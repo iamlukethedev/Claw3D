@@ -93,7 +93,7 @@ function createGatewayProxy(options) {
     throw new Error("createGatewayProxy requires loadUpstreamSettings().");
   }
 
-  const wss = new WebSocketServer({ noServer: true, verifyClient });
+  const wss = new WebSocketServer({ noServer: true, verifyClient, maxPayload: 1_048_576 });
 
   wss.on("connection", (browserWs) => {
     let upstreamWs = null;
@@ -106,9 +106,15 @@ function createGatewayProxy(options) {
     let pendingUpstreamSetupError = null;
     let closed = false;
 
+    const connectTimeoutMs = 10_000;
+    let connectTimer = setTimeout(() => {
+      closeBoth(1008, "connect timeout");
+    }, connectTimeoutMs);
+
     const closeBoth = (code, reason) => {
       if (closed) return;
       closed = true;
+      if (connectTimer) { clearTimeout(connectTimer); connectTimer = null; }
       try {
         browserWs.close(code, reason);
       } catch {}
@@ -261,6 +267,7 @@ function createGatewayProxy(options) {
           return;
         }
         connectRequestId = id;
+        if (connectTimer) { clearTimeout(connectTimer); connectTimer = null; }
         if (pendingUpstreamSetupError) {
           sendConnectError(pendingUpstreamSetupError.code, pendingUpstreamSetupError.message);
           return;
