@@ -1136,6 +1136,7 @@ export const reconcileOfficeAnimationTriggerState = (params: {
       if (skillGymDirective.directive === "gym") {
         skillGymHoldByAgentId[agentId] = true;
       }
+      // "release" directive clears the gym hold — do not set skillGymHoldByAgentId[agentId]
     } else if (next.skillGymHoldByAgentId[agentId]) {
       skillGymHoldByAgentId[agentId] = true;
     }
