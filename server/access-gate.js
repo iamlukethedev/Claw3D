@@ -28,8 +28,8 @@ function createAccessGate(options) {
 
   const handleHttp = (req, res) => {
     if (!enabled) return false;
-    if (String(req.url || "/").startsWith("/api/")) {
-      if (!isAuthorized(req)) {
+    if (!isAuthorized(req)) {
+      if (String(req.url || "/").startsWith("/api/")) {
         res.statusCode = 401;
         res.setHeader("Content-Type", "application/json");
         res.end(
@@ -37,10 +37,13 @@ function createAccessGate(options) {
             error: "Studio access token required. Send the configured Studio access cookie and retry.",
           })
         );
-        return true;
+      } else {
+        res.statusCode = 401;
+        res.setHeader("Content-Type", "text/plain");
+        res.end("Studio access token required. Set the studio_access cookie to access this page.");
       }
+      return true;
     }
-
     return false;
   };
 
