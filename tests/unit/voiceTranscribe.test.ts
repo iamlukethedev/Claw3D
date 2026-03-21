@@ -70,8 +70,16 @@ describe("POST /api/office/voice/transcribe — size limit enforcement (issue #7
 
   // ── Content-Length early rejection ────────────────────────────────────────
 
-  it("returns 413 immediately when Content-Length exceeds MAX_VOICE_UPLOAD_BYTES", async () => {
-    const oversizeBytes = MAX_VOICE_UPLOAD_BYTES + 1;
+  // The early Content-Length check uses MAX_VOICE_UPLOAD_BYTES + 1024 as its
+  // threshold because multipart/form-data requests include boundary/header
+  // overhead on top of the raw audio bytes. A request at exactly
+  // MAX_VOICE_UPLOAD_BYTES + 1 could still contain a valid audio file — the
+  // post-buffer check (which measures actual bytes) is the authoritative limit.
+  // The early check only rejects requests that are obviously too large.
+  const MULTIPART_OVERHEAD_ALLOWANCE = 1024;
+
+  it("returns 413 immediately when Content-Length clearly exceeds the limit + overhead allowance", async () => {
+    const oversizeBytes = MAX_VOICE_UPLOAD_BYTES + MULTIPART_OVERHEAD_ALLOWANCE + 1;
     const request = buildAudioRequest(1, {
       // Lie about size — we want to confirm the header check fires even when
       // the actual payload is small (verifying header-based early rejection).
@@ -85,12 +93,16 @@ describe("POST /api/office/voice/transcribe — size limit enforcement (issue #7
     expect(body.error).toMatch(/exceeds/i);
   });
 
-  it("returns 413 when Content-Length is exactly one byte over the limit", async () => {
+  it("does NOT reject early when Content-Length is MAX + 1 (within multipart overhead allowance)", async () => {
+    // MAX_VOICE_UPLOAD_BYTES + 1 is within the multipart overhead window —
+    // the actual audio file may still be within the limit. The early check
+    // should pass; the post-buffer check is the authoritative limit.
     const request = buildAudioRequest(1, {
       contentLengthOverride: MAX_VOICE_UPLOAD_BYTES + 1,
     });
     const response = await POST(request);
-    expect(response.status).toBe(413);
+    // Should NOT return 413 from the early header check (body is 1 byte, fine).
+    expect(response.status).not.toBe(413);
   });
 
   it("does NOT reject when Content-Length equals MAX_VOICE_UPLOAD_BYTES exactly", async () => {

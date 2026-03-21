@@ -9,15 +9,27 @@ export const MAX_VOICE_UPLOAD_BYTES = 20 * 1024 * 1024;
 export async function POST(request: Request) {
   try {
     // ── Early size check via Content-Length ──────────────────────────────────
-    // Reject oversized uploads BEFORE buffering any request body into memory.
-    // This prevents a DoS/OOM attack where a huge payload is fully read before
-    // the limit is enforced.  Content-Length can be absent or spoofed, so we
-    // also enforce the limit again after buffering (see below), but the header
-    // check eliminates the common case with zero memory cost.
+    // Reject obviously-oversized uploads BEFORE buffering any request body
+    // into memory. This prevents a DoS/OOM attack where a huge payload is
+    // fully read before the limit is enforced.
+    //
+    // Important: Content-Length for multipart/form-data includes boundary
+    // headers and field metadata overhead — not just the raw audio bytes.
+    // A typical multipart envelope adds ~200–500 bytes; we use a generous
+    // 1 KB overhead allowance so that a file at exactly MAX_VOICE_UPLOAD_BYTES
+    // is never incorrectly rejected by this pre-buffer check.
+    //
+    // The post-buffer check (below) is the authoritative size limit and
+    // measures the actual audio bytes — this early check only eliminates
+    // obviously-oversized requests.
+    const MULTIPART_OVERHEAD_ALLOWANCE = 1024; // 1 KB — safe upper bound
     const contentLengthHeader = request.headers.get("content-length");
     if (contentLengthHeader !== null) {
       const contentLength = Number(contentLengthHeader);
-      if (!Number.isNaN(contentLength) && contentLength > MAX_VOICE_UPLOAD_BYTES) {
+      if (
+        !Number.isNaN(contentLength) &&
+        contentLength > MAX_VOICE_UPLOAD_BYTES + MULTIPART_OVERHEAD_ALLOWANCE
+      ) {
         return NextResponse.json(
           {
             error: `Audio upload exceeds the ${MAX_VOICE_UPLOAD_BYTES} byte limit.`,
