@@ -36,6 +36,7 @@ export type OfficeIntentSnapshot = {
   standup: OfficeStandupDirective | null;
   call: OfficeCallDirective | null;
   text: OfficeTextDirective | null;
+  pingpong: boolean;
 };
 type OfficeInteractionDirective =
   | { target: "desk"; action: "hold" | "release" }
@@ -244,6 +245,22 @@ const resolveOfficeQaDirectiveFromNormalized = (
     : null;
 };
 
+const resolveOfficePingPongDirectiveFromNormalized = (normalized: string): boolean => {
+  const pingPongPatterns = [
+    /\bping.?pong\b/,
+    /\btable\s+tennis\b/,
+    /\bjoue[rz]?\s+au\s+ping.?pong\b/,
+    /\bplay\s+(?:some\s+)?ping.?pong\b/,
+    /\bplay\s+(?:some\s+)?table\s+tennis\b/,
+    /\bgo\s+play\s+ping.?pong\b/,
+    /\bgo\s+play\s+table\s+tennis\b/,
+    /\blet['']?s\s+play\s+ping.?pong\b/,
+    /\bpartie\s+de\s+ping.?pong\b/,
+    /\bfaire?\s+(?:une\s+partie\s+de\s+)?ping.?pong\b/,
+  ];
+  return pingPongPatterns.some((pattern) => pattern.test(normalized));
+};
+
 const resolveOfficeStandupDirectiveFromNormalized = (
   normalized: string,
 ): OfficeStandupDirective | null => {
@@ -422,6 +439,7 @@ export const resolveOfficeIntentSnapshot = (
       standup: null,
       call: null,
       text: null,
+      pingpong: false,
     };
   }
 
@@ -439,6 +457,7 @@ export const resolveOfficeIntentSnapshot = (
   const standupDirective = resolveOfficeStandupDirectiveFromNormalized(normalized);
   const callDirective = resolveOfficeCallDirectiveFromNormalized(normalized);
   const textDirective = resolveOfficeTextDirectiveFromNormalized(normalized);
+  const pingpongDirective = resolveOfficePingPongDirectiveFromNormalized(normalized);
   const gymDirective = gymManualDirective
     ? {
         directive: gymManualDirective,
@@ -471,6 +490,7 @@ export const resolveOfficeIntentSnapshot = (
     standup: standupDirective,
     call: callDirective,
     text: textDirective,
+    pingpong: pingpongDirective,
   });
 };
 
@@ -503,6 +523,10 @@ export const resolveOfficeQaDirective = (
 export const resolveOfficeStandupDirective = (
   value: string | null | undefined,
 ): OfficeStandupDirective | null => resolveOfficeIntentSnapshot(value).standup;
+
+export const resolveOfficePingPongDirective = (
+  value: string | null | undefined,
+): boolean => resolveOfficeIntentSnapshot(value).pingpong;
 
 export const resolveOfficeCallDirective = (
   value: string | null | undefined,

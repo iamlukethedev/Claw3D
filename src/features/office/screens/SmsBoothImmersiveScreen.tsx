@@ -3,21 +3,18 @@
 import { CheckCheck, MessageSquareText, Send, Smartphone } from "lucide-react";
 import type { MockTextMessageScenario } from "@/lib/office/text/types";
 
+const PROVIDER_LABEL: Record<string, string> = {
+  twilio: "Twilio SMS", whatsapp: "WhatsApp", telegram: "Telegram", imessage: "iMessage",
+};
+const ACTIVE_PROVIDER_LABEL =
+  PROVIDER_LABEL[process.env.NEXT_PUBLIC_MESSAGING_PROVIDER ?? "twilio"] ?? "Twilio SMS";
+
 export type TextMessageStep =
-  | "selecting_contact"
-  | "composing"
-  | "sending"
-  | "delivered"
-  | "reply"
-  | "complete";
+  | "selecting_contact" | "composing" | "sending"
+  | "delivered" | "reply" | "complete";
 
 export function SmsBoothImmersiveScreen({
-  scenario,
-  step,
-  typedMessage,
-  activeKey,
-  contacts,
-  activeContactIndex,
+  scenario, step, typedMessage, activeKey, contacts, activeContactIndex,
 }: {
   scenario: MockTextMessageScenario;
   step: TextMessageStep;
@@ -27,109 +24,167 @@ export function SmsBoothImmersiveScreen({
   activeContactIndex: number | null;
 }) {
   const statusLabel =
-    step === "selecting_contact"
-      ? "Selecting contact"
-      : step === "composing"
-      ? "Composing"
-      : step === "sending"
-        ? "Sending"
-        : step === "delivered"
-          ? "Delivered"
-          : step === "reply"
-            ? "Reply received"
-            : "Message complete";
+    step === "selecting_contact" ? "Selecting contact" :
+    step === "composing"         ? "Composing" :
+    step === "sending"           ? "Sending" :
+    step === "delivered"         ? "Delivered" :
+    step === "reply"             ? "Reply received" :
+                                   "Message complete";
+
   const messageBody = typedMessage || scenario.messageText || "";
+  const isSent = step === "delivered" || step === "reply" || step === "complete";
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_top,#0f172a_0%,#050816_48%,#02030a_100%)] text-white">
-      <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(56,189,248,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(56,189,248,0.08)_1px,transparent_1px)] [background-size:22px_22px]" />
-      <div className="relative flex h-full items-center justify-center px-8 py-10">
-        <div className="grid w-full max-w-5xl grid-cols-[1fr_0.92fr] gap-10">
-          <div className="rounded-[32px] border border-sky-300/18 bg-slate-950/65 p-8 shadow-[0_24px_90px_rgba(2,8,23,0.75)]">
-            <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.28em] text-sky-200/70">
-              <MessageSquareText className="h-4 w-4" />
-              Messaging Booth
+    <div className="relative flex h-full flex-col overflow-hidden bg-[radial-gradient(circle_at_top,#0f1b3d_0%,#060916_42%,#020409_100%)] text-white">
+
+      {/* header */}
+      <div className="border-b border-violet-400/12 bg-[#06101f]/82 px-6 py-4 backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-violet-300/18 bg-violet-300/8">
+            <MessageSquareText className="h-5 w-5 text-violet-200" />
+          </div>
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.28em] text-violet-200/65">SMS Booth · {ACTIVE_PROVIDER_LABEL}</div>
+            <div className="text-lg font-semibold text-white">
+              {isSent ? `Message sent to ${scenario.recipient}.` : `Messaging ${scenario.recipient}.`}
             </div>
-            <div className="mt-4 text-4xl font-semibold tracking-[0.08em] text-sky-50">
-              {scenario.recipient}
-            </div>
-            <div className="mt-2 text-sm uppercase tracking-[0.24em] text-sky-200/55">
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <div className={`rounded-full border px-4 py-1.5 text-[12px] uppercase tracking-[0.2em] transition-all ${
+              isSent
+                ? "border-violet-300/30 bg-violet-300/12 text-violet-100 shadow-[0_0_20px_rgba(167,139,250,0.15)]"
+                : step === "sending"
+                  ? "border-amber-300/20 bg-amber-300/8 text-amber-100/80"
+                  : "border-white/10 bg-white/5 text-white/55"
+            }`}>
               {statusLabel}
             </div>
-            <div className="mt-8 rounded-[28px] border border-sky-300/16 bg-slate-900/90 p-6">
-              <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.24em] text-sky-200/60">
-                <span>Typing from booth</span>
-                <span>iPhone relay</span>
-              </div>
-              <div className="mt-5 rounded-[24px] border border-slate-700 bg-slate-950/80 px-5 py-4 text-base leading-7 text-sky-50">
-                {messageBody || "Waiting for the first characters."}
-                {step === "composing" ? <span className="ml-1 inline-block animate-pulse">|</span> : null}
-              </div>
-              <div className="mt-5 flex items-center justify-end gap-3 text-sm uppercase tracking-[0.22em]">
-                <div className="inline-flex items-center gap-2 rounded-2xl border border-sky-300/22 bg-sky-400/10 px-4 py-2 text-sky-100/80">
-                  <Smartphone className="h-4 w-4" />
-                  Active
-                </div>
-                <div className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/24 bg-emerald-400/10 px-4 py-2 text-emerald-100/80">
-                  {step === "sending" ? <Send className="h-4 w-4" /> : <CheckCheck className="h-4 w-4" />}
-                  {step === "composing" ? "Drafting" : statusLabel}
-                </div>
+          </div>
+        </div>
+      </div>
+
+      {/* body */}
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_380px] gap-0">
+
+        {/* left — compose details */}
+        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto p-8">
+
+          {/* recipient card */}
+          <div className="rounded-3xl border border-white/6 bg-[#081122]/72 p-6">
+            <div className="text-[11px] uppercase tracking-[0.28em] text-white/40 mb-3">Recipient</div>
+            <div className="text-4xl font-semibold tracking-[0.06em] text-white">{scenario.recipient}</div>
+            <div className="mt-4 flex items-center gap-2">
+              <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.2em] ${
+                isSent ? "border-violet-300/20 bg-violet-300/8 text-violet-100/80" : "border-white/10 bg-white/5 text-white/45"
+              }`}>
+                {isSent ? <CheckCheck className="h-3 w-3" /> : <Send className="h-3 w-3" />}
+                {isSent ? "Delivered" : "Drafting"}
               </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-center">
-            <div className="relative h-[74vh] max-h-[720px] w-[360px] rounded-[44px] border border-sky-200/20 bg-[#020617] p-3 shadow-[0_30px_120px_rgba(0,0,0,0.78)]">
-              <div className="absolute left-1/2 top-3 h-1.5 w-28 -translate-x-1/2 rounded-full bg-slate-700" />
-              <div className="relative flex h-full flex-col overflow-hidden rounded-[34px] border border-sky-300/12 bg-[linear-gradient(180deg,#081225_0%,#020617_100%)] px-5 py-6">
-                <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.24em] text-sky-200/65">
-                  <span>Messages</span>
-                  <Smartphone className="h-4 w-4" />
-                </div>
-                <div className="mt-5 text-center">
-                  <div className="text-[13px] uppercase tracking-[0.26em] text-sky-200/55">
-                    {statusLabel}
-                  </div>
-                  <div className="mt-2 text-2xl font-semibold text-sky-50">
-                    {scenario.recipient}
-                  </div>
-                </div>
-                <div className="mt-6 flex-1">
-                  {step === "selecting_contact" ? (
-                    <ContactList
-                      contacts={contacts}
-                      activeContactIndex={activeContactIndex}
-                    />
-                  ) : (
-                    <div className="space-y-4">
-                      <Bubble
-                        align="right"
-                        label="Agent"
-                        text={messageBody || "Starting draft."}
-                        tone="primary"
-                      />
-                      {step === "delivered" || step === "reply" || step === "complete" ? (
-                        <div className="text-right text-[11px] uppercase tracking-[0.2em] text-sky-200/45">
-                          Delivered
-                        </div>
-                      ) : null}
-                      {step === "reply" || step === "complete" ? (
-                        <Bubble
-                          align="left"
-                          label={scenario.recipient}
-                          text={scenario.confirmationText ?? "Delivered."}
-                          tone="secondary"
-                        />
-                      ) : null}
+          {/* message body */}
+          <div className="rounded-3xl border border-white/6 bg-[#081122]/72 p-6">
+            <div className="text-[11px] uppercase tracking-[0.28em] text-white/40 mb-3">Message</div>
+            <div className="min-h-[80px] rounded-2xl border border-white/6 bg-black/20 px-5 py-4 text-[15px] leading-7 text-white/80">
+              {messageBody || <span className="text-white/25">Waiting for the first characters.</span>}
+              {step === "composing" && <span className="ml-1 inline-block animate-pulse text-white/60">|</span>}
+            </div>
+          </div>
+
+          {/* reply */}
+          {(step === "reply" || step === "complete") && scenario.confirmationText && (
+            <div className="rounded-3xl border border-white/6 bg-[#081122]/72 p-6">
+              <div className="text-[11px] uppercase tracking-[0.28em] text-white/40 mb-3">{scenario.recipient}</div>
+              <p className="text-[15px] leading-7 text-white/80">{scenario.confirmationText}</p>
+            </div>
+          )}
+
+          {/* contact list (selecting phase) */}
+          {step === "selecting_contact" && contacts.length > 0 && (
+            <div className="rounded-3xl border border-white/6 bg-[#081122]/72 p-6">
+              <div className="text-[11px] uppercase tracking-[0.28em] text-white/40 mb-3">Contacts</div>
+              <div className="space-y-2">
+                {contacts.slice(0, 5).map((contact, idx) => {
+                  const active = idx === (activeContactIndex ?? 0);
+                  return (
+                    <div key={`${contact}-${idx}`}
+                      className={`rounded-2xl border px-4 py-3 transition-all ${
+                        active
+                          ? "border-violet-300/24 bg-violet-300/10 text-white"
+                          : "border-white/6 bg-white/4 text-white/65"
+                      }`}>
+                      <div className="text-sm font-medium">{contact}</div>
+                      <div className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-white/35">
+                        {active ? "Opening conversation" : "Recent thread"}
+                      </div>
                     </div>
-                  )}
-                </div>
-                <div className="mt-4 rounded-[24px] border border-sky-300/14 bg-slate-950/75 p-3">
-                  <PhoneKeyboard activeKey={activeKey} />
-                </div>
-                <div className="rounded-[24px] border border-sky-300/14 bg-slate-950/70 px-4 py-3 text-sm text-sky-100/78">
-                  {scenario.statusLine}
-                </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* status line */}
+          <div className="rounded-2xl border border-white/6 bg-white/4 px-5 py-3 text-sm text-white/55">
+            {scenario.statusLine}
+          </div>
+        </div>
+
+        {/* right — phone mockup */}
+        <div className="flex items-center justify-center border-l border-white/6 bg-[#081122]/50 p-8">
+          <div className="relative h-[68vh] max-h-[660px] w-[320px] rounded-[44px] border border-white/12 bg-[#020617] p-3 shadow-[0_40px_120px_rgba(0,0,0,0.8)]">
+            <div className="absolute left-1/2 top-3 h-1.5 w-24 -translate-x-1/2 rounded-full bg-white/10" />
+            <div className="flex h-full flex-col overflow-hidden rounded-[34px] border border-white/6 bg-[linear-gradient(180deg,#0d1225_0%,#020617_100%)] px-5 py-7">
+              <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.24em] text-white/40">
+                <span>Messages</span>
+                <Smartphone className="h-3.5 w-3.5" />
+              </div>
+
+              <div className="mt-5 text-center">
+                <div className="text-[11px] uppercase tracking-[0.26em] text-white/35">{statusLabel}</div>
+                <div className="mt-2 text-2xl font-semibold text-white">{scenario.recipient}</div>
+              </div>
+
+              <div className="mt-6 flex-1 space-y-3">
+                {step === "selecting_contact" ? (
+                  <ContactList contacts={contacts} activeContactIndex={activeContactIndex} />
+                ) : (
+                  <>
+                    <div className="flex justify-end">
+                      <div className="max-w-[85%] rounded-2xl border border-violet-300/14 bg-violet-300/8 px-4 py-3">
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-white/35 mb-1">Agent</div>
+                        <div className="text-sm leading-6 text-white/85">
+                          {messageBody || "Starting draft."}
+                        </div>
+                      </div>
+                    </div>
+                    {isSent && (
+                      <div className="flex justify-end">
+                        <div className="flex items-center gap-1 text-[10px] uppercase tracking-[0.18em] text-violet-300/50">
+                          <CheckCheck className="h-3 w-3" /> Delivered
+                        </div>
+                      </div>
+                    )}
+                    {(step === "reply" || step === "complete") && scenario.confirmationText && (
+                      <div className="flex justify-start">
+                        <div className="max-w-[85%] rounded-2xl border border-white/6 bg-white/5 px-4 py-3">
+                          <div className="text-[10px] uppercase tracking-[0.2em] text-white/35 mb-1">{scenario.recipient}</div>
+                          <div className="text-sm leading-6 text-white/75">{scenario.confirmationText}</div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* keyboard */}
+              <div className="mt-3 rounded-2xl border border-white/6 bg-black/25 p-2.5">
+                <PhoneKeyboard activeKey={activeKey} />
+              </div>
+
+              <div className="mt-2 rounded-2xl border border-white/6 bg-black/30 px-4 py-2.5 text-[11px] text-white/45">
+                {scenario.statusLine}
               </div>
             </div>
           </div>
@@ -139,73 +194,51 @@ export function SmsBoothImmersiveScreen({
   );
 }
 
-function ContactList({
-  contacts,
-  activeContactIndex,
-}: {
-  contacts: string[];
-  activeContactIndex: number | null;
-}) {
+function ContactList({ contacts, activeContactIndex }: { contacts: string[]; activeContactIndex: number | null }) {
   const selectedIndex = activeContactIndex ?? 0;
-  const windowStart = Math.max(
-    0,
-    Math.min(selectedIndex - 2, Math.max(contacts.length - 5, 0)),
-  );
-  const visibleContacts = contacts.slice(windowStart, windowStart + 5);
+  const windowStart = Math.max(0, Math.min(selectedIndex - 2, Math.max(contacts.length - 5, 0)));
+  const visible = contacts.slice(windowStart, windowStart + 5);
 
   return (
-    <div className="relative h-full overflow-hidden rounded-[24px] border border-sky-300/14 bg-slate-950/55 px-3 py-3">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-8 bg-[linear-gradient(180deg,rgba(2,6,23,0.94),rgba(2,6,23,0))]" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-[linear-gradient(0deg,rgba(2,6,23,0.94),rgba(2,6,23,0))]" />
-      <div className="space-y-2 pt-3">
-        {visibleContacts.map((contact, index) => {
-          const absoluteIndex = windowStart + index;
-          const active = absoluteIndex === selectedIndex;
-          return (
-            <div
-              key={`${contact}-${absoluteIndex}`}
-              className={`rounded-[22px] border px-4 py-3 transition-all duration-150 ${
-                active
-                  ? "scale-[0.98] border-sky-200/70 bg-sky-300/20 text-sky-50 shadow-[0_0_20px_rgba(56,189,248,0.2)]"
-                  : "border-slate-700/80 bg-slate-900/80 text-slate-200"
-              }`}
-            >
-              <div className="text-sm font-medium">{contact}</div>
-              <div className="mt-1 text-[11px] uppercase tracking-[0.18em] opacity-60">
-                {active ? "Opening conversation" : "Recent thread"}
-              </div>
+    <div className="space-y-2">
+      {visible.map((contact, index) => {
+        const absoluteIndex = windowStart + index;
+        const active = absoluteIndex === selectedIndex;
+        return (
+          <div key={`${contact}-${absoluteIndex}`}
+            className={`rounded-2xl border px-4 py-3 transition-all duration-150 ${
+              active
+                ? "border-violet-300/28 bg-violet-300/12 text-white shadow-[0_0_16px_rgba(167,139,250,0.15)]"
+                : "border-white/6 bg-white/4 text-white/60"
+            }`}>
+            <div className="text-sm font-medium">{contact}</div>
+            <div className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-white/30">
+              {active ? "Opening conversation" : "Recent thread"}
             </div>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 const KEYBOARD_ROWS = [
-  ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
-  ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
-  ["z", "x", "c", "v", "b", "n", "m", ",", ".", "?"],
+  ["q","w","e","r","t","y","u","i","o","p"],
+  ["a","s","d","f","g","h","j","k","l"],
+  ["z","x","c","v","b","n","m",",",".","?"],
 ] as const;
 
 function PhoneKeyboard({ activeKey }: { activeKey: string | null }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {KEYBOARD_ROWS.map((row, rowIndex) => (
-        <div
-          key={row.join("")}
-          className={`flex gap-2 ${rowIndex === 1 ? "px-3" : rowIndex === 2 ? "px-6" : ""}`}
-        >
+        <div key={row.join("")} className={`flex gap-1 ${rowIndex === 1 ? "px-3" : rowIndex === 2 ? "px-5" : ""}`}>
           {row.map((keyValue) => (
-            <KeyboardKey
-              key={keyValue}
-              label={keyValue}
-              active={activeKey === keyValue}
-            />
+            <KeyboardKey key={keyValue} label={keyValue} active={activeKey === keyValue} />
           ))}
         </div>
       ))}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <KeyboardKey label="123" active={false} className="w-[18%]" />
         <KeyboardKey label="space" active={activeKey === "space"} className="flex-1" />
         <KeyboardKey label="return" active={activeKey === "return"} className="w-[22%]" />
@@ -214,51 +247,14 @@ function PhoneKeyboard({ activeKey }: { activeKey: string | null }) {
   );
 }
 
-function KeyboardKey({
-  label,
-  active,
-  className = "",
-}: {
-  label: string;
-  active: boolean;
-  className?: string;
-}) {
+function KeyboardKey({ label, active, className = "" }: { label: string; active: boolean; className?: string }) {
   return (
-    <div
-      className={`flex h-9 min-w-0 flex-1 items-center justify-center rounded-2xl border text-[12px] font-medium uppercase tracking-[0.12em] transition-all duration-100 ${
-        active
-          ? "scale-[0.96] border-sky-200/70 bg-sky-300/30 text-sky-50 shadow-[0_0_20px_rgba(56,189,248,0.25)]"
-          : "border-slate-700/90 bg-slate-800/90 text-slate-200"
-      } ${className}`}
-    >
+    <div className={`flex h-8 min-w-0 flex-1 items-center justify-center rounded-xl border text-[11px] font-medium uppercase tracking-[0.1em] transition-all duration-100 ${
+      active
+        ? "border-violet-300/35 bg-violet-300/18 text-white shadow-[0_0_12px_rgba(167,139,250,0.2)]"
+        : "border-white/8 bg-white/5 text-white/55"
+    } ${className}`}>
       {label}
-    </div>
-  );
-}
-
-function Bubble({
-  align,
-  label,
-  text,
-  tone,
-}: {
-  align: "left" | "right";
-  label: string;
-  text: string;
-  tone: "primary" | "secondary";
-}) {
-  return (
-    <div className={align === "right" ? "ml-10" : "mr-10"}>
-      <div
-        className={`rounded-[24px] border px-4 py-4 ${
-          tone === "primary"
-            ? "border-sky-300/18 bg-sky-400/10 text-sky-50"
-            : "border-slate-700 bg-slate-900/90 text-slate-100"
-        }`}
-      >
-        <div className="text-[10px] uppercase tracking-[0.22em] opacity-60">{label}</div>
-        <div className="mt-2 text-sm leading-6">{text}</div>
-      </div>
     </div>
   );
 }
