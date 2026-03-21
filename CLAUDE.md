@@ -98,6 +98,43 @@ Calls the **whisper CLI** directly (OpenClaw 2026.3.13 removed the `runner-*.js`
 
 localStorage-backed. Keys: `claw3d-booth-contacts`, `claw3d-booth-history` (limit 50). Types: `BoothContact`, `BoothHistoryEntry`.
 
+### Agent → Owner notifications (`src/app/api/agent/notify/`)
+
+Allows any OpenClaw agent to contact the owner directly via SMS or phone call, without knowing the owner's phone number.
+
+**Route:** `POST /api/agent/notify`
+
+```json
+{ "kind": "sms" | "call", "message": "...", "agentId": "optional" }
+```
+
+- Owner's phone number is read from `OWNER_PHONE_NUMBER` env var (server-side only, never returned or logged in full)
+- Delegates to `sendSms()` / `makeCall()` in `src/lib/office/twilio.ts`
+- Rate limiting: 3 notifications/hour/agent, 10/hour global (in-memory, resets on restart)
+- Optional allowlist: `NOTIFY_ALLOWED_AGENTS=id1,id2` (unset = all agents allowed)
+- Message sanitised and capped at 300 chars
+
+**Required env var (`.env.local` only — never commit):**
+```
+OWNER_PHONE_NUMBER=+33xxxxxxxxx
+```
+
+**Companion OpenClaw skill:** `~/.openclaw/workspace/skills/notify-owner/SKILL.md`
+
+The skill is declared in the OpenClaw workspace so agents see it in their context and know to call this endpoint (via curl) when asked to notify the owner. The skill description tells agents:
+- when to use it (urgent/important situations only)
+- the exact curl command for SMS and call
+- the rate limit and message constraints
+- not to ask for a phone number (it's handled server-side)
+
+The skill was created alongside this route and tested end-to-end: agents can send SMS and trigger calls on request from Discord or Claw3D chat, without the user providing any phone number.
+
+**Adding this to a new deployment:**
+1. Add `OWNER_PHONE_NUMBER` to `.env.local`
+2. Ensure `TWILIO_*` vars are set
+3. `npm run build && sudo systemctl restart claw3d.service`
+4. The `notify-owner` skill must be present in the OpenClaw workspace skills directory
+
 ### Gateway client (`src/lib/gateway/GatewayClient.ts`)
 
 WebSocket client that streams `EventFrame` objects from the OpenClaw gateway. Session keys encode `agentId`. `classifyGatewayEventKind()` in `runtimeEventBridge.ts` maps raw events to typed payloads.
@@ -112,8 +149,9 @@ OPENCLAW_PACKAGE_ROOT=/home/sarcome/.npm-global/lib/node_modules/openclaw
 TWILIO_ACCOUNT_SID=...
 TWILIO_AUTH_TOKEN=...
 TWILIO_PHONE_NUMBER=...
+OWNER_PHONE_NUMBER=...          # owner's personal number — agents notify route only
 WHISPER_BIN=/home/sarcome/.local/bin/whisper   # optional
-WHISPER_MODEL=base                              # optional
+WHISPER_MODEL=base              # optional
 ```
 
 ## Git remotes
