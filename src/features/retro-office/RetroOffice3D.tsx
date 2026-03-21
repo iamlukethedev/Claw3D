@@ -1892,6 +1892,7 @@ export function RetroOffice3D({
   onVoiceRepliesSpeedChange,
   onVoiceRepliesPreview,
   onGatewayDisconnect,
+  onOpenOnboarding,
   atmAnalytics = null,
   feedEvents = [],
   gatewayStatus = "disconnected",
@@ -1949,6 +1950,7 @@ export function RetroOffice3D({
   onVoiceRepliesSpeedChange?: (speed: number) => void;
   onVoiceRepliesPreview?: (voiceId: string | null, voiceName: string) => void;
   onGatewayDisconnect?: () => void;
+  onOpenOnboarding?: () => void;
   atmAnalytics?: OfficeUsageAnalyticsParams | null;
   feedEvents?: {
     id: string;
@@ -6047,6 +6049,10 @@ export function RetroOffice3D({
                 gatewayUrl={atmAnalytics?.gatewayUrl}
                 onGatewayDisconnect={() => {
                   onGatewayDisconnect?.();
+                  setSettingsModalOpen(false);
+                }}
+                onOpenOnboarding={() => {
+                  onOpenOnboarding?.();
                   setSettingsModalOpen(false);
                 }}
                 officeTitle={officeTitle}

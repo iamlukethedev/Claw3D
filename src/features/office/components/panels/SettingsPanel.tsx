@@ -6,6 +6,7 @@ type SettingsPanelProps = {
   gatewayStatus?: string;
   gatewayUrl?: string;
   onGatewayDisconnect?: () => void;
+  onOpenOnboarding?: () => void;
   officeTitle: string;
   officeTitleLoaded: boolean;
   onOfficeTitleChange: (title: string) => void;
@@ -23,6 +24,7 @@ export function SettingsPanel({
   gatewayStatus,
   gatewayUrl,
   onGatewayDisconnect,
+  onOpenOnboarding,
   officeTitle,
   officeTitleLoaded,
   onOfficeTitleChange,
@@ -94,6 +96,23 @@ export function SettingsPanel({
             className="rounded-md border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-rose-100 transition-colors hover:border-rose-400/40 hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Disconnect gateway
+          </button>
+        </div>
+      </div>
+      <div className="mt-3 rounded-lg border border-cyan-500/10 bg-black/20 px-4 py-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-medium text-white">Onboarding</div>
+            <div className="mt-1 text-[10px] text-white/75">
+              Re-open the onboarding wizard to test the new-user flow.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onOpenOnboarding?.()}
+            className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-emerald-100 transition-colors hover:border-emerald-400/40 hover:bg-emerald-500/15"
+          >
+            Launch wizard
           </button>
         </div>
       </div>

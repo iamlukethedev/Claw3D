@@ -85,6 +85,10 @@ import { SkillsMarketplacePanel } from "@/features/office/components/panels/Skil
 import { useOfficeSkillsMarketplace } from "@/features/office/hooks/useOfficeSkillsMarketplace";
 import { useOfficeStandupController } from "@/features/office/hooks/useOfficeStandupController";
 import { useRunLog } from "@/features/office/hooks/useRunLog";
+import {
+  OnboardingWizard,
+  useOnboardingState,
+} from "@/features/onboarding";
 import { useFinalizedAssistantReplyListener } from "@/hooks/useFinalizedAssistantReplyListener";
 import { useStudioOfficePreference } from "@/hooks/useStudioOfficePreference";
 import { useStudioVoiceRepliesPreference } from "@/hooks/useStudioVoiceRepliesPreference";
@@ -758,6 +762,9 @@ export function OfficeScreen({
   const [activeSidebarTab, setActiveSidebarTab] =
     useState<HQSidebarTab>("inbox");
   const router = useRouter();
+  const { showOnboarding, completeOnboarding, resetOnboarding } =
+    useOnboardingState();
+  const [forceShowOnboarding, setForceShowOnboarding] = useState(false);
   const {
     loaded: officeTitleLoaded,
     title: officeTitle,
@@ -789,6 +796,15 @@ export function OfficeScreen({
     voiceId: voiceRepliesPreference.voiceId,
     speed: voiceRepliesPreference.speed,
   });
+  const showOnboardingWizard = showOnboarding || forceShowOnboarding;
+  const handleOpenOnboarding = useCallback(() => {
+    resetOnboarding();
+    setForceShowOnboarding(true);
+  }, [resetOnboarding]);
+  const handleCompleteOnboarding = useCallback(() => {
+    completeOnboarding();
+    setForceShowOnboarding(false);
+  }, [completeOnboarding]);
 
   const handleAvatarProfileSave = useCallback(
     (agentId: string, profile: AgentAvatarProfile) => {
@@ -2795,6 +2811,7 @@ export function OfficeScreen({
           settingsCoordinator,
         }}
         onGatewayDisconnect={disconnect}
+        onOpenOnboarding={handleOpenOnboarding}
         feedEvents={feedEvents}
         gatewayStatus={status}
         runCountByAgentId={runCountByAgentId}
@@ -2921,6 +2938,23 @@ export function OfficeScreen({
               }}
             />
           }
+        />
+      ) : null}
+
+      {showOnboardingWizard ? (
+        <OnboardingWizard
+          gatewayConnected={status === "connected"}
+          agentCount={state.agents.length}
+          gatewayUrl={gatewayUrl}
+          token={token}
+          onGatewayUrlChange={setGatewayUrl}
+          onTokenChange={setToken}
+          onConnect={() => {
+            void connect();
+          }}
+          onComplete={handleCompleteOnboarding}
+          connectionError={gatewayError}
+          connecting={status === "connecting"}
         />
       ) : null}
 
