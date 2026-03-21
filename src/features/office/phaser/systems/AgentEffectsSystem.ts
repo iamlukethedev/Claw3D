@@ -2,6 +2,12 @@ import type Phaser from "phaser";
 
 import type { OfficeAgentPresence } from "@/lib/office/presence";
 import type { OfficeMap } from "@/lib/office/schema";
+import {
+  astar2D,
+  buildNavGrid2D,
+  type NavGrid2D,
+  type Waypoint,
+} from "@/lib/office/pathfinding";
 
 type AgentEffectsSystemParams = {
   scene: Phaser.Scene;
@@ -15,6 +21,12 @@ type AvatarState = {
   vx: number;
   vy: number;
   lastThoughtAt: number;
+  /** Current waypoint path the agent is following. */
+  path: Waypoint[];
+  /** Index of the next waypoint in `path` the agent is walking toward. */
+  pathIndex: number;
+  /** Stringified last-resolved target so we know when to re-path. */
+  lastTargetKey: string;
 };
 
 const THOUGHTS = ["coffee", "gamepad", "zzz", "idea", "music"] as const;
@@ -40,6 +52,13 @@ export class AgentEffectsSystem {
   private readonly scene: Phaser.Scene;
   private readonly avatars = new Map<string, AvatarState>();
 
+  /**
+   * Cached nav grid.  Rebuilt when the map identity changes so agents always
+   * pathfind against the current layout.
+   */
+  private navGrid: NavGrid2D | null = null;
+  private navGridMapVersion: string = "";
+
   constructor(params: AgentEffectsSystemParams) {
     this.scene = params.scene;
   }
@@ -50,6 +69,19 @@ export class AgentEffectsSystem {
     elapsedMs: number;
     thoughtBubblesEnabled: boolean;
   }) {
+    // Rebuild the nav grid when the map changes.
+    const mapKey = `${params.map.workspaceId}:${params.map.officeVersionId}`;
+    if (mapKey !== this.navGridMapVersion) {
+      this.navGrid = buildNavGrid2D(params.map);
+      this.navGridMapVersion = mapKey;
+      // Invalidate all cached paths since the world changed.
+      for (const entry of this.avatars.values()) {
+        entry.path = [];
+        entry.pathIndex = 0;
+        entry.lastTargetKey = "";
+      }
+    }
+
     const keep = new Set<string>();
     const zonesByType = new Map(
       params.map.zones.map((zone) => [zone.type, zone])
@@ -62,15 +94,28 @@ export class AgentEffectsSystem {
       entry.stateIcon.setText(agent.state === "error" ? "!" : "");
 
       const target = this.resolveTarget(agent.state, zonesByType);
-      const dx = target.x - entry.sprite.x;
-      const dy = target.y - entry.sprite.y;
-      const distance = Math.hypot(dx, dy);
-      const maxSpeed = 0.05 * params.elapsedMs;
-      if (distance > 0.1) {
-        const step = Math.min(maxSpeed, distance);
-        entry.sprite.x += (dx / distance) * step;
-        entry.sprite.y += (dy / distance) * step;
+      const targetKey = `${target.x}:${target.y}`;
+
+      // Re-path when target changes.
+      if (targetKey !== entry.lastTargetKey) {
+        entry.lastTargetKey = targetKey;
+        if (this.navGrid) {
+          entry.path = astar2D(
+            entry.sprite.x,
+            entry.sprite.y,
+            target.x,
+            target.y,
+            this.navGrid,
+          );
+        } else {
+          // Fallback: no grid available, stay put.
+          entry.path = [];
+        }
+        entry.pathIndex = 0;
       }
+
+      // Follow waypoint path.
+      this.stepAlongPath(entry, params.elapsedMs);
 
       entry.label.setPosition(entry.sprite.x, entry.sprite.y + 15);
       entry.stateIcon.setPosition(entry.sprite.x + 12, entry.sprite.y - 12);
@@ -114,6 +159,35 @@ export class AgentEffectsSystem {
       entry.thoughtIcon.destroy();
     }
     this.avatars.clear();
+    this.navGrid = null;
+  }
+
+  /**
+   * Walk the agent sprite along the computed waypoint path.
+   *
+   * When the path is empty (no route found) the agent simply stays put,
+   * which is the correct behavior: visible stillness is preferable to
+   * walking through walls.
+   */
+  private stepAlongPath(entry: AvatarState, elapsedMs: number): void {
+    if (entry.path.length === 0 || entry.pathIndex >= entry.path.length) return;
+
+    const wp = entry.path[entry.pathIndex];
+    const dx = wp.x - entry.sprite.x;
+    const dy = wp.y - entry.sprite.y;
+    const dist = Math.hypot(dx, dy);
+    const maxSpeed = 0.05 * elapsedMs;
+
+    if (dist <= maxSpeed) {
+      // Arrived at waypoint — snap and advance.
+      entry.sprite.x = wp.x;
+      entry.sprite.y = wp.y;
+      entry.pathIndex += 1;
+    } else {
+      const step = Math.min(maxSpeed, dist);
+      entry.sprite.x += (dx / dist) * step;
+      entry.sprite.y += (dy / dist) * step;
+    }
   }
 
   private getOrCreate(agentId: string, name: string, state: OfficeAgentPresence["state"]) {
@@ -156,6 +230,9 @@ export class AgentEffectsSystem {
       vx: 0,
       vy: 0,
       lastThoughtAt: this.scene.time.now,
+      path: [],
+      pathIndex: 0,
+      lastTargetKey: "",
     };
     this.avatars.set(agentId, created);
     return created;
