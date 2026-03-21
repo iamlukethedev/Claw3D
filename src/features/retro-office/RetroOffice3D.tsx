@@ -1420,10 +1420,11 @@ function useAgentTick(
         agent.status === "working" && agent.state !== "sitting"
           ? baseSpeed * WORKING_WALK_SPEED_MULTIPLIER
           : baseSpeed;
-      // Move toward the first waypoint; fall back to the raw target when empty.
+      // Move toward the first waypoint. An empty path means astar found no route —
+      // the agent stays put instead of walking through walls toward the raw target.
       const path = agent.path ?? [];
-      const wpX = path.length > 0 ? path[0].x : agent.targetX;
-      const wpY = path.length > 0 ? path[0].y : agent.targetY;
+      const wpX = path.length > 0 ? path[0].x : agent.x;
+      const wpY = path.length > 0 ? path[0].y : agent.y;
       const dx = wpX - agent.x,
         dy = wpY - agent.y;
       const dist = Math.hypot(dx, dy);

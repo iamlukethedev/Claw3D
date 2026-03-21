@@ -171,11 +171,15 @@ export function astar(
   let { c: ec, r: er } = toCell(ex, ey);
   const startFree = findFree(sc, sr);
   const endFree = findFree(ec, er);
-  if (!startFree || !endFree) return [{ x: ex, y: ey }];
+  if (!startFree || !endFree) return [];
   sc = startFree.c;
   sr = startFree.r;
   ec = endFree.c;
   er = endFree.r;
+  // Same nav cell: start and end are close enough that A* has no grid edges
+  // to traverse. The destination is still reachable — return a single-waypoint
+  // path to the exact target pixel so the movement layer can make the final
+  // fine-grained adjustment instead of staying put.
   if (sc === ec && sr === er) return [{ x: ex, y: ey }];
 
   const nodeCount = GRID_COLS * GRID_ROWS;
@@ -293,7 +297,7 @@ export function astar(
     }
   }
 
-  return [{ x: ex, y: ey }];
+  return [];
 }
 
 export const getDeskLocations = (items: FurnitureItem[]) =>
