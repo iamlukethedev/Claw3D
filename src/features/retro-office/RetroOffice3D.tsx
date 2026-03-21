@@ -2133,6 +2133,8 @@ export function RetroOffice3D({
   const phoneBoothAgentIdRef = useRef<string | null>(null);
   const onPhoneCallSpeakRef = useRef(onPhoneCallSpeak);
   const onPhoneCallCompleteRef = useRef(onPhoneCallComplete);
+  const onStandupArrivalsChangeRef = useRef(onStandupArrivalsChange);
+  const lastStandupArrivalKeyRef = useRef<string | null>(null);
   const effectiveSmsBoothAgentIdRef = useRef<string | null>(null);
   const effectiveTextMessageScenarioRef = useRef<MockTextMessageScenario | null>(null);
   const smsBoothAgentIdRef = useRef<string | null>(null);
@@ -2221,7 +2223,10 @@ export function RetroOffice3D({
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       const now = Date.now();
-      setJanitorActors((previous) => pruneExpiredJanitorActors(previous, now));
+      setJanitorActors((previous) => {
+        const next = pruneExpiredJanitorActors(previous, now);
+        return next.length === previous.length ? previous : next;
+      });
     }, 1000);
     return () => {
       window.clearInterval(intervalId);
@@ -2590,6 +2595,7 @@ export function RetroOffice3D({
     phoneBoothAgentIdRef.current = phoneBoothAgentId;
     onPhoneCallSpeakRef.current = onPhoneCallSpeak;
     onPhoneCallCompleteRef.current = onPhoneCallComplete;
+    onStandupArrivalsChangeRef.current = onStandupArrivalsChange;
   }, [
     effectiveSmsBoothAgentId,
     effectiveTextMessageScenario,
@@ -2599,6 +2605,7 @@ export function RetroOffice3D({
     effectivePhoneCallScenario,
     onPhoneCallComplete,
     onPhoneCallSpeak,
+    onStandupArrivalsChange,
     phoneBoothAgentId,
   ]);
 
@@ -3008,7 +3015,10 @@ export function RetroOffice3D({
       }
 
       if (!standupActive || !standupMeeting) {
-        onStandupArrivalsChange?.([]);
+        const nextArrivalsKey = "";
+        if (lastStandupArrivalKeyRef.current === nextArrivalsKey) return;
+        lastStandupArrivalKeyRef.current = nextArrivalsKey;
+        onStandupArrivalsChangeRef.current?.([]);
         return;
       }
 
@@ -3017,7 +3027,10 @@ export function RetroOffice3D({
         if (!agent || agent.interactionTarget !== "meeting_room") return false;
         return Math.hypot(agent.x - agent.targetX, agent.y - agent.targetY) < 18;
       });
-      onStandupArrivalsChange?.(arrivedParticipants);
+      const nextArrivalsKey = arrivedParticipants.join("|");
+      if (lastStandupArrivalKeyRef.current === nextArrivalsKey) return;
+      lastStandupArrivalKeyRef.current = nextArrivalsKey;
+      onStandupArrivalsChangeRef.current?.(arrivedParticipants);
     };
 
     syncArrivalState();
@@ -3029,7 +3042,6 @@ export function RetroOffice3D({
     githubReviewAgentId,
     manualSmsBoothOpen,
     manualPhoneBoothOpen,
-    onStandupArrivalsChange,
     phoneBoothAgentId,
     qaTestingAgentId,
     renderAgentLookupRef,

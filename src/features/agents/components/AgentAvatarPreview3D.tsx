@@ -19,6 +19,10 @@ const PreviewFigure = ({
   const groupRef = useRef<THREE.Group>(null);
   const reportedReadyRef = useRef(false);
 
+  useEffect(() => {
+    reportedReadyRef.current = false;
+  }, [profile]);
+
   useFrame((state) => {
     if (!reportedReadyRef.current) {
       reportedReadyRef.current = true;

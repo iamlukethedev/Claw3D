@@ -1799,11 +1799,18 @@ export function OfficeScreen({
     spokenPhoneCallKeysRef.current = new Set(
       [...spokenPhoneCallKeysRef.current].filter((key) => activeKeys.has(key)),
     );
-    setPreparedPhoneCallsByAgentId((previous) =>
-      Object.fromEntries(
+    setPreparedPhoneCallsByAgentId((previous) => {
+      const next = Object.fromEntries(
         Object.entries(previous).filter(([, entry]) => activeKeys.has(entry.requestKey)),
-      ),
-    );
+      );
+      if (
+        Object.keys(previous).length === Object.keys(next).length &&
+        Object.keys(previous).every((agentId) => previous[agentId] === next[agentId])
+      ) {
+        return previous;
+      }
+      return next;
+    });
   }, [phoneCallByAgentId]);
 
   useEffect(() => {
@@ -1955,11 +1962,18 @@ export function OfficeScreen({
     preparedTextMessageKeysRef.current = new Set(
       [...preparedTextMessageKeysRef.current].filter((key) => activeKeys.has(key)),
     );
-    setPreparedTextMessagesByAgentId((previous) =>
-      Object.fromEntries(
+    setPreparedTextMessagesByAgentId((previous) => {
+      const next = Object.fromEntries(
         Object.entries(previous).filter(([, entry]) => activeKeys.has(entry.requestKey)),
-      ),
-    );
+      );
+      if (
+        Object.keys(previous).length === Object.keys(next).length &&
+        Object.keys(previous).every((agentId) => previous[agentId] === next[agentId])
+      ) {
+        return previous;
+      }
+      return next;
+    });
   }, [textMessageByAgentId]);
 
   useEffect(() => {
