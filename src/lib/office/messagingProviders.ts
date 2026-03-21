@@ -10,7 +10,7 @@
  * │ twilio          │  ✅   ✅   │ Implemented — Twilio REST API            │
  * │ whatsapp        │  ✅   ❌   │ Implemented — Twilio WhatsApp API        │
  * │ telegram        │  ✅   ❌   │ Implemented — Telegram Bot API           │
- * │ imessage        │  ❌   ❌   │ No public API — not supported            │
+ * │ imessage        │  ✅   ❌   │ Implemented — BlueBubbles server (Mac)   │
  * └─────────────────┴────────────┴──────────────────────────────────────────┘
  *
  * Active provider selection
@@ -34,7 +34,7 @@
 export type MessagingProvider = "twilio" | "whatsapp" | "telegram" | "imessage";
 
 /** Providers that support sending SMS / chat messages. */
-export type SmsCapableProvider = Extract<MessagingProvider, "twilio" | "whatsapp" | "telegram">;
+export type SmsCapableProvider = Extract<MessagingProvider, "twilio" | "whatsapp" | "telegram" | "imessage">;
 
 /** Providers that support voice calls. */
 export type CallCapableProvider = Extract<MessagingProvider, "twilio">;
@@ -45,6 +45,7 @@ export const getDefaultSmsProvider = (): SmsCapableProvider => {
   const raw = (process.env.MESSAGING_PROVIDER ?? "twilio").trim().toLowerCase();
   if (raw === "whatsapp") return "whatsapp";
   if (raw === "telegram") return "telegram";
+  if (raw === "imessage") return "imessage";
   return "twilio";
 };
 
@@ -102,6 +103,16 @@ export async function dispatchSendSms(params: SendSmsParams): Promise<MessagingR
       const { sendTelegramMessage } = await import("./providers/telegram");
       return sendTelegramMessage({ text: params.body });
     }
+
+    case "imessage": {
+      /**
+       * Sends an iMessage via a BlueBubbles server running on a Mac.
+       * Requires: IMESSAGE_BLUEBUBBLES_URL, IMESSAGE_BLUEBUBBLES_PASSWORD
+       * Setup:    https://bluebubbles.app — install on a Mac signed into iMessage.
+       */
+      const { sendIMessage } = await import("./providers/imessage");
+      return sendIMessage({ to: params.to, body: params.body });
+    }
   }
 }
 
@@ -142,6 +153,12 @@ export function getSmsProviderStatus(provider: SmsCapableProvider): ProviderConf
       const ok =
         Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim()) &&
         Boolean(process.env.TELEGRAM_CHAT_ID?.trim());
+      return ok ? "configured" : "not_configured";
+    }
+    case "imessage": {
+      const ok =
+        Boolean(process.env.IMESSAGE_BLUEBUBBLES_URL?.trim()) &&
+        Boolean(process.env.IMESSAGE_BLUEBUBBLES_PASSWORD?.trim());
       return ok ? "configured" : "not_configured";
     }
   }
