@@ -2,8 +2,9 @@
  * Tests for the skillGymHold logic inside reconcileOfficeAnimationTriggerState.
  *
  * Key behaviour (issue #13 fix):
- *  - When a gym directive resolves for an agent → skillGymHoldByAgentId[agentId] = true,
- *    unconditionally (no "release" variant exists for the gym skill path).
+ *  - When a "gym" directive resolves → skillGymHoldByAgentId[agentId] = true.
+ *  - When a "release" directive resolves → skillGymHoldByAgentId[agentId] is NOT set
+ *    (the hold is cleared, mirroring the desk/github/qa release patterns).
  *  - When no gym directive resolves but a prior hold exists in next state → hold persists.
  *  - When no gym directive and no prior hold → agent has no hold entry.
  */
@@ -94,10 +95,9 @@ const makeTranscriptEntry = (params: {
 // ---------------------------------------------------------------------------
 
 describe("reconcileOfficeAnimationTriggerState – skillGym hold (issue #13)", () => {
-  it("sets skillGymHoldByAgentId to true when a gym directive exists (unconditional)", () => {
+  it("sets skillGymHoldByAgentId to true when a 'gym' directive exists", () => {
     // The agent's lastUserMessage triggers a gym-skill directive.
-    // The fix removes the incorrect `!== "release"` guard — this test confirms the
-    // hold is set for *any* gym directive without needing an extra condition.
+    // A "gym" directive should unconditionally set the hold.
     const agent = makeAgent({
       agentId: "skill",
       name: "Skill",
@@ -210,5 +210,32 @@ describe("reconcileOfficeAnimationTriggerState – skillGym hold (issue #13)", (
 
     expect(state.skillGymHoldByAgentId["skill"]).toBe(true);
     expect(state.skillGymHoldByAgentId["main"]).toBeFalsy();
+  });
+
+  it("does NOT set skillGymHoldByAgentId when the latest message has no gym-skill directive", () => {
+    // A release phrase (e.g. "leave the gym") resolves through the *manual/command* gym
+    // path (source: "manual"), not the skill path (source: "skill") that
+    // reconcileOfficeAnimationTriggerState tracks via resolveOfficeGymDirective.
+    // The skill-source resolver correctly returns null for such messages, so the hold
+    // is neither set nor preserved via the skill-directive branch.
+    //
+    // Release of the gym hold for the *manual* path is handled downstream in
+    // buildOfficeAnimationState → reduceOfficeGymHoldState, which is not under test here.
+    const agent = makeAgent({
+      agentId: "skill",
+      name: "Skill",
+      sessionKey: "agent:skill:main",
+      lastUserMessage: "Leave the gym.",
+    });
+
+    // No prior hold in state.
+    const state = reconcileOfficeAnimationTriggerState({
+      state: createOfficeAnimationTriggerState(),
+      agents: [agent],
+      nowMs: 1_000,
+    });
+
+    // With no prior hold and no skill-source gym directive, the hold must remain absent.
+    expect(state.skillGymHoldByAgentId["skill"]).toBeFalsy();
   });
 });

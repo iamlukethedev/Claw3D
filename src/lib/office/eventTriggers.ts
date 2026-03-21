@@ -1133,11 +1133,10 @@ export const reconcileOfficeAnimationTriggerState = (params: {
     });
     if (skillGymDirective) {
       skillGymDirectiveKeyByAgentId[agentId] = skillGymDirective.key;
-      // OfficeGymDirective is "gym" only — there is no "release" variant for the gym
-      // skill path (release is handled via isAgentRunning in reduceOfficeGymHoldState).
-      // The former `!== "release"` guard was an impossible comparison (TS2367) copied
-      // from the desk/github/qa patterns where "release" is a valid directive value.
-      skillGymHoldByAgentId[agentId] = true;
+      if (skillGymDirective.directive === "gym") {
+        skillGymHoldByAgentId[agentId] = true;
+      }
+      // "release" directive clears the gym hold — do not set skillGymHoldByAgentId[agentId]
     } else if (next.skillGymHoldByAgentId[agentId]) {
       skillGymHoldByAgentId[agentId] = true;
     }
