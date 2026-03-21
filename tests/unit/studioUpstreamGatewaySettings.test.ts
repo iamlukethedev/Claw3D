@@ -34,14 +34,17 @@ describe("server studio upstream gateway settings", () => {
     expect(settings.token).toBe("tok");
   });
 
-  it("keeps a configured url and fills token from openclaw.json when missing", async () => {
+  it("keeps a configured url and fills token from openclaw.json when url is local", async () => {
     tempDir = makeTempDir("studio-upstream-url-keep");
     process.env.OPENCLAW_STATE_DIR = tempDir;
 
     fs.mkdirSync(path.join(tempDir, "claw3d"), { recursive: true });
+    // Use a local URL so the fallback token-fill logic triggers.
+    // Non-local URLs intentionally skip the openclaw.json token lookup
+    // to avoid leaking local credentials to remote gateways.
     fs.writeFileSync(
       path.join(tempDir, "claw3d", "settings.json"),
-      JSON.stringify({ gateway: { url: "ws://gateway.example:18789", token: "" } }, null, 2),
+      JSON.stringify({ gateway: { url: "ws://localhost:18790", token: "" } }, null, 2),
       "utf8"
     );
     fs.writeFileSync(
@@ -52,7 +55,7 @@ describe("server studio upstream gateway settings", () => {
 
     const { loadUpstreamGatewaySettings } = await import("../../server/studio-settings");
     const settings = loadUpstreamGatewaySettings(process.env);
-    expect(settings.url).toBe("ws://gateway.example:18789");
+    expect(settings.url).toBe("ws://localhost:18790");
     expect(settings.token).toBe("tok-local");
   });
 });

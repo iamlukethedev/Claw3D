@@ -276,7 +276,7 @@ describe("useSettingsRouteController", () => {
     });
 
     await waitFor(() => {
-      expect(ctx.replace).toHaveBeenCalledWith("/agents");
+      expect(ctx.replace).toHaveBeenCalledWith("/");
     });
   });
 

@@ -68,7 +68,7 @@ describe("settingsRouteWorkflow", () => {
       })
     ).toEqual([
       { kind: "set-personality-dirty", value: false },
-      { kind: "push", href: "/agents" },
+      { kind: "push", href: "/" },
     ]);
   });
 
@@ -169,7 +169,7 @@ describe("settingsRouteWorkflow", () => {
         hasRouteAgent: false,
         currentInspectSidebar: null,
       })
-    ).toEqual([{ kind: "replace", href: "/agents" }]);
+    ).toEqual([{ kind: "replace", href: "/" }]);
   });
 
   it("plans non-route selection reconciliation", () => {
