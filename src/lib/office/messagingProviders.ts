@@ -5,26 +5,27 @@
  * service their OpenClaw workspace uses.
  *
  * ┌─────────────────┬────────────┬──────────────────────────────────────────┐
- * │ Provider        │ SMS  Call  │ Status                                   │
+ * │ Provider        │ MSG  Call  │ Status                                   │
  * ├─────────────────┼────────────┼──────────────────────────────────────────┤
  * │ twilio          │  ✅   ✅   │ Implemented — Twilio REST API            │
- * │ whatsapp        │  🔜   🔜   │ Planned — Twilio WhatsApp / Meta Cloud   │
- * │ telegram        │  🔜   —    │ Planned — Telegram Bot API               │
- * │ imessage        │  🔜   —    │ Planned — Apple Messages for Business    │
+ * │ whatsapp        │  ✅   ❌   │ Implemented — Twilio WhatsApp API        │
+ * │ telegram        │  ✅   ❌   │ Implemented — Telegram Bot API           │
+ * │ imessage        │  ❌   ❌   │ No public API — not supported            │
  * └─────────────────┴────────────┴──────────────────────────────────────────┘
- *
- * Adding a new provider
- * ─────────────────────
- * 1. Add its key to `MessagingProvider` below.
- * 2. Create `src/lib/office/providers/<name>.ts` that exports
- *    `sendSms()` and/or `makeCall()` matching the shapes here.
- * 3. Wire it into `dispatchSendSms` / `dispatchMakeCall`.
- * 4. Document required env vars in `.env.example` under the new provider block.
  *
  * Active provider selection
  * ─────────────────────────
  * Set `MESSAGING_PROVIDER` in your `.env.local` (defaults to "twilio").
  * Individual API calls may also pass an explicit `provider` field to override.
+ *
+ * Adding a new provider
+ * ─────────────────────
+ * 1. Add its key to `MessagingProvider` below.
+ * 2. Create `src/lib/office/providers/<name>.ts` that exports the
+ *    implementation matching the shapes used in this file.
+ * 3. Wire it into `dispatchSendSms` / `dispatchMakeCall`.
+ * 4. Add `getSmsProviderStatus` / `getCallProviderStatus` cases.
+ * 5. Document required env vars in `.env.example`.
  */
 
 // ── Provider types ────────────────────────────────────────────────────────────
@@ -36,7 +37,7 @@ export type MessagingProvider = "twilio" | "whatsapp" | "telegram" | "imessage";
 export type SmsCapableProvider = Extract<MessagingProvider, "twilio" | "whatsapp" | "telegram">;
 
 /** Providers that support voice calls. */
-export type CallCapableProvider = Extract<MessagingProvider, "twilio" | "whatsapp">;
+export type CallCapableProvider = Extract<MessagingProvider, "twilio">;
 
 // ── Active provider resolution ────────────────────────────────────────────────
 
@@ -48,8 +49,8 @@ export const getDefaultSmsProvider = (): SmsCapableProvider => {
 };
 
 export const getDefaultCallProvider = (): CallCapableProvider => {
-  const raw = (process.env.MESSAGING_PROVIDER ?? "twilio").trim().toLowerCase();
-  if (raw === "whatsapp") return "whatsapp";
+  // Only Twilio supports outbound calls via a public API.
+  // WhatsApp and Telegram do not expose programmatic outbound calling.
   return "twilio";
 };
 
@@ -71,7 +72,7 @@ export type MakeCallParams = {
 
 export type MessagingResult = { sid: string };
 
-// ── SMS dispatch ──────────────────────────────────────────────────────────────
+// ── SMS / message dispatch ────────────────────────────────────────────────────
 
 export async function dispatchSendSms(params: SendSmsParams): Promise<MessagingResult> {
   const provider = params.provider ?? getDefaultSmsProvider();
@@ -82,34 +83,25 @@ export async function dispatchSendSms(params: SendSmsParams): Promise<MessagingR
       return sendSms({ to: params.to, body: params.body });
     }
 
-    case "whatsapp":
+    case "whatsapp": {
       /**
-       * WhatsApp via Twilio:  https://www.twilio.com/en-us/whatsapp
-       * WhatsApp via Meta:    https://developers.facebook.com/docs/whatsapp/cloud-api
-       *
-       * Required env vars (example):
-       *   WHATSAPP_PROVIDER=twilio          # "twilio" or "meta"
-       *   TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886
-       *   META_WHATSAPP_TOKEN=...
-       *   META_WHATSAPP_PHONE_NUMBER_ID=...
+       * Sends a WhatsApp message via the Twilio WhatsApp API.
+       * Requires: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER
+       * Setup:    console.twilio.com/develop/sms/whatsapp/senders
        */
-      throw new Error(
-        "WhatsApp provider is not yet implemented. " +
-          "Contributions welcome: https://github.com/iamlukethedev/Claw3D",
-      );
+      const { sendWhatsAppMessage } = await import("./providers/whatsapp");
+      return sendWhatsAppMessage({ to: params.to, body: params.body });
+    }
 
-    case "telegram":
+    case "telegram": {
       /**
-       * Telegram Bot API:  https://core.telegram.org/bots/api#sendmessage
-       *
-       * Required env vars (example):
-       *   TELEGRAM_BOT_TOKEN=...
-       *   TELEGRAM_CHAT_ID=...   # or resolve dynamically from recipient username
+       * Sends a message via the Telegram Bot API.
+       * Requires: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+       * Setup:    message @BotFather on Telegram to create a bot.
        */
-      throw new Error(
-        "Telegram provider is not yet implemented. " +
-          "Contributions welcome: https://github.com/iamlukethedev/Claw3D",
-      );
+      const { sendTelegramMessage } = await import("./providers/telegram");
+      return sendTelegramMessage({ text: params.body });
+    }
   }
 }
 
@@ -123,38 +115,35 @@ export async function dispatchMakeCall(params: MakeCallParams): Promise<Messagin
       const { makeCall } = await import("./twilio");
       return makeCall({ to: params.to, message: params.message });
     }
-
-    case "whatsapp":
-      /**
-       * WhatsApp voice calls via Meta Cloud API (beta):
-       *   https://developers.facebook.com/docs/whatsapp/cloud-api/calling
-       *
-       * Note: iMessage does not expose a public calling API.
-       * Apple Messages for Business supports chat only.
-       */
-      throw new Error(
-        "WhatsApp call provider is not yet implemented. " +
-          "Contributions welcome: https://github.com/iamlukethedev/Claw3D",
-      );
   }
 }
 
 // ── Configuration helpers ─────────────────────────────────────────────────────
 
-export type ProviderConfigStatus = "configured" | "not_configured" | "not_implemented";
+export type ProviderConfigStatus = "configured" | "not_configured" | "not_supported";
 
 export function getSmsProviderStatus(provider: SmsCapableProvider): ProviderConfigStatus {
   switch (provider) {
     case "twilio": {
-      const configured =
+      const ok =
         Boolean(process.env.TWILIO_ACCOUNT_SID?.trim()) &&
         Boolean(process.env.TWILIO_AUTH_TOKEN?.trim()) &&
         Boolean(process.env.TWILIO_PHONE_NUMBER?.trim());
-      return configured ? "configured" : "not_configured";
+      return ok ? "configured" : "not_configured";
     }
-    case "whatsapp":
-    case "telegram":
-      return "not_implemented";
+    case "whatsapp": {
+      const ok =
+        Boolean(process.env.TWILIO_ACCOUNT_SID?.trim()) &&
+        Boolean(process.env.TWILIO_AUTH_TOKEN?.trim()) &&
+        Boolean(process.env.TWILIO_WHATSAPP_NUMBER?.trim());
+      return ok ? "configured" : "not_configured";
+    }
+    case "telegram": {
+      const ok =
+        Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim()) &&
+        Boolean(process.env.TELEGRAM_CHAT_ID?.trim());
+      return ok ? "configured" : "not_configured";
+    }
   }
 }
 
@@ -162,11 +151,9 @@ export function getCallProviderStatus(provider: CallCapableProvider): ProviderCo
   switch (provider) {
     case "twilio":
       return getSmsProviderStatus("twilio");
-    case "whatsapp":
-      return "not_implemented";
   }
 }
 
-/** Returns true when at least one SMS provider is ready. */
+/** Returns true when at least one messaging provider is ready. */
 export const isAnyMessagingConfigured = (): boolean =>
   getSmsProviderStatus(getDefaultSmsProvider()) === "configured";
