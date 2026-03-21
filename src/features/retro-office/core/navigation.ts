@@ -176,7 +176,11 @@ export function astar(
   sr = startFree.r;
   ec = endFree.c;
   er = endFree.r;
-  if (sc === ec && sr === er) return [];
+  // Same nav cell: start and end are close enough that A* has no grid edges
+  // to traverse. The destination is still reachable — return a single-waypoint
+  // path to the exact target pixel so the movement layer can make the final
+  // fine-grained adjustment instead of staying put.
+  if (sc === ec && sr === er) return [{ x: ex, y: ey }];
 
   const nodeCount = GRID_COLS * GRID_ROWS;
   const gCost = new Float32Array(nodeCount).fill(Infinity);
