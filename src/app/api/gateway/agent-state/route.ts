@@ -87,6 +87,10 @@ export async function PUT(request: Request) {
     if (!trimmedTrash) {
       return NextResponse.json({ error: "trashDir is required." }, { status: 400 });
     }
+    const SAFE_TRASH_DIR_RE = /^[a-zA-Z0-9_.~\/-]+$/;
+    if (!SAFE_TRASH_DIR_RE.test(trimmedTrash)) {
+      return NextResponse.json({ error: "trashDir contains invalid characters." }, { status: 400 });
+    }
     if (!isSafeAgentId(trimmedAgent)) {
       return NextResponse.json({ error: `Invalid agentId: ${trimmedAgent}` }, { status: 400 });
     }
