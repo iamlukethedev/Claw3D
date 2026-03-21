@@ -1100,8 +1100,8 @@ const AgentChatComposer = memo(function AgentChatComposer({
           <div
             className={`mb-2 rounded-md border px-2.5 py-1.5 font-mono text-[10px] tracking-[0.02em] ${
               voiceError
-                ? "border-red-500/30 bg-red-500/10 text-red-200"
-                : "border-amber-700/35 bg-amber-500/8 text-amber-200"
+                ? "ui-alert-danger"
+                : "border-[color:var(--warning-border,hsl(40_60%_30%))] bg-[color:var(--warning-bg,hsl(40_60%_10%))] text-[color:var(--warning-fg,hsl(40_80%_75%))]"
             }`}
             data-testid="agent-voice-status"
           >
@@ -1122,7 +1122,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
             <button
               className={`rounded-md border px-2.5 py-2 font-mono text-[11px] font-medium tracking-[0.02em] transition ${
                 voiceRecording
-                  ? "border-red-500/60 bg-red-500/12 text-red-200 hover:bg-red-500/18"
+                  ? "ui-alert-danger"
                   : "border-border/70 bg-surface-3 text-white hover:bg-surface-2 hover:text-white"
               } disabled:cursor-not-allowed disabled:border-border/30 disabled:bg-muted/20 disabled:text-muted-foreground`}
               type="button"
