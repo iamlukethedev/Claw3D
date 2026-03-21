@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
 
 import { buildMockPhoneCallScenario } from "@/lib/office/call/mock";
-import { isTwilioConfigured, isPhoneNumberLike, normalizePhoneNumber, makeCall } from "@/lib/office/twilio";
+import { isPhoneNumberLike, normalizePhoneNumber } from "@/lib/office/twilio";
+import {
+  dispatchMakeCall,
+  getDefaultCallProvider,
+  getCallProviderStatus,
+  type CallCapableProvider,
+} from "@/lib/office/messagingProviders";
 
 export const runtime = "nodejs";
 
 type PhoneCallRequestBody = {
   callee?: string;
   message?: string | null;
+  /** Optional: override the active messaging provider for this request. */
+  provider?: CallCapableProvider;
 };
 
 const MAX_CALLEE_CHARS = 120;
@@ -38,13 +46,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const twilioEnabled = isTwilioConfigured();
+    const provider = body.provider ?? getDefaultCallProvider();
+    const providerReady = getCallProviderStatus(provider) === "configured";
     const calleeIsPhone = isPhoneNumberLike(callee);
 
-    // Si Twilio est configuré, le destinataire ressemble à un numéro, et on a un message : appel réel
-    if (twilioEnabled && calleeIsPhone && message) {
+    // Provider configured + phone number + message → real call
+    if (providerReady && calleeIsPhone && message) {
       const to = normalizePhoneNumber(callee);
-      await makeCall({ to, message });
+      await dispatchMakeCall({ to, message, provider });
       const scenario = {
         phase: "ready_to_call" as const,
         callee,
@@ -58,8 +67,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ scenario }, { headers: { "Cache-Control": "no-store" } });
     }
 
-    // Si Twilio est configuré mais pas de message encore, demander le message
-    if (twilioEnabled && calleeIsPhone && !message) {
+    // Provider configured but no message yet → prompt for message
+    if (providerReady && calleeIsPhone && !message) {
       const scenario = {
         phase: "needs_message" as const,
         callee,
@@ -73,7 +82,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ scenario }, { headers: { "Cache-Control": "no-store" } });
     }
 
-    // Fallback : mode mock (Twilio non configuré ou destinataire non numérique)
+    // Fallback: mock mode (no provider configured or recipient is not a phone number)
     const scenario = buildMockPhoneCallScenario({
       callee,
       message: message || null,

@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
 
 import { buildMockTextMessageScenario } from "@/lib/office/text/mock";
-import { isTwilioConfigured, isPhoneNumberLike, normalizePhoneNumber, sendSms } from "@/lib/office/twilio";
+import { isPhoneNumberLike, normalizePhoneNumber } from "@/lib/office/twilio";
+import {
+  dispatchSendSms,
+  getDefaultSmsProvider,
+  getSmsProviderStatus,
+  type SmsCapableProvider,
+} from "@/lib/office/messagingProviders";
 
 export const runtime = "nodejs";
 
 type TextMessageRequestBody = {
   recipient?: string;
   message?: string | null;
+  /** Optional: override the active messaging provider for this request. */
+  provider?: SmsCapableProvider;
 };
 
 const MAX_RECIPIENT_CHARS = 120;
@@ -38,13 +46,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const twilioEnabled = isTwilioConfigured();
+    const provider = body.provider ?? getDefaultSmsProvider();
+    const providerReady = getSmsProviderStatus(provider) === "configured";
     const recipientIsPhone = isPhoneNumberLike(recipient);
 
-    // Si Twilio est configuré, le destinataire ressemble à un numéro, et on a un message : envoi réel
-    if (twilioEnabled && recipientIsPhone && message) {
+    // Provider configured + phone number + message → real SMS
+    if (providerReady && recipientIsPhone && message) {
       const to = normalizePhoneNumber(recipient);
-      await sendSms({ to, body: message });
+      await dispatchSendSms({ to, body: message, provider });
       const scenario = {
         phase: "ready_to_send" as const,
         recipient,
@@ -56,8 +65,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ scenario }, { headers: { "Cache-Control": "no-store" } });
     }
 
-    // Si Twilio est configuré mais pas de message encore, demander le message
-    if (twilioEnabled && recipientIsPhone && !message) {
+    // Provider configured but no message yet → prompt for message
+    if (providerReady && recipientIsPhone && !message) {
       const scenario = {
         phase: "needs_message" as const,
         recipient,
@@ -69,7 +78,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ scenario }, { headers: { "Cache-Control": "no-store" } });
     }
 
-    // Fallback : mode mock (Twilio non configuré ou destinataire non numérique)
+    // Fallback: mock mode (no provider configured or recipient is not a phone number)
     const scenario = buildMockTextMessageScenario({ recipient, message: message || null });
     return NextResponse.json({ scenario }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

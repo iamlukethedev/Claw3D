@@ -28,7 +28,7 @@ const tokens = {
     tabActive:   "border-emerald-300/22 bg-emerald-300/12 text-white",
     headerBorder:"border-emerald-400/12",
     selected:    "border-emerald-300/24 bg-emerald-300/10",
-    ctaBorder:   "border-emerald-400/25 bg-emerald-400/10 text-emerald-100 hover:border-emerald-300/40 hover:bg-emerald-400/16",
+    ctaBorder:   "border-emerald-400/40 bg-emerald-400/16 text-emerald-100 shadow-[0_0_24px_rgba(52,211,153,0.12)] hover:border-emerald-300/55 hover:bg-emerald-400/24",
     ctaSuccess:  "border-emerald-400/30 bg-emerald-400/15 text-emerald-200",
     badge:       "border-emerald-300/18 bg-emerald-300/8 text-emerald-100/85",
     label:       "text-emerald-200/65",
@@ -41,7 +41,7 @@ const tokens = {
     tabActive:   "border-violet-300/22 bg-violet-300/12 text-white",
     headerBorder:"border-violet-400/12",
     selected:    "border-violet-300/24 bg-violet-300/10",
-    ctaBorder:   "border-violet-400/25 bg-violet-400/10 text-violet-100 hover:border-violet-300/40 hover:bg-violet-400/16",
+    ctaBorder:   "border-violet-400/40 bg-violet-400/16 text-violet-100 shadow-[0_0_24px_rgba(167,139,250,0.12)] hover:border-violet-300/55 hover:bg-violet-400/24",
     ctaSuccess:  "border-emerald-400/30 bg-emerald-400/15 text-emerald-200",
     badge:       "border-violet-300/18 bg-violet-300/8 text-violet-100/85",
     label:       "text-violet-200/65",
@@ -181,7 +181,7 @@ export function BoothInputDialog(props: Props) {
       </div>
 
       {/* ── BODY ── */}
-      <div className="grid min-h-0 flex-1 grid-cols-[300px_1fr_280px]">
+      <div className="grid min-h-0 flex-1 grid-cols-[260px_1fr_360px]">
 
         {/* ── COL 1 : CONTACTS ── */}
         <div className="flex min-h-0 flex-col border-r border-white/6 bg-[#081122]/72">
@@ -313,7 +313,7 @@ export function BoothInputDialog(props: Props) {
 
           {/* CTA */}
           <button disabled={!digits.trim() || loading || success} onClick={handleSubmit}
-            className={`mt-5 flex h-13 items-center justify-center gap-3 rounded-2xl border text-[13px] font-semibold uppercase tracking-[0.22em] transition-all disabled:cursor-not-allowed disabled:opacity-30 ${
+            className={`mt-5 flex h-14 items-center justify-center gap-3 rounded-2xl border text-[13px] font-semibold uppercase tracking-[0.22em] transition-all disabled:cursor-not-allowed disabled:opacity-30 ${
               success ? tk.ctaSuccess + " border" : tk.ctaBorder + " border"
             }`}>
             {loading ? <Loader2 className="h-5 w-5 animate-spin" />
@@ -325,12 +325,12 @@ export function BoothInputDialog(props: Props) {
         </div>
 
         {/* ── COL 3 : KEYPAD ── */}
-        <div className="flex flex-col items-center justify-center border-l border-white/6 bg-[#081122]/72 px-8 py-8">
-          <div className={`mb-5 text-[11px] uppercase tracking-[0.28em] ${tk.label}`}>Keypad</div>
-          <div className="grid w-full grid-cols-3 gap-2.5">
+        <div className="flex flex-col items-center justify-center border-l border-white/6 bg-[#081122]/72 px-10 py-10">
+          <div className={`mb-6 text-[11px] uppercase tracking-[0.28em] ${tk.label}`}>Keypad</div>
+          <div className="grid w-full grid-cols-3 gap-3">
             {KEYPAD_ROWS.flat().map((key) => (
               <button key={key} onClick={() => pressKey(key)}
-                className={`flex h-16 items-center justify-center rounded-2xl border text-xl font-light transition-all active:scale-95 ${
+                className={`flex h-[72px] items-center justify-center rounded-2xl border text-xl font-light transition-all active:scale-95 ${
                   key === "⌫"
                     ? "border-white/6 bg-white/3 text-white/40 hover:border-white/12 hover:bg-white/6 hover:text-white/70"
                     : "border-white/8 bg-white/5 text-white/80 hover:border-white/18 hover:bg-white/10 hover:text-white"
