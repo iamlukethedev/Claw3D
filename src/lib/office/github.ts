@@ -213,6 +213,8 @@ const parseRemoteUrl = (remoteUrl: string): string | null => {
 };
 
 export const resolveCurrentRepoSlug = (): string | null => {
+  const override = process.env.GITHUB_CURRENT_REPO?.trim();
+  if (override) return override || null;
   try {
     const remoteUrl = runTextCommand("git", ["remote", "get-url", "origin"], "git remote get-url origin");
     return parseRemoteUrl(remoteUrl);
