@@ -31,7 +31,7 @@ export function PhoneBoothImmersiveScreen({
             <PhoneCall className="h-5 w-5 text-emerald-200" />
           </div>
           <div>
-            <div className="text-[11px] uppercase tracking-[0.28em] text-emerald-200/65">Phone Booth</div>
+            <div className="text-[11px] uppercase tracking-[0.28em] text-emerald-200/65">Phone Booth · via Twilio</div>
             <div className="text-lg font-semibold text-white">
               {isLive ? `Connected to ${scenario.callee}.` : `Calling ${scenario.callee}.`}
             </div>

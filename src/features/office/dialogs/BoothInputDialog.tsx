@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   PhoneCall, MessageSquareText, Loader2, Delete, UserPlus,
-  Clock, Users, X, Check, Phone, MessageSquare, Eye, EyeOff, ChevronLeft,
+  Clock, Users, X, Check, Phone, MessageSquare, Eye, EyeOff, ChevronLeft, AtSign,
 } from "lucide-react";
 import type { MockPhoneCallScenario } from "@/lib/office/call/types";
 import type { MockTextMessageScenario } from "@/lib/office/text/types";
@@ -18,6 +18,18 @@ type Props =
   | { kind: "sms";   onSuccess: (scenario: MockTextMessageScenario) => void; onClose: () => void };
 
 const KEYPAD_ROWS = [["1","2","3"],["4","5","6"],["7","8","9"],["*","0","⌫"]];
+
+// ── Provider config (NEXT_PUBLIC_* inlined at build time) ─────────────────────
+const ACTIVE_PROVIDER = process.env.NEXT_PUBLIC_MESSAGING_PROVIDER ?? "twilio";
+
+const PROVIDER_LABEL: Record<string, string> = {
+  twilio: "Twilio SMS", whatsapp: "WhatsApp", telegram: "Telegram", imessage: "iMessage",
+};
+
+const SMS_CTA_LABEL: Record<string, string> = {
+  twilio: "Send SMS", whatsapp: "Send via WhatsApp",
+  telegram: "Send to Telegram", imessage: "Send via iMessage",
+};
 
 // ── Design tokens per booth kind ──────────────────────────────────────────────
 const tokens = {
@@ -94,6 +106,14 @@ export function BoothInputDialog(props: Props) {
   const isPhone = kind === "phone";
   const tk = tokens[kind];
 
+  // Provider context — calls are always Twilio; SMS depends on ACTIVE_PROVIDER
+  const provider = ACTIVE_PROVIDER;
+  const isTelegramSms = !isPhone && provider === "telegram";
+  const isIMessageSms = !isPhone && provider === "imessage";
+  const showKeypad = isPhone || provider === "twilio" || provider === "whatsapp";
+  const providerLabel = PROVIDER_LABEL[provider] ?? "Twilio SMS";
+  const smsCtaLabel = SMS_CTA_LABEL[provider] ?? "Send SMS";
+
   const [digits, setDigits] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -110,6 +130,10 @@ export function BoothInputDialog(props: Props) {
   const refreshContacts = useCallback(() => setContacts(loadContacts()), []);
   const fullNumber = digits.trim();
 
+  // Telegram doesn't need a recipient (chat_id is server-side)
+  const canSubmit = isTelegramSms ? true : Boolean(fullNumber);
+  const recipientForApi = isTelegramSms ? "telegram" : fullNumber;
+
   const pressKey = (key: string) => {
     if (key === "⌫") setDigits((d) => d.slice(0, -1));
     else if (digits.length < 20) setDigits((d) => d + key);
@@ -121,18 +145,21 @@ export function BoothInputDialog(props: Props) {
     (h) => (h.name ?? "").toLowerCase().includes(search.toLowerCase()) || h.phone.includes(search));
 
   const handleSubmit = async () => {
-    if (!fullNumber) return;
+    if (!canSubmit) return;
     setLoading(true); setError(null);
     try {
       const url = isPhone ? "/api/office/call" : "/api/office/text";
       const body = isPhone
         ? { callee: fullNumber, message: message.trim() || null }
-        : { recipient: fullNumber, message: message.trim() || null };
+        : { recipient: recipientForApi, message: message.trim() || null };
       const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = (await res.json()) as { scenario?: unknown; error?: string };
       if (!res.ok || data.error) { setError(data.error ?? "Something went wrong."); return; }
-      addHistoryEntry({ kind: isPhone ? "call" : "sms", name: findContactByPhone(fullNumber)?.name ?? null, phone: fullNumber, message: message.trim() || null });
-      setHistory(loadHistory()); setSuccess(true);
+      if (!isTelegramSms) {
+        addHistoryEntry({ kind: isPhone ? "call" : "sms", name: findContactByPhone(fullNumber)?.name ?? null, phone: fullNumber, message: message.trim() || null });
+        setHistory(loadHistory());
+      }
+      setSuccess(true);
       setTimeout(() => {
         if (isPhone) (props as Extract<Props, { kind: "phone" }>).onSuccess(data.scenario as MockPhoneCallScenario);
         else (props as Extract<Props, { kind: "sms" }>).onSuccess(data.scenario as MockTextMessageScenario);
@@ -164,6 +191,11 @@ export function BoothInputDialog(props: Props) {
           <div className="text-[15px] font-semibold text-white">
             {isPhone ? "Place a call." : "Send a message."}
           </div>
+        </div>
+
+        {/* Provider badge */}
+        <div className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em] ${tk.badge}`}>
+          {isPhone ? "via Twilio" : providerLabel}
         </div>
 
         <div className="flex-1" />
@@ -280,18 +312,42 @@ export function BoothInputDialog(props: Props) {
         {/* ── COL 2 : COMPOSE ── */}
         <div className="flex flex-col px-10 py-8">
 
-          {/* Number display */}
+          {/* Recipient display */}
           <div className="mb-6">
             <div className={`text-[11px] uppercase tracking-[0.28em] ${tk.label} mb-2`}>
-              {isPhone ? "Call" : "Send to"}
+              {isPhone ? "Call" : isTelegramSms ? "Channel" : "Send to"}
             </div>
-            <div className={`rounded-2xl border ${tk.numberBorder} bg-[#081122]/72 px-6 py-5`}>
-              <div className="font-mono text-3xl font-light tracking-[0.18em] text-white">
-                {digits
-                  ? (privacyMode ? "••• ••• ••••" : digits)
-                  : <span className="text-2xl font-sans tracking-normal text-white/22">(555) 867-5309</span>}
+
+            {isTelegramSms ? (
+              /* Telegram: fixed recipient from server config */
+              <div className={`rounded-2xl border ${tk.numberBorder} bg-[#081122]/72 px-6 py-4`}>
+                <div className="text-sm text-white/70 leading-6">
+                  Message will be sent to your configured Telegram chat.
+                </div>
+                <div className="mt-1 text-[11px] uppercase tracking-[0.18em] text-white/35">
+                  Chat ID set via <span className="font-mono">TELEGRAM_CHAT_ID</span>
+                </div>
               </div>
-            </div>
+            ) : isIMessageSms ? (
+              /* iMessage: text input (phone or Apple ID email) */
+              <div className={`rounded-2xl border ${tk.numberBorder} bg-[#081122]/72 px-6 py-5`}>
+                <input
+                  value={digits}
+                  onChange={(e) => setDigits(e.target.value)}
+                  placeholder="Phone number or Apple ID email"
+                  className="w-full bg-transparent font-mono text-xl font-light tracking-[0.12em] text-white outline-none placeholder:text-[16px] placeholder:font-sans placeholder:tracking-normal placeholder:text-white/22"
+                />
+              </div>
+            ) : (
+              /* Twilio / WhatsApp: numeric display */
+              <div className={`rounded-2xl border ${tk.numberBorder} bg-[#081122]/72 px-6 py-5`}>
+                <div className="font-mono text-3xl font-light tracking-[0.18em] text-white">
+                  {digits
+                    ? (privacyMode ? "••• ••• ••••" : digits)
+                    : <span className="text-2xl font-sans tracking-normal text-white/22">(555) 867-5309</span>}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Message */}
@@ -300,7 +356,12 @@ export function BoothInputDialog(props: Props) {
               {isPhone ? "Voice message" : "Message"}
             </div>
             <textarea value={message} onChange={(e) => setMessage(e.target.value)}
-              placeholder={isPhone ? "Tell them I'll be late…" : "Hey, just checking in…"}
+              placeholder={
+                isPhone ? "Tell them I'll be late…" :
+                isTelegramSms ? "Type your Telegram message…" :
+                isIMessageSms ? "iMessage text…" :
+                "Hey, just checking in…"
+              }
               className="flex-1 w-full resize-none rounded-2xl border border-white/8 bg-[#081122]/72 px-6 py-5 text-[15px] leading-7 text-white/85 placeholder-white/22 outline-none transition focus:border-white/16 focus:bg-[#081122]/90" />
           </div>
 
@@ -312,7 +373,7 @@ export function BoothInputDialog(props: Props) {
           )}
 
           {/* CTA */}
-          <button disabled={!digits.trim() || loading || success} onClick={handleSubmit}
+          <button disabled={!canSubmit || loading || success} onClick={handleSubmit}
             className={`mt-5 flex h-14 items-center justify-center gap-3 rounded-2xl border text-[13px] font-semibold uppercase tracking-[0.22em] transition-all disabled:cursor-not-allowed disabled:opacity-30 ${
               success ? tk.ctaSuccess + " border" : tk.ctaBorder + " border"
             }`}>
@@ -320,26 +381,61 @@ export function BoothInputDialog(props: Props) {
               : success ? <Check className="h-5 w-5" />
               : isPhone ? <PhoneCall className="h-5 w-5" />
               : <MessageSquareText className="h-5 w-5" />}
-            {success ? "Done!" : isPhone ? "Call" : "Send SMS"}
+            {success ? "Done!" : isPhone ? "Call" : smsCtaLabel}
           </button>
         </div>
 
-        {/* ── COL 3 : KEYPAD ── */}
-        <div className="flex flex-col items-center justify-center border-l border-white/6 bg-[#081122]/72 px-10 py-10">
-          <div className={`mb-6 text-[11px] uppercase tracking-[0.28em] ${tk.label}`}>Keypad</div>
-          <div className="grid w-full grid-cols-3 gap-3">
-            {KEYPAD_ROWS.flat().map((key) => (
-              <button key={key} onClick={() => pressKey(key)}
-                className={`flex h-[72px] items-center justify-center rounded-2xl border text-xl font-light transition-all active:scale-95 ${
-                  key === "⌫"
-                    ? "border-white/6 bg-white/3 text-white/40 hover:border-white/12 hover:bg-white/6 hover:text-white/70"
-                    : "border-white/8 bg-white/5 text-white/80 hover:border-white/18 hover:bg-white/10 hover:text-white"
-                }`}>
-                {key === "⌫" ? <Delete className="h-5 w-5" /> : key}
-              </button>
-            ))}
+        {/* ── COL 3 : KEYPAD / INPUT HINT ── */}
+        {showKeypad ? (
+          /* Numeric keypad — Twilio, WhatsApp, or Phone booth */
+          <div className="flex flex-col items-center justify-center border-l border-white/6 bg-[#081122]/72 px-10 py-10">
+            <div className={`mb-6 text-[11px] uppercase tracking-[0.28em] ${tk.label}`}>Keypad</div>
+            <div className="grid w-full grid-cols-3 gap-3">
+              {KEYPAD_ROWS.flat().map((key) => (
+                <button key={key} onClick={() => pressKey(key)}
+                  className={`flex h-[72px] items-center justify-center rounded-2xl border text-xl font-light transition-all active:scale-95 ${
+                    key === "⌫"
+                      ? "border-white/6 bg-white/3 text-white/40 hover:border-white/12 hover:bg-white/6 hover:text-white/70"
+                      : "border-white/8 bg-white/5 text-white/80 hover:border-white/18 hover:bg-white/10 hover:text-white"
+                  }`}>
+                  {key === "⌫" ? <Delete className="h-5 w-5" /> : key}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : isIMessageSms ? (
+          /* iMessage: hint panel */
+          <div className="flex flex-col items-center justify-center border-l border-white/6 bg-[#081122]/72 px-10 py-10">
+            <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border ${tk.iconBg}`}>
+              <AtSign className={`h-6 w-6 ${tk.iconColor}`} />
+            </div>
+            <div className={`mb-3 text-[11px] uppercase tracking-[0.28em] ${tk.label}`}>iMessage</div>
+            <p className="text-center text-[13px] leading-6 text-white/50">
+              Enter a phone number or Apple ID email address in the field on the left.
+            </p>
+            <div className="mt-5 rounded-2xl border border-white/6 bg-white/4 px-4 py-3 text-center text-[11px] text-white/35 leading-5">
+              Examples:<br />
+              <span className="font-mono text-white/50">+33612345678</span><br />
+              <span className="font-mono text-white/50">you@icloud.com</span>
+            </div>
+          </div>
+        ) : (
+          /* Telegram: info panel */
+          <div className="flex flex-col items-center justify-center border-l border-white/6 bg-[#081122]/72 px-10 py-10">
+            <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border ${tk.iconBg}`}>
+              <MessageSquare className={`h-6 w-6 ${tk.iconColor}`} />
+            </div>
+            <div className={`mb-3 text-[11px] uppercase tracking-[0.28em] ${tk.label}`}>Telegram</div>
+            <p className="text-center text-[13px] leading-6 text-white/50">
+              Your message will be sent directly to the configured Telegram chat.
+            </p>
+            <div className="mt-5 rounded-2xl border border-white/6 bg-white/4 px-4 py-3 text-center text-[11px] text-white/35 leading-5">
+              The recipient is set via<br />
+              <span className="font-mono text-white/50">TELEGRAM_CHAT_ID</span><br />
+              in your server config.
+            </div>
+          </div>
+        )}
       </div>
 
       {showAddContact && (

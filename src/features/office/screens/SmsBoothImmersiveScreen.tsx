@@ -3,6 +3,12 @@
 import { CheckCheck, MessageSquareText, Send, Smartphone } from "lucide-react";
 import type { MockTextMessageScenario } from "@/lib/office/text/types";
 
+const PROVIDER_LABEL: Record<string, string> = {
+  twilio: "Twilio SMS", whatsapp: "WhatsApp", telegram: "Telegram", imessage: "iMessage",
+};
+const ACTIVE_PROVIDER_LABEL =
+  PROVIDER_LABEL[process.env.NEXT_PUBLIC_MESSAGING_PROVIDER ?? "twilio"] ?? "Twilio SMS";
+
 export type TextMessageStep =
   | "selecting_contact" | "composing" | "sending"
   | "delivered" | "reply" | "complete";
@@ -38,7 +44,7 @@ export function SmsBoothImmersiveScreen({
             <MessageSquareText className="h-5 w-5 text-violet-200" />
           </div>
           <div>
-            <div className="text-[11px] uppercase tracking-[0.28em] text-violet-200/65">SMS Booth</div>
+            <div className="text-[11px] uppercase tracking-[0.28em] text-violet-200/65">SMS Booth · {ACTIVE_PROVIDER_LABEL}</div>
             <div className="text-lg font-semibold text-white">
               {isSent ? `Message sent to ${scenario.recipient}.` : `Messaging ${scenario.recipient}.`}
             </div>
