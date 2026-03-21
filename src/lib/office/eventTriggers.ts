@@ -36,6 +36,7 @@ import {
   resolveOfficeDeskDirective,
   resolveOfficeGithubDirective,
   resolveOfficeGymDirective,
+  resolveOfficePingPongDirective,
   resolveOfficeQaDirective,
   resolveOfficeStandupDirective,
   resolveOfficeTextDirective,
@@ -101,6 +102,8 @@ export type OfficeAnimationTriggerState = {
   pendingStandupRequest: OfficeStandupTriggerRequest | null;
   phoneCallByAgentId: PhoneCallByAgentId;
   phoneCallDirectiveKeyByAgentId: StringByAgentId;
+  pingPongDirectiveKeyByAgentId: StringByAgentId;
+  pingPongHoldByAgentId: BooleanByAgentId;
   qaDirectiveKeyByAgentId: StringByAgentId;
   qaHoldByAgentId: BooleanByAgentId;
   sessionEpochSnapshot: SessionEpochSnapshot;
@@ -127,6 +130,7 @@ export type OfficeAnimationState = {
   pendingStandupRequest: OfficeStandupTriggerRequest | null;
   phoneBoothHoldByAgentId: BooleanByAgentId;
   phoneCallByAgentId: PhoneCallByAgentId;
+  pingPongHoldByAgentId: BooleanByAgentId;
   qaHoldByAgentId: BooleanByAgentId;
   smsBoothHoldByAgentId: BooleanByAgentId;
   skillGymHoldByAgentId: BooleanByAgentId;
@@ -874,6 +878,8 @@ export const createOfficeAnimationTriggerState = (): OfficeAnimationTriggerState
   pendingStandupRequest: null,
   phoneCallByAgentId: emptyObject(),
   phoneCallDirectiveKeyByAgentId: emptyObject(),
+  pingPongDirectiveKeyByAgentId: emptyObject(),
+  pingPongHoldByAgentId: emptyObject(),
   qaDirectiveKeyByAgentId: emptyObject(),
   qaHoldByAgentId: emptyObject(),
   sessionEpochSnapshot: {},
@@ -1053,6 +1059,8 @@ export const reconcileOfficeAnimationTriggerState = (params: {
   const githubDirectiveKeyByAgentId: StringByAgentId = {};
   const phoneCallByAgentId: PhoneCallByAgentId = {};
   const phoneCallDirectiveKeyByAgentId: StringByAgentId = {};
+  const pingPongHoldByAgentId: BooleanByAgentId = {};
+  const pingPongDirectiveKeyByAgentId: StringByAgentId = {};
   const qaHoldByAgentId: BooleanByAgentId = {};
   const qaDirectiveKeyByAgentId: StringByAgentId = {};
   const skillGymHoldByAgentId: BooleanByAgentId = {};
@@ -1124,6 +1132,18 @@ export const reconcileOfficeAnimationTriggerState = (params: {
       }
     } else if (next.qaHoldByAgentId[agentId]) {
       qaHoldByAgentId[agentId] = true;
+    }
+
+    const pingPongDirective = resolveLatestDirective({
+      lastUserMessage: agent.lastUserMessage,
+      transcriptEntries: agent.transcriptEntries,
+      resolver: (value) => resolveOfficePingPongDirective(value) ? "pingpong" as const : null,
+    });
+    if (pingPongDirective) {
+      pingPongDirectiveKeyByAgentId[agentId] = pingPongDirective.key;
+      pingPongHoldByAgentId[agentId] = true;
+    } else if (next.pingPongHoldByAgentId[agentId]) {
+      pingPongHoldByAgentId[agentId] = true;
     }
 
     const skillGymDirective = resolveLatestDirective({
@@ -1215,6 +1235,8 @@ export const reconcileOfficeAnimationTriggerState = (params: {
     pendingStandupRequest,
     phoneCallByAgentId,
     phoneCallDirectiveKeyByAgentId,
+    pingPongDirectiveKeyByAgentId,
+    pingPongHoldByAgentId,
     qaDirectiveKeyByAgentId,
     qaHoldByAgentId,
     sessionEpochSnapshot: buildSessionEpochSnapshot(params.agents),
@@ -1360,6 +1382,7 @@ export const buildOfficeAnimationState = (params: {
     pendingStandupRequest: params.state.pendingStandupRequest,
     phoneBoothHoldByAgentId,
     phoneCallByAgentId,
+    pingPongHoldByAgentId: params.state.pingPongHoldByAgentId,
     qaHoldByAgentId: params.state.qaHoldByAgentId,
     smsBoothHoldByAgentId,
     skillGymHoldByAgentId: params.state.skillGymHoldByAgentId,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { buildMockPhoneCallScenario } from "@/lib/office/call/mock";
+import { isTwilioConfigured, isPhoneNumberLike, normalizePhoneNumber, makeCall } from "@/lib/office/twilio";
 
 export const runtime = "nodejs";
 
@@ -37,20 +38,50 @@ export async function POST(request: Request) {
       );
     }
 
-    // TODO: Create Claw3D voice and text skill.
+    const twilioEnabled = isTwilioConfigured();
+    const calleeIsPhone = isPhoneNumberLike(callee);
+
+    // Si Twilio est configuré, le destinataire ressemble à un numéro, et on a un message : appel réel
+    if (twilioEnabled && calleeIsPhone && message) {
+      const to = normalizePhoneNumber(callee);
+      await makeCall({ to, message });
+      const scenario = {
+        phase: "ready_to_call" as const,
+        callee,
+        dialNumber: to,
+        promptText: null,
+        spokenText: message,
+        recipientReply: null,
+        statusLine: `Appel lancé vers ${callee}.`,
+        voiceAvailable: false,
+      };
+      return NextResponse.json({ scenario }, { headers: { "Cache-Control": "no-store" } });
+    }
+
+    // Si Twilio est configuré mais pas de message encore, demander le message
+    if (twilioEnabled && calleeIsPhone && !message) {
+      const scenario = {
+        phase: "needs_message" as const,
+        callee,
+        dialNumber: normalizePhoneNumber(callee),
+        promptText: `Que voulez-vous dire à ${callee} ?`,
+        spokenText: null,
+        recipientReply: null,
+        statusLine: `En attente de votre message pour ${callee}.`,
+        voiceAvailable: false,
+      };
+      return NextResponse.json({ scenario }, { headers: { "Cache-Control": "no-store" } });
+    }
+
+    // Fallback : mode mock (Twilio non configuré ou destinataire non numérique)
     const scenario = buildMockPhoneCallScenario({
       callee,
       message: message || null,
       voiceAvailable: Boolean(process.env.ELEVENLABS_API_KEY?.trim()),
     });
-
-    return NextResponse.json(
-      { scenario },
-      { headers: { "Cache-Control": "no-store" } },
-    );
+    return NextResponse.json({ scenario }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to prepare the mock phone call.";
+    const message = error instanceof Error ? error.message : "Failed to place phone call.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -40,6 +40,7 @@ import { buildMockPhoneCallScenario } from "@/lib/office/call/mock";
 import type { MockPhoneCallScenario } from "@/lib/office/call/types";
 import { buildMockTextMessageScenario } from "@/lib/office/text/mock";
 import type { MockTextMessageScenario } from "@/lib/office/text/types";
+import { BoothInputDialog } from "@/features/office/dialogs/BoothInputDialog";
 import type { OfficeDeskMonitor } from "@/lib/office/deskMonitor";
 import type { OfficeAnimationState } from "@/lib/office/eventTriggers";
 import type { StandupMeeting } from "@/lib/office/standup/types";
@@ -459,6 +460,7 @@ function useAgentTick(
   lastSeenByAgentId: Record<string, number> = {},
   deskHoldByAgentId: Record<string, boolean> = {},
   gymHoldByAgentId: Record<string, boolean> = {},
+  pingPongHoldByAgentId: Record<string, boolean> = {},
   smsBoothHoldByAgentId: Record<string, boolean> = {},
   phoneBoothHoldByAgentId: Record<string, boolean> = {},
   qaHoldByAgentId: Record<string, boolean> = {},
@@ -1918,6 +1920,7 @@ export function RetroOffice3D({
     | "githubHoldByAgentId"
     | "gymHoldByAgentId"
     | "phoneBoothHoldByAgentId"
+    | "pingPongHoldByAgentId"
     | "smsBoothHoldByAgentId"
     | "qaHoldByAgentId"
   > | null;
@@ -1982,6 +1985,8 @@ export function RetroOffice3D({
     animationState?.deskHoldByAgentId ?? deskHoldByAgentId;
   const resolvedGymHoldByAgentId =
     animationState?.gymHoldByAgentId ?? gymHoldByAgentId;
+  const resolvedPingPongHoldByAgentId =
+    animationState?.pingPongHoldByAgentId ?? {};
   const resolvedSmsBoothHoldByAgentId =
     animationState?.smsBoothHoldByAgentId ?? {};
   const resolvedPhoneBoothHoldByAgentId =
@@ -2119,6 +2124,7 @@ export function RetroOffice3D({
   const [activeTextContactIndex, setActiveTextContactIndex] = useState<number | null>(
     null,
   );
+  const [boothInputKind, setBoothInputKind] = useState<"phone" | "sms" | null>(null);
   const [manualPhoneBoothOpen, setManualPhoneBoothOpen] = useState(false);
   const [manualPhoneCallScenario, setManualPhoneCallScenario] =
     useState<MockPhoneCallScenario | null>(null);
@@ -2275,6 +2281,7 @@ export function RetroOffice3D({
     lastSeenByAgentId,
     resolvedDeskHoldByAgentId,
     resolvedGymHoldByAgentId,
+    resolvedPingPongHoldByAgentId,
     resolvedSmsBoothHoldByAgentId,
     resolvedPhoneBoothHoldByAgentId,
     resolvedQaHoldByAgentId,
@@ -3050,6 +3057,78 @@ export function RetroOffice3D({
     standupMeeting,
   ]);
 
+  // Ping-pong directive: when an agent receives a "play ping-pong" command,
+  // find a table + idle partner and start the session automatically.
+  useEffect(() => {
+    const requestingIds = Object.keys(resolvedPingPongHoldByAgentId).filter(
+      (id) => resolvedPingPongHoldByAgentId[id],
+    );
+    if (requestingIds.length === 0) return;
+
+    const furniture = furnitureRef.current ?? [];
+    const table = furniture.find((item) => item.type === "pingpong");
+    if (!table) return;
+
+    const allAgents = renderAgentsRef.current;
+    const now = Date.now();
+
+    for (const requestingId of requestingIds) {
+      const requestingAgent = allAgents.find((a) => a.id === requestingId);
+      // Skip if already playing
+      if (!requestingAgent || requestingAgent.pingPongUntil !== undefined) continue;
+
+      // Find an idle partner (not the requesting agent, not already playing)
+      const partner = allAgents.find(
+        (a) =>
+          a.id !== requestingId &&
+          a.pingPongUntil === undefined &&
+          a.status === "idle" &&
+          a.state !== "walking",
+      );
+      if (!partner) continue;
+
+      const targets = resolvePingPongTargets(table);
+      const players = [requestingAgent, partner];
+      players.forEach((agent, index) => {
+        const target = targets[index];
+        if (!target) return;
+        Object.assign(agent, {
+          targetX: target.x,
+          targetY: target.y,
+          path: planPath(agent.x, agent.y, target.x, target.y),
+          facing: target.facing,
+          state: "walking",
+          walkSpeed: Math.max(agent.walkSpeed, PING_PONG_APPROACH_SPEED),
+          pingPongUntil: now + PING_PONG_SESSION_MS,
+          pingPongTargetX: target.x,
+          pingPongTargetY: target.y,
+          pingPongFacing: target.facing,
+          pingPongPartnerId: players[1 - index]?.id,
+          pingPongTableUid: table._uid,
+          pingPongSide: index as 0 | 1,
+          pingPongPreviousWalkSpeed: agent.pingPongPreviousWalkSpeed ?? agent.walkSpeed,
+        } satisfies Partial<RenderAgent>);
+      });
+
+      setMoodByAgentId((prev) => {
+        const next = { ...prev };
+        for (const agent of players) {
+          next[agent.id] = { emoji: "🏓", ts: now };
+        }
+        return next;
+      });
+      window.setTimeout(() => {
+        setMoodByAgentId((prev) => {
+          const next = { ...prev };
+          for (const agent of players) {
+            if (next[agent.id]?.emoji === "🏓") delete next[agent.id];
+          }
+          return next;
+        });
+      }, 2500);
+    }
+  }, [resolvedPingPongHoldByAgentId, furnitureRef]);
+
   useEffect(() => {
     const resetTimer = window.setTimeout(() => {
       setSmsBoothImmersiveReady(false);
@@ -3811,15 +3890,7 @@ export function RetroOffice3D({
         setActiveGithubTerminalUid(null);
         setActiveQaTerminalUid(null);
         onMonitorSelect?.(null);
-        setSmsBoothCommandArrived(true);
-        setSmsBoothDoorOpen(true);
-        setManualTextMessageScenario(
-          buildMockTextMessageScenario({
-            recipient: "Joseph",
-            message: "I will be late for the soccer game.",
-          }),
-        );
-        setManualSmsBoothOpen(true);
+        setBoothInputKind("sms");
         return;
       }
       if (item.type === "phone_booth") {
@@ -3828,19 +3899,7 @@ export function RetroOffice3D({
         setActiveGithubTerminalUid(null);
         setActiveQaTerminalUid(null);
         onMonitorSelect?.(null);
-        setPhoneBoothCommandArrived(true);
-        setPhoneBoothDoorOpen(true);
-        setManualPhoneCallScenario(
-          buildMockPhoneCallScenario({
-            callee: "my contact",
-            message: "This is a demo call from the OpenClaw phone booth.",
-            voiceAvailable:
-              voiceRepliesLoaded &&
-              Boolean(voiceRepliesVoiceId) &&
-              voiceRepliesEnabled,
-          }),
-        );
-        setManualPhoneBoothOpen(true);
+        setBoothInputKind("phone");
         return;
       }
       if (item.type === "server_terminal") {
@@ -5677,6 +5736,32 @@ export function RetroOffice3D({
             </button>
           </div>
         </div>
+      ) : null}
+
+      {boothInputKind === "sms" ? (
+        <BoothInputDialog
+          kind="sms"
+          onClose={() => setBoothInputKind(null)}
+          onSuccess={(scenario) => {
+            setBoothInputKind(null);
+            setSmsBoothCommandArrived(true);
+            setSmsBoothDoorOpen(true);
+            setManualTextMessageScenario(scenario);
+            setManualSmsBoothOpen(true);
+          }}
+        />
+      ) : boothInputKind === "phone" ? (
+        <BoothInputDialog
+          kind="phone"
+          onClose={() => setBoothInputKind(null)}
+          onSuccess={(scenario) => {
+            setBoothInputKind(null);
+            setPhoneBoothCommandArrived(true);
+            setPhoneBoothDoorOpen(true);
+            setManualPhoneCallScenario(scenario);
+            setManualPhoneBoothOpen(true);
+          }}
+        />
       ) : null}
 
       {smsBoothImmersive && effectiveTextMessageScenario && effectiveSmsBoothAgentId ? (
