@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { astar, buildNavGrid } from "@/features/retro-office/core/navigation";
-import type { FurnitureItem } from "@/features/retro-office/core/types";
+import { astar } from "@/features/retro-office/core/navigation";
 
 // Grid constants (must match navigation.ts)
 const GRID_CELL = 25;
