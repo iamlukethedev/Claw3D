@@ -20,6 +20,7 @@
     "@noble/ed25519": "^3.0.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "@solana/web3.js": "^1.98.4",
     "@vercel/otel": "^2.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

@@ -1,5 +1,6 @@
 import {
   ATM_MIGRATION_KEY,
+  CRYPTO_ROOM_MIGRATION_KEY,
   GYM_ROOM_MIGRATION_KEY,
   PHONE_BOOTH_MIGRATION_KEY,
   QA_LAB_MIGRATION_KEY,
@@ -85,4 +86,11 @@ export const hasSmsBoothMigrationApplied = () =>
 
 export const markSmsBoothMigrationApplied = () => {
   markStorageFlag(SMS_BOOTH_MIGRATION_KEY);
+};
+
+export const hasCryptoRoomMigrationApplied = () =>
+  hasStorageFlag(CRYPTO_ROOM_MIGRATION_KEY);
+
+export const markCryptoRoomMigrationApplied = () => {
+  markStorageFlag(CRYPTO_ROOM_MIGRATION_KEY);
 };
