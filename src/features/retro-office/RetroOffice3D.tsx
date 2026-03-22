@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import {
+  Component,
   Suspense,
   useCallback,
   useEffect,
@@ -134,6 +135,7 @@ import type { NavGrid } from "@/features/retro-office/core/navigation";
 import { AgentModel as AgentObjectModel } from "@/features/retro-office/objects/agents";
 import {
   FurnitureModel as GenericFurnitureModel,
+  FurniturePreloader,
   InstancedFurnitureItems as InstancedFurnitureItemsModel,
   PlacementGhost as FurniturePlacementGhost,
 } from "@/features/retro-office/objects/furniture";
@@ -164,6 +166,7 @@ import {
   WeightBenchModel as InteractiveWeightBenchModel,
   YogaMatModel as InteractiveYogaMatModel,
 } from "@/features/retro-office/objects/machines";
+import { Jukebox } from "@/features/retro-office/objects/Jukebox";
 import {
   ClockModel as PrimitiveClockModel,
   DoorModel as PrimitiveDoorModel,
@@ -206,6 +209,23 @@ type DragState =
   | { kind: "idle" }
   | { kind: "moving"; uid: string }
   | { kind: "placing"; itemType: string };
+
+class SceneErrorBoundary extends Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; fallback: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) return this.props.fallback;
+    return this.props.children;
+  }
+}
 
 const SMS_CONTACT_SEED_NAMES = [
   "Avery",
@@ -1909,6 +1929,7 @@ export function RetroOffice3D({
   onTextMessageComplete,
   onQaLabDismiss,
   onOpenGithubSkillSetup,
+  onJukeboxInteract,
 }: {
   agents: OfficeAgent[];
   animationState?: Pick<
@@ -1976,6 +1997,7 @@ export function RetroOffice3D({
   onTextMessageComplete?: (agentId: string) => void;
   onQaLabDismiss?: () => void;
   onOpenGithubSkillSetup?: () => void;
+  onJukeboxInteract?: () => void;
 }) {
   const resolvedCleaningCues = animationState?.cleaningCues ?? cleaningCues;
   const resolvedDeskHoldByAgentId =
@@ -2089,8 +2111,15 @@ export function RetroOffice3D({
   // E3 Idea 3: spotlight.
   const [spotlightAgentId, setSpotlightAgentId] = useState<string | null>(null);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const orbitRef = useRef<any>(null);
+  const orbitRef = useRef<import("three-stdlib").OrbitControls>(null);
+  const [sceneReady, setSceneReady] = useState(false);
+
+  // Fallback: if WebGL doesn't initialize within 8s, assume failure and show UI anyway
+  useEffect(() => {
+    const timer = setTimeout(() => setSceneReady(true), 8000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Follow cam: which agent to trail with a third-person perspective camera.
   const [followAgentId, setFollowAgentId] = useState<string | null>(null);
   const followAgentIdRef = useRef<string | null>(null);
@@ -4376,20 +4405,39 @@ export function RetroOffice3D({
           5. Floor/walls render immediately (no Suspense). Only GLB models are suspended.
         */}
         {!immersiveOverlayActive ? (
-          <Canvas
-            orthographic
-            dpr={[0.85, 1.5]}
-            camera={{ position: CAM_POS, zoom: 55, near: 0.1, far: 100 }}
-            shadows={{ type: THREE.PCFShadowMap }}
-            gl={{ antialias: true, powerPreference: "high-performance" }}
-            style={{ width: "100%", height: "100%" }}
-            onPointerUp={() => {
-              if (drag.kind === "moving") setDrag({ kind: "idle" });
-            }}
+          <SceneErrorBoundary
+            fallback={
+              <div className="absolute inset-0 flex items-center justify-center bg-red-900 text-white p-8">
+                <div>
+                  <p className="text-xl font-bold mb-2">3D Scene failed to load</p>
+                  <p className="text-sm opacity-80">Please refresh the page to try again.</p>
+                </div>
+              </div>
+            }
           >
+            {!sceneReady && (
+              <div className="absolute inset-0 flex items-center justify-center bg-[#1a1008] z-30">
+                <div className="text-white text-lg">Loading 3D Office...</div>
+              </div>
+            )}
+            <Canvas
+              orthographic
+              dpr={[0.85, 1.5]}
+              camera={{ position: CAM_POS, zoom: 55, near: 0.1, far: 100 }}
+              shadows={{ type: THREE.PCFShadowMap }}
+              gl={{ antialias: true, powerPreference: "high-performance" }}
+              style={{ width: "100%", height: "100%" }}
+              onPointerUp={() => {
+                if (drag.kind === "moving") setDrag({ kind: "idle" });
+              }}
+              onCreated={() => setSceneReady(true)}
+            >
           {/* Ensure camera looks at origin after mount. */}
           <CameraRig />
           <AdaptiveDprController />
+
+          {/* Preload furniture GLB models. */}
+          <FurniturePreloader />
 
           {/* Orbit / pan / zoom controls — disabled while follow cam is active or while editing furniture. */}
           <OrbitControls
@@ -4896,6 +4944,9 @@ export function RetroOffice3D({
 
           <ScenePingPongBall agentsRef={renderAgentsRef} />
 
+          {/* Spotify Jukebox - placed in the lounge area */}
+          <Jukebox position={[5, 0, -3]} onInteract={onJukeboxInteract} />
+
           {/* Idea 7: Desk nameplates — small labels showing assigned agent above each desk. */}
           <DeskNameplateOverlay
             deskLocations={deskLocations}
@@ -4975,6 +5026,7 @@ export function RetroOffice3D({
             onClick={handleFloorClick}
           />
           </Canvas>
+          </SceneErrorBoundary>
         ) : null}
       </div>
 

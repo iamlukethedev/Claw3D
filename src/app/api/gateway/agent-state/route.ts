@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { restoreAgentStateLocally, trashAgentStateLocally } from "@/lib/agent-state/local";
-import { isLocalGatewayUrl } from "@/lib/gateway/local-gateway";
+import { isLocalGatewayUrlForServer } from "@/lib/gateway/local-gateway-server";
 import {
   resolveConfiguredSshTarget,
   resolveGatewaySshTargetFromGatewayUrl,
@@ -30,7 +30,7 @@ const resolveAgentStateSshTarget = (): string | null => {
   if (configured) return configured;
   const settings = loadStudioSettings();
   const gatewayUrl = settings.gateway?.url ?? "";
-  if (isLocalGatewayUrl(gatewayUrl)) return null;
+  if (isLocalGatewayUrlForServer(gatewayUrl)) return null;
   return resolveGatewaySshTargetFromGatewayUrl(gatewayUrl, process.env);
 };
 

@@ -10,11 +10,6 @@ const SCREENSHOT_ONLY_HOSTS = [
   /(^|\.)tiktok\.com$/i,
 ];
 
-const normalizeLoopbackHostname = (hostname: string) => {
-  const normalized = hostname.trim().toLowerCase();
-  return normalized === "0.0.0.0" ? "127.0.0.1" : hostname;
-};
-
 export const shouldPreferBrowserScreenshot = (value: string | null | undefined): boolean => {
   const trimmed = value?.trim();
   if (!trimmed) return false;
@@ -24,6 +19,11 @@ export const shouldPreferBrowserScreenshot = (value: string | null | undefined):
   } catch {
     return false;
   }
+};
+
+const normalizeLoopbackHostname = (hostname: string) => {
+  const normalized = hostname.trim().toLowerCase();
+  return normalized === "0.0.0.0" ? "127.0.0.1" : hostname;
 };
 
 export const resolveBrowserControlBaseUrl = (gatewayUrl: string | null | undefined): string | null => {

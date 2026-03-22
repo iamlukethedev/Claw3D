@@ -16,12 +16,18 @@ import {
 const SETTINGS_DIRNAME = "claw3d";
 const SETTINGS_FILENAME = "settings.json";
 const OPENCLAW_CONFIG_FILENAME = "openclaw.json";
+const WSL_GATEWAY_HOST_ENV = "OPENCLAW_GATEWAY_HOST";
 
 export const resolveStudioSettingsPath = () =>
   path.join(resolveStateDir(), SETTINGS_DIRNAME, SETTINGS_FILENAME);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object");
+
+const resolveConfiguredGatewayHost = (): string => {
+  const override = process.env[WSL_GATEWAY_HOST_ENV]?.trim();
+  return override || "localhost";
+};
 
 const readOpenclawGatewayDefaults = (): { url: string; token: string } | null => {
   try {
@@ -36,7 +42,7 @@ const readOpenclawGatewayDefaults = (): { url: string; token: string } | null =>
     const token = typeof auth?.token === "string" ? auth.token.trim() : "";
     const port = typeof gateway.port === "number" && Number.isFinite(gateway.port) ? gateway.port : null;
     if (!token) return null;
-    const url = port ? `ws://localhost:${port}` : "";
+    const url = port ? `ws://${resolveConfiguredGatewayHost()}:${port}` : "";
     if (!url) return null;
     return { url, token };
   } catch {
@@ -64,7 +70,7 @@ export const loadStudioSettings = (): StudioSettings => {
       return {
         ...settings,
         gateway: settings.gateway?.url?.trim()
-          ? { url: settings.gateway.url.trim(), token: gateway.token }
+          ? { url: settings.gateway.url, token: gateway.token }
           : gateway,
       };
     }

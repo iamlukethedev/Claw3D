@@ -19,4 +19,3 @@ export const isLocalGatewayUrl = (gatewayUrl: string): boolean => {
     normalized === "0.0.0.0"
   );
 };
-

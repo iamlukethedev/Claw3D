@@ -4,6 +4,7 @@ import {
   normalizeBrowserPreviewUrl,
   resolveBrowserControlBaseUrl,
 } from "@/lib/office/browserPreview";
+import { resolveBrowserControlBaseUrlForServer } from "@/lib/gateway/local-gateway-server";
 import { validateBrowserPreviewTarget } from "@/lib/security/urlSafety";
 import { loadStudioSettings } from "@/lib/studio/settings-store";
 
@@ -147,7 +148,8 @@ export async function GET(request: Request) {
 
     const settings = loadStudioSettings();
     const gatewayUrl = settings.gateway?.url?.trim() ?? "";
-    const controlBaseUrl = resolveBrowserControlBaseUrl(gatewayUrl);
+    const controlBaseUrl =
+      resolveBrowserControlBaseUrlForServer(gatewayUrl) ?? resolveBrowserControlBaseUrl(gatewayUrl);
     if (!controlBaseUrl) {
       return NextResponse.json(
         { error: "Browser screenshot preview only works when Studio is connected to a local gateway." },
@@ -189,6 +191,6 @@ export async function GET(request: Request) {
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to build browser preview";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

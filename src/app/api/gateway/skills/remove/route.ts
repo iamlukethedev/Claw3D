@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { isLocalGatewayUrl } from "@/lib/gateway/local-gateway";
+import { isLocalGatewayUrlForServer } from "@/lib/gateway/local-gateway-server";
 import { removeSkillLocally } from "@/lib/skills/remove-local";
 import type { RemovableSkillSource, SkillRemoveRequest } from "@/lib/skills/types";
 import {
@@ -33,7 +33,7 @@ const resolveSkillRemovalSshTarget = (): string | null => {
   if (configured) return configured;
   const settings = loadStudioSettings();
   const gatewayUrl = settings.gateway?.url ?? "";
-  if (isLocalGatewayUrl(gatewayUrl)) return null;
+  if (isLocalGatewayUrlForServer(gatewayUrl)) return null;
   return resolveGatewaySshTargetFromGatewayUrl(gatewayUrl, process.env);
 };
 

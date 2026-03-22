@@ -14,6 +14,7 @@ export type StudioGatewaySettings = {
 
 export type StudioGatewaySettingsPublic = {
   url: string;
+  token: string;
   tokenConfigured: boolean;
 };
 
@@ -586,6 +587,7 @@ export const sanitizeStudioGatewaySettings = (
   if (!value) return null;
   return {
     url: value.url,
+    token: value.token,
     tokenConfigured: value.token.length > 0,
   };
 };
