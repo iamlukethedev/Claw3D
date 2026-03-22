@@ -1,5 +1,7 @@
 const { WebSocket, WebSocketServer } = require("ws");
 
+const { buildServerDeviceAuth } = require("./studio-device");
+
 const buildErrorResponse = (id, code, message) => {
   return {
     type: "res",
@@ -79,6 +81,19 @@ const hasCompleteDeviceAuth = (params) => {
   );
 };
 
+// Extract client metadata from connect frame params for device auth signing.
+const resolveClientMeta = (params) => {
+  const client = params && isObject(params) && isObject(params.client) ? params.client : {};
+  return {
+    clientId: typeof client.id === "string" ? client.id : "openclaw-control-ui",
+    clientMode: typeof client.mode === "string" ? client.mode : "webchat",
+    role: typeof params?.role === "string" ? params.role : "operator",
+    scopes: Array.isArray(params?.scopes)
+      ? params.scopes.filter((s) => typeof s === "string")
+      : ["operator.read", "operator.write", "operator.admin", "operator.approvals", "operator.pairing"],
+  };
+};
+
 function createGatewayProxy(options) {
   const {
     loadUpstreamSettings,
@@ -105,6 +120,8 @@ function createGatewayProxy(options) {
     let pendingConnectFrame = null;
     let pendingUpstreamSetupError = null;
     let closed = false;
+    // Nonce received from the gateway's connect.challenge event.
+    let challengeNonce = null;
 
     const closeBoth = (code, reason) => {
       if (closed) return;
@@ -130,14 +147,18 @@ function createGatewayProxy(options) {
       closeBoth(1011, "connect failed");
     };
 
-    const forwardConnectFrame = (frame) => {
-      const browserHasAuth =
+    // Forward the connect frame to the upstream gateway.
+    // If the browser did not include device auth, add server-side Ed25519-signed
+    // device auth so the gateway's control-ui-insecure-auth check passes.
+    const forwardConnectFrame = async (frame) => {
+      const browserHasDeviceAuth = hasCompleteDeviceAuth(frame.params);
+      const browserHasCredential =
         hasNonEmptyToken(frame.params) ||
         hasNonEmptyPassword(frame.params) ||
         hasNonEmptyDeviceToken(frame.params) ||
-        hasCompleteDeviceAuth(frame.params);
+        browserHasDeviceAuth;
 
-      if (!upstreamToken && !browserHasAuth) {
+      if (!upstreamToken && !browserHasCredential) {
         sendConnectError(
           "studio.gateway_token_missing",
           "Upstream gateway token is not configured on the Studio host."
@@ -145,13 +166,46 @@ function createGatewayProxy(options) {
         return;
       }
 
-      const connectFrame = browserHasAuth
-        ? frame
-        : {
-            ...frame,
-            params: injectAuthToken(frame.params, upstreamToken),
-          };
-      upstreamWs.send(JSON.stringify(connectFrame));
+      if (browserHasDeviceAuth) {
+        // Browser already signed the challenge — forward as-is.
+        upstreamWs.send(JSON.stringify(frame));
+        return;
+      }
+
+      // Browser lacks device auth (disableDeviceAuth=true or non-secure context).
+      // Build params with the upstream token injected, then add server-side device auth.
+      try {
+        const params = browserHasCredential
+          ? frame.params
+          : injectAuthToken(frame.params, upstreamToken);
+
+        const effectiveToken = hasNonEmptyToken(params) ? params.auth?.token : upstreamToken;
+        const { clientId, clientMode, role, scopes } = resolveClientMeta(params);
+
+        const deviceAuth = await buildServerDeviceAuth({
+          nonce: challengeNonce ?? undefined,
+          token: effectiveToken,
+          clientId,
+          clientMode,
+          role,
+          scopes,
+        });
+
+        const connectFrame = {
+          ...frame,
+          params: {
+            ...params,
+            device: deviceAuth,
+          },
+        };
+        upstreamWs.send(JSON.stringify(connectFrame));
+      } catch (err) {
+        logError("Failed to build server-side device auth.", err);
+        sendConnectError(
+          "studio.device_auth_failed",
+          "Studio proxy failed to sign gateway connect request."
+        );
+      }
     };
 
     const maybeForwardPendingConnect = () => {
@@ -160,7 +214,7 @@ function createGatewayProxy(options) {
       }
       const frame = pendingConnectFrame;
       pendingConnectFrame = null;
-      forwardConnectFrame(frame);
+      void forwardConnectFrame(frame);
     };
 
     const startUpstream = async () => {
@@ -204,15 +258,48 @@ function createGatewayProxy(options) {
       });
 
       upstreamWs.on("message", (upRaw) => {
-        const upParsed = safeJsonParse(String(upRaw ?? ""));
+        const upStr = String(upRaw ?? "");
+        const upParsed = safeJsonParse(upStr);
+
+        // Track connect response id so we know when the handshake completes.
         if (upParsed && isObject(upParsed) && upParsed.type === "res") {
           const resId = typeof upParsed.id === "string" ? upParsed.id : "";
           if (resId && connectRequestId && resId === connectRequestId) {
             connectResponseSent = true;
           }
         }
+
+        // Intercept connect.challenge to capture the nonce for server-side signing.
+        if (
+          upParsed &&
+          isObject(upParsed) &&
+          upParsed.type === "event" &&
+          upParsed.event === "connect.challenge"
+        ) {
+          const payload = upParsed.payload;
+          const nonce =
+            payload && isObject(payload) && typeof payload.nonce === "string"
+              ? payload.nonce
+              : null;
+          if (nonce) {
+            challengeNonce = nonce;
+          }
+          // Forward the challenge to the browser as usual.
+          if (browserWs.readyState === WebSocket.OPEN) {
+            browserWs.send(upStr);
+          }
+          // If the connect frame was already queued (arrived before challenge), re-forward
+          // it now that we have the nonce.
+          if (pendingConnectFrame && upstreamReady && upstreamWs?.readyState === WebSocket.OPEN) {
+            const frame = pendingConnectFrame;
+            pendingConnectFrame = null;
+            void forwardConnectFrame(frame);
+          }
+          return;
+        }
+
         if (browserWs.readyState === WebSocket.OPEN) {
-          browserWs.send(String(upRaw ?? ""));
+          browserWs.send(upStr);
         }
       });
 
@@ -277,7 +364,7 @@ function createGatewayProxy(options) {
 
       if (parsed.type === "req" && parsed.method === "connect" && !connectResponseSent) {
         pendingConnectFrame = null;
-        forwardConnectFrame(parsed);
+        void forwardConnectFrame(parsed);
         return;
       }
 
