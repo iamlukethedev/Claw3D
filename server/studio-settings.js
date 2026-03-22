@@ -59,6 +59,7 @@ const readJsonFile = (filePath) => {
 const DEFAULT_GATEWAY_URL = "ws://localhost:18789";
 const OPENCLAW_CONFIG_FILENAME = "openclaw.json";
 const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1", "0.0.0.0"]);
+const WSL_GATEWAY_HOST_ENV = "OPENCLAW_GATEWAY_HOST";
 
 const isRecord = (value) => Boolean(value && typeof value === "object");
 
@@ -70,6 +71,35 @@ const isLocalGatewayUrl = (value) => {
     return LOOPBACK_HOSTNAMES.has(parsed.hostname.toLowerCase());
   } catch {
     return false;
+  }
+};
+
+const resolveConfiguredGatewayHost = (env = process.env) => {
+  const override = env[WSL_GATEWAY_HOST_ENV]?.trim();
+  return override || "localhost";
+};
+
+const rewriteLoopbackGatewayUrl = (value, env = process.env) => {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (!trimmed) return trimmed;
+  if (!isLocalGatewayUrl(trimmed)) return trimmed;
+
+  try {
+    const parsed = new URL(trimmed);
+    const hadExplicitTrailingSlash = trimmed.endsWith("/");
+    parsed.hostname = resolveConfiguredGatewayHost(env);
+    const next = parsed.toString();
+    if (
+      parsed.pathname === "/" &&
+      !hadExplicitTrailingSlash &&
+      !parsed.search &&
+      !parsed.hash
+    ) {
+      return next.endsWith("/") ? next.slice(0, -1) : next;
+    }
+    return next;
+  } catch {
+    return trimmed;
   }
 };
 
@@ -86,7 +116,7 @@ const readOpenclawGatewayDefaults = (env = process.env) => {
     const port =
       typeof gateway.port === "number" && Number.isFinite(gateway.port) ? gateway.port : null;
     if (!token) return null;
-    const url = port ? `ws://localhost:${port}` : "";
+    const url = port ? `ws://${resolveConfiguredGatewayHost(env)}:${port}` : "";
     if (!url) return null;
     return { url, token };
   } catch {
@@ -100,18 +130,18 @@ const loadUpstreamGatewaySettings = (env = process.env) => {
   const gateway = parsed && typeof parsed === "object" ? parsed.gateway : null;
   const url = typeof gateway?.url === "string" ? gateway.url.trim() : "";
   const token = typeof gateway?.token === "string" ? gateway.token.trim() : "";
-  if (!token && (!url || isLocalGatewayUrl(url))) {
+  if (!token) {
     const defaults = readOpenclawGatewayDefaults(env);
     if (defaults) {
       return {
-        url: url || defaults.url,
+        url: rewriteLoopbackGatewayUrl(url || defaults.url, env),
         token: defaults.token,
         settingsPath,
       };
     }
   }
   return {
-    url: url || DEFAULT_GATEWAY_URL,
+    url: rewriteLoopbackGatewayUrl(url || DEFAULT_GATEWAY_URL, env),
     token,
     settingsPath,
   };

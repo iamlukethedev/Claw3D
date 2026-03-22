@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { isLocalGatewayUrl } from "@/lib/gateway/local-gateway";
+import { isLocalGatewayUrlForServer } from "@/lib/gateway/local-gateway-server";
 import {
   resolveConfiguredSshTarget,
   resolveGatewaySshTargetFromGatewayUrl,
@@ -151,7 +151,7 @@ PY
 const resolveSshTarget = (): string | null => {
   const settings = loadStudioSettings();
   const gatewayUrl = settings.gateway?.url ?? "";
-  if (isLocalGatewayUrl(gatewayUrl)) return null;
+  if (isLocalGatewayUrlForServer(gatewayUrl)) return null;
   const configured = resolveConfiguredSshTarget(process.env);
   if (configured) return configured;
   return resolveGatewaySshTargetFromGatewayUrl(gatewayUrl, process.env);

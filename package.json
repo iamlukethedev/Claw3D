@@ -31,9 +31,11 @@
     "react-markdown": "^10.1.0",
     "react-mentions-ts": "^5.4.7",
     "remark-gfm": "^4.0.1",
+    "spotify-web-api-node": "^5.0.2",
     "tailwind-merge": "^3.4.0",
     "three": "^0.183.2",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.0",

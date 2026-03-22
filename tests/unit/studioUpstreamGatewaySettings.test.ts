@@ -8,10 +8,12 @@ const makeTempDir = (name: string) => fs.mkdtempSync(path.join(os.tmpdir(), `${n
 
 describe("server studio upstream gateway settings", () => {
   const priorStateDir = process.env.OPENCLAW_STATE_DIR;
+  const priorGatewayHost = process.env.OPENCLAW_GATEWAY_HOST;
   let tempDir: string | null = null;
 
   afterEach(() => {
     process.env.OPENCLAW_STATE_DIR = priorStateDir;
+    process.env.OPENCLAW_GATEWAY_HOST = priorGatewayHost;
     if (tempDir) {
       fs.rmSync(tempDir, { recursive: true, force: true });
       tempDir = null;
@@ -29,7 +31,12 @@ describe("server studio upstream gateway settings", () => {
     );
 
     const { loadUpstreamGatewaySettings } = await import("../../server/studio-settings");
-    const settings = loadUpstreamGatewaySettings(process.env);
+    const settings = loadUpstreamGatewaySettings({
+      OPENCLAW_STATE_DIR: tempDir,
+      OPENCLAW_GATEWAY_HOST: "",
+      WSL_DISTRO_NAME: "",
+      WSL_INTEROP: "",
+    } as unknown as NodeJS.ProcessEnv);
     expect(settings.url).toBe("ws://localhost:18790");
     expect(settings.token).toBe("tok");
   });
@@ -51,8 +58,31 @@ describe("server studio upstream gateway settings", () => {
     );
 
     const { loadUpstreamGatewaySettings } = await import("../../server/studio-settings");
-    const settings = loadUpstreamGatewaySettings(process.env);
+    const settings = loadUpstreamGatewaySettings({
+      OPENCLAW_STATE_DIR: tempDir,
+      OPENCLAW_GATEWAY_HOST: "",
+      WSL_DISTRO_NAME: "",
+      WSL_INTEROP: "",
+    } as unknown as NodeJS.ProcessEnv);
     expect(settings.url).toBe("ws://gateway.example:18789");
     expect(settings.token).toBe("tok-local");
+  });
+
+  it("rewrites loopback gateway urls to the configured host", async () => {
+    tempDir = makeTempDir("studio-upstream-loopback-host");
+    process.env.OPENCLAW_STATE_DIR = tempDir;
+    process.env.OPENCLAW_GATEWAY_HOST = "172.20.48.1";
+
+    fs.mkdirSync(path.join(tempDir, "claw3d"), { recursive: true });
+    fs.writeFileSync(
+      path.join(tempDir, "claw3d", "settings.json"),
+      JSON.stringify({ gateway: { url: "ws://localhost:18789", token: "tok" } }, null, 2),
+      "utf8"
+    );
+
+    const { loadUpstreamGatewaySettings } = await import("../../server/studio-settings");
+    const settings = loadUpstreamGatewaySettings(process.env);
+    expect(settings.url).toBe("ws://172.20.48.1:18789");
+    expect(settings.token).toBe("tok");
   });
 });

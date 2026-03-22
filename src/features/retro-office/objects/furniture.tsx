@@ -402,4 +402,10 @@ export function PlacementGhost({
   );
 }
 
-[...new Set(Object.values(FURNITURE_GLB))].forEach((path) => useGLTF.preload(path));
+// Preloads all furniture GLB models. Must be called inside a React component.
+export function FurniturePreloader() {
+  useEffect(() => {
+    [...new Set(Object.values(FURNITURE_GLB))].forEach((path) => useGLTF.preload(path));
+  }, []);
+  return null;
+}

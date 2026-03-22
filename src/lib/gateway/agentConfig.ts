@@ -1,4 +1,5 @@
-import { GatewayResponseError, type GatewayClient } from "@/lib/gateway/GatewayClient";
+import { GatewayResponseError } from "@/lib/gateway/errors";
+import type { GatewayClient } from "@/lib/gateway/GatewayClient";
 
 export type AgentHeartbeatActiveHours = {
   start: string;

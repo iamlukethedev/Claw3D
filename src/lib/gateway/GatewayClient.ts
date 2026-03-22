@@ -16,7 +16,6 @@ import type {
   StudioSettingsLoadOptions,
   StudioSettingsResponse,
 } from "@/lib/studio/coordinator";
-import { resolveStudioProxyGatewayUrl } from "@/lib/gateway/proxy-url";
 import { ensureGatewayReloadModeHotForLocalStudio } from "@/lib/gateway/gatewayReloadMode";
 import { GatewayResponseError } from "@/lib/gateway/errors";
 
@@ -315,7 +314,7 @@ export const isGatewayDisconnectLikeError = (err: unknown): boolean => {
     return true;
   }
 
-  const match = msg.match(/gateway closed \\((\\d+)\\)/);
+  const match = msg.match(/gateway closed \((\d+)\)/);
   if (!match) return false;
   const code = Number(match[1]);
   return Number.isFinite(code) && code === 1012;
@@ -611,7 +610,7 @@ export const useGatewayConnection = (
     try {
       await settingsCoordinator.flushPending();
       await client.connect({
-        gatewayUrl: resolveStudioProxyGatewayUrl(),
+        gatewayUrl,
         token,
         authScopeKey: gatewayUrl,
         clientName: "openclaw-control-ui",

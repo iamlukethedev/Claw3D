@@ -10,10 +10,16 @@ const makeTempDir = (name: string) => fs.mkdtempSync(path.join(os.tmpdir(), `${n
 
 describe("studio settings route", () => {
   const priorStateDir = process.env.OPENCLAW_STATE_DIR;
+  const priorGatewayHost = process.env.OPENCLAW_GATEWAY_HOST;
+  const priorWslDistroName = process.env.WSL_DISTRO_NAME;
+  const priorWslInterop = process.env.WSL_INTEROP;
   let tempDir: string | null = null;
 
   afterEach(() => {
     process.env.OPENCLAW_STATE_DIR = priorStateDir;
+    process.env.OPENCLAW_GATEWAY_HOST = priorGatewayHost;
+    process.env.WSL_DISTRO_NAME = priorWslDistroName;
+    process.env.WSL_INTEROP = priorWslInterop;
     if (tempDir) {
       fs.rmSync(tempDir, { recursive: true, force: true });
       tempDir = null;
@@ -39,6 +45,9 @@ describe("studio settings route", () => {
   it("GET returns local gateway defaults from openclaw.json", async () => {
     tempDir = makeTempDir("studio-settings-get-local-defaults");
     process.env.OPENCLAW_STATE_DIR = tempDir;
+    process.env.OPENCLAW_GATEWAY_HOST = "";
+    process.env.WSL_DISTRO_NAME = "";
+    process.env.WSL_INTEROP = "";
     fs.writeFileSync(
       path.join(tempDir, "openclaw.json"),
       JSON.stringify({ gateway: { port: 18791, auth: { token: "local-token" } } }, null, 2),
@@ -62,6 +71,33 @@ describe("studio settings route", () => {
     });
   });
 
+  it("GET rewrites local gateway defaults to the configured host", async () => {
+    tempDir = makeTempDir("studio-settings-get-local-defaults-host");
+    process.env.OPENCLAW_STATE_DIR = tempDir;
+    process.env.OPENCLAW_GATEWAY_HOST = "172.20.48.1";
+    fs.writeFileSync(
+      path.join(tempDir, "openclaw.json"),
+      JSON.stringify({ gateway: { port: 18791, auth: { token: "local-token" } } }, null, 2),
+      "utf8"
+    );
+
+    const response = await GET();
+    const body = (await response.json()) as {
+      settings?: { gateway?: { url?: string; tokenConfigured?: boolean } | null };
+      localGatewayDefaults?: { url?: string; tokenConfigured?: boolean } | null;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.localGatewayDefaults).toEqual({
+      url: "ws://172.20.48.1:18791",
+      tokenConfigured: true,
+    });
+    expect(body.settings?.gateway).toEqual({
+      url: "ws://172.20.48.1:18791",
+      tokenConfigured: true,
+    });
+  });
+
   it("PUT returns 400 for non-object JSON payload", async () => {
     tempDir = makeTempDir("studio-settings-put-invalid");
     process.env.OPENCLAW_STATE_DIR = tempDir;
@@ -79,6 +115,9 @@ describe("studio settings route", () => {
   it("PUT persists a patch and GET returns merged settings", async () => {
     tempDir = makeTempDir("studio-settings-put-persist");
     process.env.OPENCLAW_STATE_DIR = tempDir;
+    process.env.OPENCLAW_GATEWAY_HOST = "";
+    process.env.WSL_DISTRO_NAME = "";
+    process.env.WSL_INTEROP = "";
 
     const patch = {
       gateway: { url: "ws://example.test:1234", token: "t" },

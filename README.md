@@ -90,13 +90,21 @@ cp .env.example .env
 npm run dev
 ```
 
-Then open `http://localhost:3000` and configure the gateway URL and token in Studio.
+Then open `http://127.0.0.1:3000` and configure the gateway URL and token in Studio.
 
 For a local gateway on the same machine, the usual upstream URL is:
 
 ```text
 ws://localhost:18789
 ```
+
+If you are testing the Spotify jukebox locally, Spotify must be configured with the exact callback URI your app uses. The auth flow stays on the same host you opened Claw3D with, so the callback must match that host exactly:
+
+```text
+http://127.0.0.1:3000/api/spotify/callback
+```
+
+Do not mix `localhost` and `127.0.0.1` across the auth start and callback.
 
 ## How It Connects
 
@@ -114,7 +122,7 @@ This design keeps gateway settings persisted on the Studio host and lets Studio 
 ### Gateway local, Studio local
 
 1. Start Studio with `npm run dev`.
-2. Open `http://localhost:3000`.
+2. Open `http://127.0.0.1:3000`.
 3. Use `ws://localhost:18789` plus your OpenClaw gateway token.
 
 ### Gateway remote, Studio local
@@ -158,6 +166,7 @@ Common environment variables:
 - `HOST` and `PORT` control the Studio server bind address and port.
 - `STUDIO_ACCESS_TOKEN` protects Studio when binding to a public host.
 - `NEXT_PUBLIC_GATEWAY_URL` provides the default upstream gateway URL when Studio settings are empty.
+- `OPENCLAW_GATEWAY_HOST` overrides the host used when Studio rewrites loopback gateway URLs under WSL2.
 - `OPENCLAW_STATE_DIR` and `OPENCLAW_CONFIG_PATH` override the default OpenClaw paths.
 - `OPENCLAW_GATEWAY_SSH_TARGET` and `OPENCLAW_GATEWAY_SSH_USER` support gateway-host operations over SSH.
 - `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, and `ELEVENLABS_MODEL_ID` enable voice reply integration.
@@ -198,6 +207,8 @@ See [`.env.example`](.env.example) for the full local development template.
 If the UI loads but Connect fails, the problem is usually on the Studio -> Gateway side:
 
 - Confirm the upstream URL and token in Studio settings.
+- If Claw3D is running in WSL2 and the Gateway is on the Windows host, set `OPENCLAW_GATEWAY_HOST` to a host-reachable IP or use a tunnel/Tailscale URL instead of `0.0.0.0`.
+- If the browser is on Windows and Claw3D is in WSL2, keep the gateway bound locally and use `OPENCLAW_GATEWAY_HOST` to rewrite loopback gateway URLs to a host-reachable address.
 - `EPROTO` or `wrong version number` usually means `wss://` was used against a non-TLS endpoint.
 - `401 Studio access token required` usually means `STUDIO_ACCESS_TOKEN` is enabled and the request is missing the expected `studio_access` cookie.
 - Helpful proxy error codes include `studio.gateway_url_missing`, `studio.gateway_token_missing`, `studio.upstream_error`, and `studio.upstream_closed`.

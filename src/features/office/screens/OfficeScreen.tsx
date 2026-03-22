@@ -82,6 +82,7 @@ import { HistoryPanel } from "@/features/office/components/panels/HistoryPanel";
 import { InboxPanel } from "@/features/office/components/panels/InboxPanel";
 import { PlaybooksPanel } from "@/features/office/components/panels/PlaybooksPanel";
 import { SkillsMarketplacePanel } from "@/features/office/components/panels/SkillsMarketplacePanel";
+import { JukeboxPanel } from "@/features/spotify-jukebox/components/JukeboxPanel";
 import { useOfficeSkillsMarketplace } from "@/features/office/hooks/useOfficeSkillsMarketplace";
 import { useOfficeStandupController } from "@/features/office/hooks/useOfficeStandupController";
 import { useRunLog } from "@/features/office/hooks/useRunLog";
@@ -114,6 +115,9 @@ import {
 } from "@/lib/office/deskMonitor";
 import type { StandupAgentSnapshot } from "@/lib/office/standup/types";
 import type { SkillStatusEntry } from "@/lib/skills/types";
+import {
+  useSpotifyOfficeBootstrap,
+} from "@/features/office/hooks/useSpotifyOfficeBootstrap";
 
 const stringToColor = (str: string) => {
   let hash = 0;
@@ -650,6 +654,11 @@ export function OfficeScreen({
 }: OfficeScreenProps) {
   const searchParams = useSearchParams();
   const debugEnabled = searchParams.get("officeDebug") === "1";
+  const {
+    status: spotifyBootstrapStatus,
+    notice: spotifyBootstrapNotice,
+    clearNotice: clearSpotifyBootstrapNotice,
+  } = useSpotifyOfficeBootstrap();
   const [settingsCoordinator] = useState(() =>
     createStudioSettingsCoordinator(),
   );
@@ -761,6 +770,7 @@ export function OfficeScreen({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSidebarTab, setActiveSidebarTab] =
     useState<HQSidebarTab>("inbox");
+  const [showJukeboxPanel, setShowJukeboxPanel] = useState(false);
   const router = useRouter();
   const { showOnboarding, completeOnboarding, resetOnboarding } =
     useOnboardingState();
@@ -2772,6 +2782,42 @@ export function OfficeScreen({
 
   return (
     <main className="h-full w-full overflow-hidden bg-black">
+      {spotifyBootstrapNotice ? (
+        <div className="pointer-events-none fixed left-1/2 top-4 z-50 w-full max-w-2xl -translate-x-1/2 px-4">
+          <div
+            className={`pointer-events-auto rounded-xl border px-4 py-3 shadow-2xl backdrop-blur ${
+              spotifyBootstrapNotice.kind === "success"
+                ? "border-emerald-400/30 bg-emerald-950/80 text-emerald-50"
+                : "border-rose-400/30 bg-rose-950/80 text-rose-50"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] opacity-80">
+                  {spotifyBootstrapNotice.title}
+                </p>
+                <p className="mt-1 text-sm opacity-90">
+                  {spotifyBootstrapNotice.detail}
+                </p>
+                {spotifyBootstrapStatus ? (
+                  <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] opacity-70">
+                    status: {spotifyBootstrapStatus.connected ? "connected" : "disconnected"}
+                    {" · "}access token: {spotifyBootstrapStatus.hasAccessToken ? "yes" : "no"}
+                    {" · "}refresh token: {spotifyBootstrapStatus.hasRefreshToken ? "yes" : "no"}
+                  </p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                className="rounded-md border border-current/20 px-2 py-1 text-[10px] uppercase tracking-[0.16em] opacity-75 transition-opacity hover:opacity-100"
+                onClick={clearSpotifyBootstrapNotice}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <RetroOffice3D
         agents={officeAgents}
         animationState={officeAnimationState}
@@ -2847,6 +2893,9 @@ export function OfficeScreen({
         onQaLabDismiss={() => {
           handleQaDismiss();
         }}
+        onJukeboxInteract={() => {
+          setShowJukeboxPanel(true);
+        }}
         onPhoneCallSpeak={handlePhoneCallSpeak}
         onPhoneCallComplete={handlePhoneCallComplete}
         onTextMessageComplete={handleTextMessageComplete}
@@ -2855,6 +2904,10 @@ export function OfficeScreen({
           setActiveSidebarTab("marketplace");
         }}
       />
+
+      {showJukeboxPanel && (
+        <JukeboxPanel onClose={() => setShowJukeboxPanel(false)} />
+      )}
 
       {showEmptyFleetBanner ? (
         <div className="pointer-events-none fixed left-1/2 top-16 z-40 w-full max-w-xl -translate-x-1/2 px-4">
