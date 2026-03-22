@@ -8,6 +8,7 @@ export const GYM_ROOM_MIGRATION_KEY = "openclaw-office-gym-room-migration-v3";
 export const QA_LAB_MIGRATION_KEY = "openclaw-office-qa-lab-migration-v3";
 export const PHONE_BOOTH_MIGRATION_KEY = "openclaw-office-phone-booth-migration-v1";
 export const SMS_BOOTH_MIGRATION_KEY = "openclaw-office-sms-booth-migration-v1";
+export const CRYPTO_ROOM_MIGRATION_KEY = "openclaw-office-crypto-room-migration-v2";
 export const ROTATION_STEP_DEG = 15;
 export const WALL_THICKNESS = 8;
 export const DOOR_THICKNESS = 8;

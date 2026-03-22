@@ -69,6 +69,8 @@ export const ITEM_FOOTPRINT: Record<string, [number, number]> = {
   qa_terminal: [54, 38],
   device_rack: [70, 36],
   test_bench: [90, 42],
+  crypto_board: [22, 84],
+  crypto_terminal: [72, 34],
   treadmill: [70, 35],
   weight_bench: [90, 45],
   dumbbell_rack: [80, 28],
@@ -150,6 +152,8 @@ export const ITEM_METADATA: Record<string, { blocksNavigation: boolean }> = {
   qa_terminal:     { blocksNavigation: true  },
   device_rack:     { blocksNavigation: true  },
   test_bench:      { blocksNavigation: true  },
+  crypto_board:    { blocksNavigation: false },
+  crypto_terminal: { blocksNavigation: true  },
   // ── gym ───────────────────────────────────────────────────────────────────
   treadmill:       { blocksNavigation: true  },
   weight_bench:    { blocksNavigation: true  },

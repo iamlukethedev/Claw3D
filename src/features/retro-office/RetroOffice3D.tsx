@@ -24,6 +24,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { SettingsPanel } from "@/features/office/components/panels/SettingsPanel";
+import { CryptoImmersiveScreen } from "@/features/crypto/components/CryptoImmersiveScreen";
 import { AtmImmersiveScreen } from "@/features/office/screens/AtmImmersiveScreen";
 import { GithubImmersiveScreen } from "@/features/office/screens/GithubImmersiveScreen";
 import {
@@ -68,6 +69,7 @@ import {
 } from "@/features/retro-office/core/constants";
 import {
   ensureOfficeAtm,
+  ensureOfficeCryptoRoom,
   ensureOfficeGymRoom,
   ensureOfficePhoneBooth,
   ensureOfficePingPongTable,
@@ -115,6 +117,7 @@ import {
 import {
   loadFurniture,
   markAtmMigrationApplied,
+  markCryptoRoomMigrationApplied,
   markGymRoomMigrationApplied,
   markPhoneBoothMigrationApplied,
   markQaLabMigrationApplied,
@@ -147,6 +150,8 @@ import {
 } from "@/features/retro-office/objects/kitchen";
 import {
   AtmMachineModel as InteractiveAtmMachineModel,
+  CryptoBoardModel as InteractiveCryptoBoardModel,
+  CryptoTerminalModel as InteractiveCryptoTerminalModel,
   DeviceRackModel as InteractiveDeviceRackModel,
   DumbbellRackModel as InteractiveDumbbellRackModel,
   ExerciseBikeModel as InteractiveExerciseBikeModel,
@@ -1999,13 +2004,15 @@ export function RetroOffice3D({
         ensureOfficeServerRoom(
           ensureOfficePhoneBooth(
             ensureOfficeSmsBooth(
-            ensureOfficeAtm(
-              ensureOfficePingPongTable(
-                (loadFurniture() ?? materializeDefaults()).filter(
-                  (item) => !isRetiredPingPongLamp(item),
+              ensureOfficeAtm(
+                ensureOfficeCryptoRoom(
+                  ensureOfficePingPongTable(
+                    (loadFurniture() ?? materializeDefaults()).filter(
+                      (item) => !isRetiredPingPongLamp(item),
+                    ),
+                  ),
                 ),
               ),
-            ),
             ),
           ),
         ),
@@ -2098,6 +2105,7 @@ export function RetroOffice3D({
   const followAgentIdRef = useRef<string | null>(null);
   const prevMonitorAgentIdRef = useRef<string | null>(null);
   const prevAtmUidRef = useRef<string | null>(null);
+  const prevCryptoViewRef = useRef<string | null>(null);
   const prevSmsBoothViewRef = useRef<string | null>(null);
   const prevPhoneBoothViewRef = useRef<string | null>(null);
   const prevGithubViewRef = useRef<string | null>(null);
@@ -2105,6 +2113,8 @@ export function RetroOffice3D({
   const [monitorImmersiveReady, setMonitorImmersiveReady] = useState(false);
   const [activeAtmUid, setActiveAtmUid] = useState<string | null>(null);
   const [atmImmersiveReady, setAtmImmersiveReady] = useState(false);
+  const [activeCryptoTerminalUid, setActiveCryptoTerminalUid] = useState<string | null>(null);
+  const [cryptoImmersiveReady, setCryptoImmersiveReady] = useState(false);
   const [phoneBoothCommandArrived, setPhoneBoothCommandArrived] = useState(false);
   const [phoneBoothImmersiveReady, setPhoneBoothImmersiveReady] = useState(false);
   const [phoneBoothDoorOpen, setPhoneBoothDoorOpen] = useState(false);
@@ -2152,6 +2162,10 @@ export function RetroOffice3D({
 
   useEffect(() => {
     markAtmMigrationApplied();
+  }, []);
+
+  useEffect(() => {
+    markCryptoRoomMigrationApplied();
   }, []);
 
   useEffect(() => {
@@ -2367,6 +2381,18 @@ export function RetroOffice3D({
     [activeAtmUid, furniture],
   );
   const atmImmersive = Boolean(activeAtm && atmImmersiveReady);
+  const activeCryptoTerminal = useMemo(
+    () =>
+      activeCryptoTerminalUid
+        ? (furniture.find(
+            (item) =>
+              item._uid === activeCryptoTerminalUid &&
+              (item.type === "crypto_board" || item.type === "crypto_terminal"),
+          ) ?? null)
+        : null,
+    [activeCryptoTerminalUid, furniture],
+  );
+  const cryptoImmersive = Boolean(activeCryptoTerminal && cryptoImmersiveReady);
   const activeSmsBooth = useMemo(
     () => furniture.find((item) => item.type === "sms_booth") ?? null,
     [furniture],
@@ -2469,6 +2495,7 @@ export function RetroOffice3D({
   const immersiveOverlayActive =
     monitorImmersive ||
     atmImmersive ||
+    cryptoImmersive ||
     smsBoothImmersive ||
     phoneBoothImmersive ||
     githubImmersive ||
@@ -2624,6 +2651,7 @@ export function RetroOffice3D({
       !followAgentId &&
       !monitorAgentId &&
       !activeAtmUid &&
+      !activeCryptoTerminalUid &&
       !activeGithubTerminalUid &&
       !activeQaTerminalUid
     ) {
@@ -2631,6 +2659,7 @@ export function RetroOffice3D({
     }
   }, [
     activeAtmUid,
+    activeCryptoTerminalUid,
     activeGithubTerminalUid,
     activeQaTerminalUid,
     followAgentId,
@@ -2821,6 +2850,17 @@ export function RetroOffice3D({
   }, [activeAtmUid, monitorAgentId]);
 
   useEffect(() => {
+    if (monitorAgentId && activeCryptoTerminalUid) {
+      const timer = window.setTimeout(() => {
+        setActiveCryptoTerminalUid(null);
+      }, 0);
+      return () => {
+        window.clearTimeout(timer);
+      };
+    }
+  }, [activeCryptoTerminalUid, monitorAgentId]);
+
+  useEffect(() => {
     if (monitorAgentId && activeGithubTerminalUid) {
       const timer = window.setTimeout(() => {
         setActiveGithubTerminalUid(null);
@@ -2854,6 +2894,17 @@ export function RetroOffice3D({
   }, [activeAtmUid, activeGithubTerminalUid]);
 
   useEffect(() => {
+    if (activeAtmUid && activeCryptoTerminalUid) {
+      const timer = window.setTimeout(() => {
+        setActiveCryptoTerminalUid(null);
+      }, 0);
+      return () => {
+        window.clearTimeout(timer);
+      };
+    }
+  }, [activeAtmUid, activeCryptoTerminalUid]);
+
+  useEffect(() => {
     if (activeAtmUid && activeQaTerminalUid) {
       const timer = window.setTimeout(() => {
         setActiveQaTerminalUid(null);
@@ -2865,10 +2916,35 @@ export function RetroOffice3D({
   }, [activeAtmUid, activeQaTerminalUid]);
 
   useEffect(() => {
+    if (activeGithubTerminalUid && activeCryptoTerminalUid) {
+      const timer = window.setTimeout(() => {
+        setActiveCryptoTerminalUid(null);
+      }, 0);
+      return () => {
+        window.clearTimeout(timer);
+      };
+    }
+  }, [activeCryptoTerminalUid, activeGithubTerminalUid]);
+
+  useEffect(() => {
+    if (activeQaTerminalUid && activeCryptoTerminalUid) {
+      const timer = window.setTimeout(() => {
+        setActiveCryptoTerminalUid(null);
+      }, 0);
+      return () => {
+        window.clearTimeout(timer);
+      };
+    }
+  }, [activeCryptoTerminalUid, activeQaTerminalUid]);
+
+  useEffect(() => {
     if (!smsBoothAgentId) return;
     const timer = window.setTimeout(() => {
       if (activeAtmUid) {
         setActiveAtmUid(null);
+      }
+      if (activeCryptoTerminalUid) {
+        setActiveCryptoTerminalUid(null);
       }
       if (activeGithubTerminalUid) {
         setActiveGithubTerminalUid(null);
@@ -2885,6 +2961,7 @@ export function RetroOffice3D({
     };
   }, [
     activeAtmUid,
+    activeCryptoTerminalUid,
     activeGithubTerminalUid,
     activeQaTerminalUid,
     monitorAgentId,
@@ -2898,6 +2975,9 @@ export function RetroOffice3D({
       if (activeAtmUid) {
         setActiveAtmUid(null);
       }
+      if (activeCryptoTerminalUid) {
+        setActiveCryptoTerminalUid(null);
+      }
       if (activeGithubTerminalUid) {
         setActiveGithubTerminalUid(null);
       }
@@ -2913,6 +2993,7 @@ export function RetroOffice3D({
     };
   }, [
     activeAtmUid,
+    activeCryptoTerminalUid,
     activeGithubTerminalUid,
     activeQaTerminalUid,
     monitorAgentId,
@@ -3444,6 +3525,24 @@ export function RetroOffice3D({
 
   useEffect(() => {
     const resetTimer = window.setTimeout(() => {
+      setCryptoImmersiveReady(false);
+    }, 0);
+    if (!activeCryptoTerminalUid) {
+      return () => {
+        window.clearTimeout(resetTimer);
+      };
+    }
+    const timer = window.setTimeout(() => {
+      setCryptoImmersiveReady(true);
+    }, 900);
+    return () => {
+      window.clearTimeout(resetTimer);
+      window.clearTimeout(timer);
+    };
+  }, [activeCryptoTerminalUid]);
+
+  useEffect(() => {
+    const resetTimer = window.setTimeout(() => {
       setGithubImmersiveReady(false);
     }, 0);
     const githubViewActive =
@@ -3559,6 +3658,17 @@ export function RetroOffice3D({
   }, [activeAtm, activeAtmUid]);
 
   useEffect(() => {
+    if (activeCryptoTerminalUid && !activeCryptoTerminal) {
+      const timer = window.setTimeout(() => {
+        setActiveCryptoTerminalUid(null);
+      }, 0);
+      return () => {
+        window.clearTimeout(timer);
+      };
+    }
+  }, [activeCryptoTerminal, activeCryptoTerminalUid]);
+
+  useEffect(() => {
     if (activeGithubTerminalUid && !activeGithubTerminal) {
       const timer = window.setTimeout(() => {
         setActiveGithubTerminalUid(null);
@@ -3604,6 +3714,31 @@ export function RetroOffice3D({
     };
     prevAtmUidRef.current = activeAtmUid;
   }, [activeAtm, activeAtmUid]);
+
+  useEffect(() => {
+    if (!activeCryptoTerminalUid && prevCryptoViewRef.current) {
+      cameraPresetRef.current = CAMERA_PRESET_MAP.overview;
+    }
+    if (!activeCryptoTerminalUid || !activeCryptoTerminal) {
+      prevCryptoViewRef.current = activeCryptoTerminalUid;
+      return;
+    }
+    const { width, height } = getItemBaseSize(activeCryptoTerminal);
+    const [wx, , wz] = toWorld(
+      activeCryptoTerminal.x + width / 2,
+      activeCryptoTerminal.y + height / 2,
+    );
+    const frontVector = new THREE.Vector3(0, 0, 1).applyAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      getItemRotationRadians(activeCryptoTerminal),
+    );
+    cameraPresetRef.current = {
+      pos: [wx + frontVector.x * 0.88, 1.24, wz + frontVector.z * 0.88],
+      target: [wx + frontVector.x * 0.03, 1.08, wz + frontVector.z * 0.03],
+      zoom: 215,
+    };
+    prevCryptoViewRef.current = activeCryptoTerminalUid;
+  }, [activeCryptoTerminal, activeCryptoTerminalUid]);
 
   useEffect(() => {
     const activeViewKey = activeGithubTerminalUid
@@ -3724,6 +3859,7 @@ export function RetroOffice3D({
         );
         setFollowAgentId(null);
         setActiveAtmUid(null);
+        setActiveCryptoTerminalUid(null);
         onMonitorSelect?.(null);
         cameraPresetRef.current = {
           pos: [tableWx + 2.4, 2.8, tableWz + 2.1],
@@ -3801,15 +3937,26 @@ export function RetroOffice3D({
       }
       if (item.type === "atm") {
         setFollowAgentId(null);
+        setActiveCryptoTerminalUid(null);
         setActiveGithubTerminalUid(null);
         setActiveQaTerminalUid(null);
         onMonitorSelect?.(null);
         setActiveAtmUid(uid);
         return;
       }
+      if (item.type === "crypto_board" || item.type === "crypto_terminal") {
+        setFollowAgentId(null);
+        setActiveAtmUid(null);
+        setActiveGithubTerminalUid(null);
+        setActiveQaTerminalUid(null);
+        onMonitorSelect?.(null);
+        setActiveCryptoTerminalUid(uid);
+        return;
+      }
       if (item.type === "sms_booth") {
         setFollowAgentId(null);
         setActiveAtmUid(null);
+        setActiveCryptoTerminalUid(null);
         setActiveGithubTerminalUid(null);
         setActiveQaTerminalUid(null);
         onMonitorSelect?.(null);
@@ -3827,6 +3974,7 @@ export function RetroOffice3D({
       if (item.type === "phone_booth") {
         setFollowAgentId(null);
         setActiveAtmUid(null);
+        setActiveCryptoTerminalUid(null);
         setActiveGithubTerminalUid(null);
         setActiveQaTerminalUid(null);
         onMonitorSelect?.(null);
@@ -3848,6 +3996,7 @@ export function RetroOffice3D({
       if (item.type === "server_terminal") {
         setFollowAgentId(null);
         setActiveAtmUid(null);
+        setActiveCryptoTerminalUid(null);
         setActiveQaTerminalUid(null);
         onMonitorSelect?.(null);
         setActiveGithubTerminalUid(uid);
@@ -3856,6 +4005,7 @@ export function RetroOffice3D({
       if (item.type === "server_rack") {
         setFollowAgentId(null);
         setActiveAtmUid(null);
+        setActiveCryptoTerminalUid(null);
         setActiveQaTerminalUid(null);
         onMonitorSelect?.(null);
         setActiveGithubTerminalUid(serverTerminal?._uid ?? uid);
@@ -3868,6 +4018,7 @@ export function RetroOffice3D({
       ) {
         setFollowAgentId(null);
         setActiveAtmUid(null);
+        setActiveCryptoTerminalUid(null);
         setActiveGithubTerminalUid(null);
         onMonitorSelect?.(null);
         setActiveQaTerminalUid(
@@ -3891,6 +4042,7 @@ export function RetroOffice3D({
         setActiveGithubTerminalUid(null);
         setActiveQaTerminalUid(null);
         setActiveAtmUid(null);
+        setActiveCryptoTerminalUid(null);
         onMonitorSelect?.(agentId);
         return;
       }
@@ -3898,6 +4050,7 @@ export function RetroOffice3D({
       setActiveGithubTerminalUid(null);
       setActiveQaTerminalUid(null);
       setActiveAtmUid(null);
+      setActiveCryptoTerminalUid(null);
       const agent = renderAgentLookupRef.current.get(agentId);
       if (!agent) return;
       const tx = item.x + 40;
@@ -3969,6 +4122,8 @@ export function RetroOffice3D({
     document.body.style.cursor =
       hoveredItem?.type === "pingpong" ||
       hoveredItem?.type === "atm" ||
+      hoveredItem?.type === "crypto_board" ||
+      hoveredItem?.type === "crypto_terminal" ||
       hoveredItem?.type === "sms_booth" ||
       hoveredItem?.type === "phone_booth" ||
       hoveredItem?.type === "server_rack" ||
@@ -4184,6 +4339,11 @@ export function RetroOffice3D({
           setActiveAtmUid(null);
           return;
         }
+        if (cryptoImmersive) {
+          e.preventDefault();
+          setActiveCryptoTerminalUid(null);
+          return;
+        }
       }
       if (!editMode) return;
       if (e.key === "Escape") {
@@ -4242,6 +4402,7 @@ export function RetroOffice3D({
     activeQaTerminalUid,
     activeGithubTerminalUid,
     atmImmersive,
+    cryptoImmersive,
     editMode,
     drag,
     githubImmersive,
@@ -4252,6 +4413,7 @@ export function RetroOffice3D({
     onMonitorSelect,
     onQaLabDismiss,
     qaImmersive,
+    setActiveCryptoTerminalUid,
     rotateSelectedItem,
     selectedUid,
   ]);
@@ -4583,6 +4745,30 @@ export function RetroOffice3D({
                 />
               ) : item.type === "atm" ? (
                 <InteractiveAtmMachineModel
+                  key={item._uid}
+                  item={item}
+                  isSelected={item._uid === selectedUid}
+                  isHovered={item._uid === hoverUid}
+                  editMode={editMode}
+                  onPointerDown={handleFurniturePointerDown}
+                  onPointerOver={handleFurniturePointerOver}
+                  onPointerOut={handleFurniturePointerOut}
+                  onClick={handleDeskClick}
+                />
+              ) : item.type === "crypto_board" ? (
+                <InteractiveCryptoBoardModel
+                  key={item._uid}
+                  item={item}
+                  isSelected={item._uid === selectedUid}
+                  isHovered={item._uid === hoverUid}
+                  editMode={editMode}
+                  onPointerDown={handleFurniturePointerDown}
+                  onPointerOver={handleFurniturePointerOver}
+                  onPointerOut={handleFurniturePointerOut}
+                  onClick={handleDeskClick}
+                />
+              ) : item.type === "crypto_terminal" ? (
+                <InteractiveCryptoTerminalModel
                   key={item._uid}
                   item={item}
                   isSelected={item._uid === selectedUid}
@@ -5425,6 +5611,34 @@ export function RetroOffice3D({
             <button
               type="button"
               onClick={() => onMonitorSelect?.(null)}
+              className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-white/70 transition-colors hover:border-white/20 hover:text-white"
+            >
+              Exit
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {cryptoImmersive ? (
+        <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),rgba(0,0,0,0.92))]" />
+          <div className="absolute inset-x-0 top-0 h-[9vh] bg-black" />
+          <div className="absolute inset-x-0 bottom-0 h-[12vh] bg-black" />
+          <div className="absolute inset-y-0 left-0 w-[5vw] bg-black" />
+          <div className="absolute inset-y-0 right-0 w-[5vw] bg-black" />
+          <div className="absolute inset-[4.8vh_4.8vw_7.2vh_4.8vw] rounded-[30px] border border-cyan-300/16 bg-[#020812] shadow-[0_0_0_18px_rgba(1,5,16,0.96),0_0_0_22px_rgba(34,211,238,0.12),0_30px_120px_rgba(0,0,0,0.78)]" />
+          <div className="absolute inset-[5.6vh_5.6vw_8vh_5.6vw] rounded-[24px] border border-cyan-300/12 bg-[#030c14]" />
+          <div className="pointer-events-auto absolute inset-[5.8vh_5.8vw_8.2vh_5.8vw] overflow-hidden rounded-[22px] bg-[#01060a]">
+            <CryptoImmersiveScreen agents={agents} />
+          </div>
+          <div className="pointer-events-auto absolute right-[5.8vw] top-[4.2vh] flex items-center gap-3 rounded-full border border-cyan-300/18 bg-[#04111b]/88 px-4 py-2 backdrop-blur-sm">
+            <div className="h-2 w-2 rounded-full bg-emerald-400" />
+            <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-cyan-100/90">
+              Crypto Room
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveCryptoTerminalUid(null)}
               className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-white/70 transition-colors hover:border-white/20 hover:text-white"
             >
               Exit

@@ -13,6 +13,7 @@ import {
 import { nextUid } from "@/features/retro-office/core/geometry";
 import {
   hasAtmMigrationApplied,
+  hasCryptoRoomMigrationApplied,
   hasGymRoomMigrationApplied,
   hasPhoneBoothMigrationApplied,
   hasQaLabMigrationApplied,
@@ -392,7 +393,7 @@ const DEFAULT_QA_LAB_ITEMS: FurnitureSeed[] = [
   { type: "plant", x: 1496, y: 622 },
 ];
 
-const DEFAULT_ART_ROOM_ITEMS: FurnitureSeed[] = [
+const PREVIOUS_ART_ROOM_ITEMS: FurnitureSeed[] = [
   { type: "wall", x: 260, y: 40, w: 8, h: 230 },
   { type: "wall", x: 260, y: 40, w: 178, h: 8 },
   { type: "wall", x: 260, y: 262, w: 178, h: 8 },
@@ -403,6 +404,52 @@ const DEFAULT_ART_ROOM_ITEMS: FurnitureSeed[] = [
   { type: "easel", x: 278, y: 158, facing: 90 },
   { type: "plant", x: 280, y: 60 },
   { type: "plant", x: 280, y: 240 },
+];
+
+const DEFAULT_CRYPTO_ROOM_ITEMS: FurnitureSeed[] = [
+  { type: "wall", x: 260, y: 40, w: 8, h: 230 },
+  { type: "wall", x: 260, y: 40, w: 178, h: 8 },
+  { type: "wall", x: 260, y: 262, w: 178, h: 8 },
+  { type: "wall", x: 430, y: 40, w: 8, h: 90 },
+  { type: "door", x: 420, y: 150, w: 40, h: 8, facing: 90 },
+  { type: "wall", x: 430, y: 170, w: 8, h: 100 },
+  { type: "crypto_board", x: 330, y: 50, facing: 90 },
+  { type: "crypto_board", x: 330, y: 190, facing: 90 },
+  { type: "crypto_terminal", x: 270, y: 140, facing: 90 },
+];
+
+const LEGACY_CRYPTO_ROOM_ITEMS: FurnitureSeed[] = [
+  { type: "wall", x: 260, y: 40, w: 8, h: 230 },
+  { type: "wall", x: 260, y: 40, w: 178, h: 8 },
+  { type: "wall", x: 260, y: 262, w: 178, h: 8 },
+  { type: "wall", x: 430, y: 40, w: 8, h: 90 },
+  { type: "door", x: 420, y: 150, w: 40, h: 8, facing: 90 },
+  { type: "wall", x: 430, y: 170, w: 8, h: 100 },
+  { type: "crypto_board", x: 282, y: 66, facing: 90 },
+  { type: "crypto_board", x: 314, y: 66, facing: 90 },
+  { type: "crypto_board", x: 346, y: 66, facing: 90 },
+  { type: "server_rack", x: 278, y: 162, facing: 90 },
+  { type: "server_rack", x: 338, y: 162, facing: 90 },
+  { type: "crypto_terminal", x: 288, y: 220, facing: 0 },
+  { type: "plant", x: 284, y: 242 },
+  { type: "plant", x: 392, y: 242 },
+];
+
+const PREVIOUS_CRYPTO_ROOM_ITEMS: FurnitureSeed[] = [
+  { type: "wall", x: 260, y: 40, w: 8, h: 230 },
+  { type: "wall", x: 260, y: 40, w: 178, h: 8 },
+  { type: "wall", x: 260, y: 262, w: 178, h: 8 },
+  { type: "wall", x: 430, y: 40, w: 8, h: 90 },
+  { type: "door", x: 420, y: 150, w: 40, h: 8, facing: 90 },
+  { type: "wall", x: 430, y: 170, w: 8, h: 100 },
+  { type: "crypto_board", x: 282, y: 66, facing: 90 },
+  { type: "crypto_board", x: 314, y: 66, facing: 90 },
+  { type: "crypto_board", x: 346, y: 66, facing: 90 },
+  { type: "crypto_terminal", x: 278, y: 152, facing: 90 },
+  { type: "crypto_terminal", x: 344, y: 152, facing: 90 },
+  { type: "crypto_terminal", x: 288, y: 220, facing: 0 },
+  { type: "plant", x: 284, y: 242 },
+  { type: "plant", x: 392, y: 242 },
 ];
 
 const DEFAULT_FURNITURE: FurnitureSeed[] = [
@@ -416,7 +463,7 @@ const DEFAULT_FURNITURE: FurnitureSeed[] = [
   { type: "executive_desk", x: 420, y: 60, w: 130, h: 65 },
   { type: "chair", x: 540, y: 60, facing: 0 },
   { type: "bookshelf", x: 500, y: 30, w: 80, h: 120 },
-  { type: "couch", x: 270, y: 90, w: 40, h: 80, vertical: true, facing: 180 },
+  { type: "couch", x: 290, y: 110, w: 40, h: 80, vertical: true, facing: 180 },
   { type: "fridge", x: 1050, y: 20, w: 40, h: 80 },
   { type: "stove", x: 920, y: 20 },
   { type: "cabinet", x: 980, y: 30, w: 40, h: 40 },
@@ -500,7 +547,7 @@ const DEFAULT_FURNITURE: FurnitureSeed[] = [
   ...DEFAULT_SERVER_ROOM_ITEMS,
   ...DEFAULT_GYM_ITEMS,
   ...DEFAULT_QA_LAB_ITEMS,
-  ...DEFAULT_ART_ROOM_ITEMS,
+  ...DEFAULT_CRYPTO_ROOM_ITEMS,
   DEFAULT_SMS_BOOTH,
   { type: "chair", x: 100, y: 200, facing: 180 },
 ];
@@ -556,6 +603,18 @@ const PREVIOUS_QA_LAB_SIGNATURES = new Set(
 );
 const QA_LAB_SIGNATURES = new Set(
   DEFAULT_QA_LAB_ITEMS.map(createFurnitureSignature),
+);
+const PREVIOUS_ART_ROOM_SIGNATURES = new Set(
+  PREVIOUS_ART_ROOM_ITEMS.map(createFurnitureSignature),
+);
+const LEGACY_CRYPTO_ROOM_SIGNATURES = new Set(
+  LEGACY_CRYPTO_ROOM_ITEMS.map(createFurnitureSignature),
+);
+const PREVIOUS_CRYPTO_ROOM_SIGNATURES = new Set(
+  PREVIOUS_CRYPTO_ROOM_ITEMS.map(createFurnitureSignature),
+);
+const CRYPTO_ROOM_SIGNATURES = new Set(
+  DEFAULT_CRYPTO_ROOM_ITEMS.map(createFurnitureSignature),
 );
 
 const hasSignature = (
@@ -731,6 +790,51 @@ export const ensureOfficeQaLab = (items: FurnitureItem[]): FurnitureItem[] => {
   return [
     ...items,
     ...DEFAULT_QA_LAB_ITEMS.map((item) => ({ ...item, _uid: nextUid() })),
+  ];
+};
+
+export const ensureOfficeCryptoRoom = (
+  items: FurnitureItem[],
+): FurnitureItem[] => {
+  const hasCurrentCryptoRoom = hasSignature(items, CRYPTO_ROOM_SIGNATURES);
+  if (hasCurrentCryptoRoom) return items;
+
+  const hasPreviousCryptoRoom = hasAllSignatures(items, PREVIOUS_CRYPTO_ROOM_SIGNATURES);
+  if (hasPreviousCryptoRoom) {
+    return [
+      ...replaceBySignatureSet(items, PREVIOUS_CRYPTO_ROOM_SIGNATURES),
+      ...DEFAULT_CRYPTO_ROOM_ITEMS.map((item) => ({ ...item, _uid: nextUid() })),
+    ];
+  }
+
+  const hasLegacyCryptoRoom = hasAllSignatures(items, LEGACY_CRYPTO_ROOM_SIGNATURES);
+  if (hasLegacyCryptoRoom) {
+    return [
+      ...replaceBySignatureSet(items, LEGACY_CRYPTO_ROOM_SIGNATURES),
+      ...DEFAULT_CRYPTO_ROOM_ITEMS.map((item) => ({ ...item, _uid: nextUid() })),
+    ];
+  }
+
+  const hasPreviousArtRoom = hasAllSignatures(items, PREVIOUS_ART_ROOM_SIGNATURES);
+  if (hasPreviousArtRoom) {
+    return [
+      ...replaceBySignatureSet(items, PREVIOUS_ART_ROOM_SIGNATURES),
+      ...DEFAULT_CRYPTO_ROOM_ITEMS.map((item) => ({ ...item, _uid: nextUid() })),
+    ];
+  }
+
+  const hasLegacyArtProps = items.some((item) => item.type === "easel");
+  if (hasLegacyArtProps) {
+    return [
+      ...items.filter((item) => item.type !== "easel"),
+      ...DEFAULT_CRYPTO_ROOM_ITEMS.map((item) => ({ ...item, _uid: nextUid() })),
+    ];
+  }
+
+  if (hasCryptoRoomMigrationApplied()) return items;
+  return [
+    ...items,
+    ...DEFAULT_CRYPTO_ROOM_ITEMS.map((item) => ({ ...item, _uid: nextUid() })),
   ];
 };
 
