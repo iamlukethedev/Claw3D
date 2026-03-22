@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.3] - 2026-03-21
+
+### Added
+
+- **SOUNDCLAW**: in-app music console powered by Spotify, embedded in the 3D office. Connects via OAuth, supports search, play/pause/skip/volume, device selection, and now-playing display. Requires Spotify Premium and an active playback device. Local auth redirect must use `http://127.0.0.1:3000/api/spotify/callback`.
+
 ## [0.1.2] - 2026-03-20
 
 ### Added

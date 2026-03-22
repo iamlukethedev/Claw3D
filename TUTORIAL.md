@@ -178,6 +178,17 @@ Important:
 
 - Use `wss://` for Tailscale HTTPS endpoints.
 - Use `ws://localhost:18789` only when Gateway is local to the same machine as Claw3D or when using an SSH tunnel.
+- If Claw3D is running in WSL2 and the gateway is on the Windows host, set `OPENCLAW_GATEWAY_HOST` to the Windows-reachable host IP so loopback gateway defaults are rewritten to a reachable address.
+
+If you are also using SOUNDCLAW (the Spotify-powered music console) in local dev, register the exact redirect URI that matches the host you opened Claw3D with:
+
+```text
+http://127.0.0.1:3000/api/spotify/callback
+```
+
+Do not mix `localhost` and `127.0.0.1` across the auth start and callback.
+
+> **Spotify playback requirement:** The Spotify Web API can only control a player that is already running. **Spotify must be installed and an active playback device must be available** (Spotify must be open and signed in somewhere) for the jukebox to play music.
 
 ---
 
@@ -222,6 +233,14 @@ Run this checklist in order:
 - Usually means protocol mismatch.
 - Fix: if your endpoint is HTTPS/Tailscale Serve, use `wss://...`.
 - Do not use `wss://` against a plain `ws://` endpoint.
+
+### Gateway works in WSL but not from Windows Chrome
+
+- This is usually a localhost mismatch, not a gateway bind problem.
+- Keep the gateway bound locally on its own host.
+- Set `OPENCLAW_GATEWAY_HOST` in the Claw3D environment to the host IP Windows can reach.
+- Restart Claw3D and reconnect.
+- Do not fix this by binding the gateway to `0.0.0.0`.
 
 ### `401` or auth errors from Claw3D
 
