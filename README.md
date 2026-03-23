@@ -159,7 +159,7 @@ Common environment variables:
 - `STUDIO_ACCESS_TOKEN` protects Studio when binding to a public host.
 - `NEXT_PUBLIC_GATEWAY_URL` provides the default upstream gateway URL when Studio settings are empty.
 - `OPENCLAW_STATE_DIR` and `OPENCLAW_CONFIG_PATH` override the default OpenClaw paths.
-- `OPENCLAW_GATEWAY_SSH_TARGET` and `OPENCLAW_GATEWAY_SSH_USER` support gateway-host operations over SSH.
+- `OPENCLAW_GATEWAY_SSH_TARGET`, `OPENCLAW_GATEWAY_SSH_USER`, `OPENCLAW_GATEWAY_SSH_PORT`, and `OPENCLAW_GATEWAY_SSH_STRICT_HOST_KEY_CHECKING` support advanced gateway-host operations over SSH when needed.
 - `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, and `ELEVENLABS_MODEL_ID` enable voice reply integration.
 
 See [`.env.example`](.env.example) for the full local development template.
@@ -201,6 +201,16 @@ If the UI loads but Connect fails, the problem is usually on the Studio -> Gatew
 - `EPROTO` or `wrong version number` usually means `wss://` was used against a non-TLS endpoint.
 - `401 Studio access token required` usually means `STUDIO_ACCESS_TOKEN` is enabled and the request is missing the expected `studio_access` cookie.
 - Helpful proxy error codes include `studio.gateway_url_missing`, `studio.gateway_token_missing`, `studio.upstream_error`, and `studio.upstream_closed`.
+
+Marketplace skill installs now use a gateway-native workspace flow and do not require enabling SSH on the user machine.
+
+If you use other advanced gateway-host operations over SSH:
+
+- macOS: enable `System Settings` -> `General` -> `Sharing` -> `Remote Login`, and make sure the target user is allowed.
+- Windows: enable the `OpenSSH Server` optional feature, start the `sshd` service, and allow it through the firewall.
+- Linux: make sure `sshd` is installed, running, and reachable from the Studio machine.
+
+For first-time SSH connections, Claw3D uses `StrictHostKeyChecking=accept-new` by default so a new host key can be trusted automatically. If you need stricter behavior, set `OPENCLAW_GATEWAY_SSH_STRICT_HOST_KEY_CHECKING=yes`, or set it to `no` only if you explicitly want to skip host key checks.
 
 ## Contributing
 

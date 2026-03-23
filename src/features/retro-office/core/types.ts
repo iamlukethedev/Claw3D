@@ -1,4 +1,5 @@
 import type { AgentAvatarProfile } from "@/lib/avatars/profile";
+import type { OfficeInteractionTargetId } from "@/lib/office/places";
 
 export type OfficeAgent = {
   id: string;
@@ -50,14 +51,7 @@ export type RenderAgent = SceneActor & {
   pingPongTableUid?: string;
   pingPongSide?: 0 | 1;
   pingPongPreviousWalkSpeed?: number;
-  interactionTarget?:
-    | "desk"
-    | "server_room"
-    | "meeting_room"
-    | "gym"
-    | "qa_lab"
-    | "sms_booth"
-    | "phone_booth";
+  interactionTarget?: OfficeInteractionTargetId;
   smsBoothStage?: "door_outer" | "door_inner" | "typing";
   phoneBoothStage?: "door_outer" | "door_inner" | "receiver";
   serverRoomStage?: "door_outer" | "door_inner" | "terminal";

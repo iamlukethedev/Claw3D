@@ -1,28 +1,26 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { removeSkillFromGateway } from "@/lib/skills/remove";
+import { removeSkillViaGatewayAgent } from "@/lib/skills/remove-gateway";
+
+vi.mock("@/lib/skills/remove-gateway", () => ({
+  removeSkillViaGatewayAgent: vi.fn(),
+}));
 
 describe("skills remove client", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    vi.unstubAllGlobals();
   });
 
-  it("posts skill removal payload to the Studio API route", async () => {
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      text: async () =>
-        JSON.stringify({
-          result: {
-            removed: true,
-            removedPath: "/tmp/workspace/skills/github",
-            source: "openclaw-workspace",
-          },
-        }),
-    }));
-    vi.stubGlobal("fetch", fetchMock);
+  it("delegates sanitized skill removal payloads to the gateway-native remover", async () => {
+    vi.mocked(removeSkillViaGatewayAgent).mockResolvedValueOnce({
+      removed: true,
+      removedPath: "/tmp/workspace/skills/github",
+      source: "openclaw-workspace",
+    });
 
     const result = await removeSkillFromGateway({
+      client: { call: vi.fn() } as never,
       skillKey: " github ",
       source: "openclaw-workspace",
       baseDir: " /tmp/workspace/skills/github ",
@@ -30,16 +28,15 @@ describe("skills remove client", () => {
       managedSkillsDir: " /tmp/managed ",
     });
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/gateway/skills/remove", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
+    expect(removeSkillViaGatewayAgent).toHaveBeenCalledWith({
+      client: expect.any(Object),
+      request: {
         skillKey: "github",
         source: "openclaw-workspace",
         baseDir: "/tmp/workspace/skills/github",
         workspaceDir: "/tmp/workspace",
         managedSkillsDir: "/tmp/managed",
-      }),
+      },
     });
     expect(result).toEqual({
       removed: true,
@@ -51,6 +48,7 @@ describe("skills remove client", () => {
   it("fails fast when required payload fields are missing", async () => {
     await expect(
       removeSkillFromGateway({
+        client: { call: vi.fn() } as never,
         skillKey: " ",
         source: "openclaw-workspace",
         baseDir: "/tmp/workspace/skills/github",
@@ -61,6 +59,7 @@ describe("skills remove client", () => {
 
     await expect(
       removeSkillFromGateway({
+        client: { call: vi.fn() } as never,
         skillKey: "github",
         source: "openclaw-workspace",
         baseDir: " ",

@@ -1,4 +1,5 @@
-import { fetchJson } from "@/lib/http";
+import type { GatewayClient } from "@/lib/gateway/GatewayClient";
+import { removeSkillViaGatewayAgent } from "@/lib/skills/remove-gateway";
 import type { SkillRemoveRequest, SkillRemoveResult } from "@/lib/skills/types";
 
 const normalizeRequired = (value: string, field: string): string => {
@@ -10,20 +11,17 @@ const normalizeRequired = (value: string, field: string): string => {
 };
 
 export const removeSkillFromGateway = async (
-  request: SkillRemoveRequest
+  params: { client: GatewayClient } & SkillRemoveRequest
 ): Promise<SkillRemoveResult> => {
   const payload: SkillRemoveRequest = {
-    skillKey: normalizeRequired(request.skillKey, "skillKey"),
-    source: request.source,
-    baseDir: normalizeRequired(request.baseDir, "baseDir"),
-    workspaceDir: normalizeRequired(request.workspaceDir, "workspaceDir"),
-    managedSkillsDir: normalizeRequired(request.managedSkillsDir, "managedSkillsDir"),
+    skillKey: normalizeRequired(params.skillKey, "skillKey"),
+    source: params.source,
+    baseDir: normalizeRequired(params.baseDir, "baseDir"),
+    workspaceDir: normalizeRequired(params.workspaceDir, "workspaceDir"),
+    managedSkillsDir: normalizeRequired(params.managedSkillsDir, "managedSkillsDir"),
   };
-
-  const response = await fetchJson<{ result: SkillRemoveResult }>("/api/gateway/skills/remove", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
+  return removeSkillViaGatewayAgent({
+    client: params.client,
+    request: payload,
   });
-  return response.result;
 };

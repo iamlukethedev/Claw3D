@@ -90,6 +90,20 @@ export type SkillRemoveResult = {
   source: RemovableSkillSource;
 };
 
+export type PackagedSkillInstallRequest = {
+  packageId: string;
+  source: RemovableSkillSource;
+  workspaceDir: string;
+  managedSkillsDir: string;
+};
+
+export type PackagedSkillInstallResult = {
+  installed: boolean;
+  installedPath: string;
+  source: RemovableSkillSource;
+  skillKey: string;
+};
+
 const resolveAgentId = (agentId: string): string => {
   const trimmed = agentId.trim();
   if (!trimmed) {

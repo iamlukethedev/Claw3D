@@ -932,6 +932,7 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
         label: `Remove ${normalizedSkillKey}`,
         run: async () => {
           const result = await removeSkillFromGateway({
+            client: params.client,
             skillKey: normalizedSkillKey,
             source: normalizedSource,
             baseDir: skill.baseDir,
