@@ -111,14 +111,14 @@ describe("AgentBrainPanel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Persona" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "SOUL.md" })).toBeInTheDocument();
     });
 
-    expect(screen.getByRole("heading", { name: "Directives" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Context" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Identity" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Directives")).toHaveValue("alpha agents");
-    expect(screen.getByLabelText("Persona")).toHaveValue(
+    expect(screen.getByRole("heading", { name: "AGENTS.md" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "USER.md" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "IDENTITY.md" })).toBeInTheDocument();
+    expect(screen.getByLabelText("AGENTS.md")).toHaveValue("alpha agents");
+    expect(screen.getByLabelText("SOUL.md")).toHaveValue(
       "# SOUL.md - Who You Are\n\n## Core Truths\n\nBe useful."
     );
     expect(screen.getByLabelText("Name")).toHaveValue("Alpha");
@@ -154,10 +154,10 @@ describe("AgentBrainPanel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Directives")).toBeInTheDocument();
+      expect(screen.getByLabelText("AGENTS.md")).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByLabelText("Directives"), {
+    fireEvent.change(screen.getByLabelText("AGENTS.md"), {
       target: { value: "alpha directives updated" },
     });
 
@@ -171,15 +171,17 @@ describe("AgentBrainPanel", () => {
     expect(filesByAgent["agent-1"]["AGENTS.md"]).toBe("alpha directives updated");
   });
 
-  it("discards_unsaved_changes_without_writing_files", async () => {
+  it("calls_cancel_without_writing_files", async () => {
     const { client, calls } = createMockClient();
     const agents = [createAgent("agent-1", "Alpha", "session-1")];
+    const onCancel = vi.fn();
 
     render(
       createElement(AgentBrainPanel, {
         client,
         agents,
         selectedAgentId: "agent-1",
+        onCancel,
       })
     );
 
@@ -192,12 +194,12 @@ describe("AgentBrainPanel", () => {
     });
     expect(screen.getByLabelText("Name")).toHaveValue("Alpha Prime");
 
-    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
-    expect(screen.getByLabelText("Name")).toHaveValue("Alpha");
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
     expect(calls.some((entry) => entry.method === "agents.files.set")).toBe(false);
   });
 
-  it("does_not_render_name_editor_in_personality_panel", async () => {
+  it("does_not_render_legacy_name_editor_controls", async () => {
     const { client } = createMockClient();
     const agents = [createAgent("agent-1", "Alpha", "session-1")];
 
@@ -210,7 +212,7 @@ describe("AgentBrainPanel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Persona" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "SOUL.md" })).toBeInTheDocument();
     });
     expect(screen.queryByLabelText("Agent name")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Update Name" })).not.toBeInTheDocument();

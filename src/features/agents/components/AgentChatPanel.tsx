@@ -1100,8 +1100,8 @@ const AgentChatComposer = memo(function AgentChatComposer({
           <div
             className={`mb-2 rounded-md border px-2.5 py-1.5 font-mono text-[10px] tracking-[0.02em] ${
               voiceError
-                ? "border-red-500/30 bg-red-500/10 text-red-200"
-                : "border-amber-700/35 bg-amber-500/8 text-amber-200"
+                ? "ui-badge-status-error"
+                : "ui-badge-status-approval"
             }`}
             data-testid="agent-voice-status"
           >
@@ -1122,7 +1122,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
             <button
               className={`rounded-md border px-2.5 py-2 font-mono text-[11px] font-medium tracking-[0.02em] transition ${
                 voiceRecording
-                  ? "border-red-500/60 bg-red-500/12 text-red-200 hover:bg-red-500/18"
+                  ? "ui-btn-danger"
                   : "border-border/70 bg-surface-3 text-white hover:bg-surface-2 hover:text-white"
               } disabled:cursor-not-allowed disabled:border-border/30 disabled:bg-muted/20 disabled:text-muted-foreground`}
               type="button"
@@ -1152,7 +1152,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
             </span>
           ) : null}
           <button
-            className="rounded border border-amber-700/50 bg-[#0e0a04]/90 px-3 py-2 font-mono text-[12px] font-medium tracking-wider text-amber-500/80 shadow-lg backdrop-blur transition-colors hover:border-amber-600/70 hover:text-amber-400 disabled:cursor-not-allowed disabled:border-border/30 disabled:bg-muted/20 disabled:text-amber-900/50"
+            className="rounded border border-[color:var(--status-approval-border)] bg-[#0e0a04]/90 px-3 py-2 font-mono text-[12px] font-medium tracking-wider text-[color:var(--status-approval-fg)] shadow-lg backdrop-blur transition-colors hover:border-[color:var(--status-approval-border)] hover:text-[color:var(--status-approval-fg)] disabled:cursor-not-allowed disabled:border-border/30 disabled:bg-muted/20 disabled:text-muted-foreground"
             type="button"
             onClick={onSend}
             disabled={sendDisabled}
@@ -1562,7 +1562,7 @@ export const AgentChatPanel = ({
 
           <div className="mt-0.5 flex items-center gap-2">
             <button
-              className="nodrag inline-flex items-center whitespace-nowrap rounded border border-amber-800/40 bg-amber-900/20 px-2 py-0.5 font-mono text-[9px] font-medium tracking-[0.02em] text-amber-400/80 transition hover:bg-amber-900/30 hover:text-amber-300 disabled:cursor-not-allowed disabled:opacity-40"
+              className="nodrag inline-flex items-center whitespace-nowrap rounded border border-[color:var(--status-approval-border)] bg-[color:var(--status-approval-bg)] px-2 py-0.5 font-mono text-[9px] font-medium tracking-[0.02em] text-[color:var(--status-approval-fg)] transition hover:bg-[color:var(--status-approval-bg)] hover:text-[color:var(--status-approval-fg)] disabled:cursor-not-allowed disabled:opacity-40"
               type="button"
               data-testid="agent-new-session-toggle"
               aria-label="Start new session"

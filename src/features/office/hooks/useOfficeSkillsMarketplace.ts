@@ -318,7 +318,7 @@ export const useOfficeSkillsMarketplace = ({
         },
       });
     },
-    [runSkillMutation],
+    [client, runSkillMutation],
   );
 
   return {

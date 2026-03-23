@@ -8,7 +8,7 @@ import type { CronRunResult } from "@/lib/cron/types";
 import type { MutationBlockState } from "@/features/agents/operations/mutationLifecycleWorkflow";
 
 import { useAgentSettingsMutationController } from "@/features/agents/operations/useAgentSettingsMutationController";
-import { deleteAgentViaStudio } from "@/features/agents/operations/deleteAgentOperation";
+import { deleteAgentRecordViaStudio } from "@/features/agents/operations/deleteAgentOperation";
 import { performCronCreateFlow } from "@/features/agents/operations/cronCreateOperation";
 import { updateAgentPermissionsViaStudio } from "@/features/agents/operations/agentPermissionsOperation";
 import { runAgentConfigMutationLifecycle } from "@/features/agents/operations/mutationLifecycleWorkflow";
@@ -50,7 +50,7 @@ vi.mock("@/features/agents/operations/useGatewayRestartBlock", () => ({
 }));
 
 vi.mock("@/features/agents/operations/deleteAgentOperation", () => ({
-  deleteAgentViaStudio: vi.fn(),
+  deleteAgentRecordViaStudio: vi.fn(),
 }));
 
 vi.mock("@/features/agents/operations/cronCreateOperation", () => ({
@@ -219,7 +219,7 @@ const renderController = (overrides?: Partial<Parameters<typeof useAgentSettings
 };
 
 describe("useAgentSettingsMutationController", () => {
-  const mockedDeleteAgentViaStudio = vi.mocked(deleteAgentViaStudio);
+  const mockedDeleteAgentViaStudio = vi.mocked(deleteAgentRecordViaStudio);
   const mockedPerformCronCreateFlow = vi.mocked(performCronCreateFlow);
   const mockedRunCronJobNow = vi.mocked(runCronJobNow);
   const mockedRemoveCronJob = vi.mocked(removeCronJob);
@@ -347,7 +347,7 @@ describe("useAgentSettingsMutationController", () => {
       deps.clearBlock();
       return true;
     });
-    mockedDeleteAgentViaStudio.mockResolvedValue({ trashed: { trashDir: "", moved: [] }, restored: null });
+    mockedDeleteAgentViaStudio.mockResolvedValue(undefined);
 
     const ctx = renderController();
 
@@ -653,13 +653,15 @@ describe("useAgentSettingsMutationController", () => {
       });
     });
 
-    expect(mockedRemoveSkillFromGateway).toHaveBeenCalledWith({
-      skillKey: "browser",
-      source: "openclaw-workspace",
-      baseDir: "/tmp/workspace/skills/browser",
-      workspaceDir: "/tmp/workspace",
-      managedSkillsDir: "/tmp/skills",
-    });
+    expect(mockedRemoveSkillFromGateway).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skillKey: "browser",
+        source: "openclaw-workspace",
+        baseDir: "/tmp/workspace/skills/browser",
+        workspaceDir: "/tmp/workspace",
+        managedSkillsDir: "/tmp/skills",
+      })
+    );
     expect(ctx.enqueueConfigMutation).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "update-skill-setup" })
     );

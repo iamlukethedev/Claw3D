@@ -58,20 +58,8 @@ const readJsonFile = (filePath) => {
 
 const DEFAULT_GATEWAY_URL = "ws://localhost:18789";
 const OPENCLAW_CONFIG_FILENAME = "openclaw.json";
-const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1", "0.0.0.0"]);
 
 const isRecord = (value) => Boolean(value && typeof value === "object");
-
-const isLocalGatewayUrl = (value) => {
-  const trimmed = typeof value === "string" ? value.trim() : "";
-  if (!trimmed) return false;
-  try {
-    const parsed = new URL(trimmed);
-    return LOOPBACK_HOSTNAMES.has(parsed.hostname.toLowerCase());
-  } catch {
-    return false;
-  }
-};
 
 const readOpenclawGatewayDefaults = (env = process.env) => {
   try {
@@ -100,7 +88,7 @@ const loadUpstreamGatewaySettings = (env = process.env) => {
   const gateway = parsed && typeof parsed === "object" ? parsed.gateway : null;
   const url = typeof gateway?.url === "string" ? gateway.url.trim() : "";
   const token = typeof gateway?.token === "string" ? gateway.token.trim() : "";
-  if (!token && (!url || isLocalGatewayUrl(url))) {
+  if (!token) {
     const defaults = readOpenclawGatewayDefaults(env);
     if (defaults) {
       return {

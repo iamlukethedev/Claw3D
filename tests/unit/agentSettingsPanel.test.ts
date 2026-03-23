@@ -615,7 +615,7 @@ describe("AgentSettingsPanel", () => {
       target: { value: "git" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Configure" }));
-    fireEvent.click(screen.getByRole("button", { name: "Remove skill from gateway" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove for all agents" }));
 
     expect(onRemoveSkill).toHaveBeenCalledWith({
       skillKey: "github",

@@ -305,11 +305,9 @@ export const AgentAvatarPreview3D = ({
     () => profile ?? createDefaultAgentAvatarProfile("preview"),
     [profile]
   );
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    setIsReady(false);
-  }, [resolvedProfile]);
+  const profileKey = useMemo(() => JSON.stringify(resolvedProfile), [resolvedProfile]);
+  const [readyProfileKey, setReadyProfileKey] = useState<string | null>(null);
+  const isReady = readyProfileKey === profileKey;
 
   return (
     <div className={`relative ${className}`}>
@@ -321,7 +319,7 @@ export const AgentAvatarPreview3D = ({
           </div>
         </div>
       ) : null}
-      <Canvas camera={{ position: [0, 0.7, 2.5], fov: 34 }}>
+      <Canvas key={profileKey} camera={{ position: [0, 0.7, 2.5], fov: 34 }}>
         <color attach="background" args={["#070b16"]} />
         <ambientLight intensity={1.4} />
         <directionalLight position={[3, 4, 5]} intensity={2.4} />
@@ -329,7 +327,7 @@ export const AgentAvatarPreview3D = ({
         <PreviewFigure
           profile={resolvedProfile}
           onFirstFrame={() => {
-            setIsReady(true);
+            setReadyProfileKey(profileKey);
           }}
         />
         <Environment preset="city" />

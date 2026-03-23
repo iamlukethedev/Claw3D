@@ -211,7 +211,11 @@ export const AgentBrainPanel = ({
             </button>
           </div>
 
-          <div className="space-y-8 pb-8">{renderedSections}</div>
+          <div className="space-y-8 pb-8">
+            {renderedSections.map((section, index) => (
+              <div key={`${activeSection ?? "all"}-${index}`}>{section}</div>
+            ))}
+          </div>
         </section>
       </div>
     </div>

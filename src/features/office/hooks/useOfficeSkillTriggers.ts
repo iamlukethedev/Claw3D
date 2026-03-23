@@ -54,10 +54,11 @@ export const useOfficeSkillTriggers = ({
     () => (agentIdsKey ? agentIdsKey.split("|").filter((value) => value.length > 0) : []),
     [agentIdsKey],
   );
+  const shouldLoadTriggers =
+    status === "connected" && stableAgentIds.length > 0 && packagedTriggers.length > 0;
 
   useEffect(() => {
-    if (status !== "connected" || agents.length === 0 || packagedTriggers.length === 0) {
-      setEnabledTriggersByAgentId({});
+    if (!shouldLoadTriggers) {
       return;
     }
 
@@ -107,7 +108,12 @@ export const useOfficeSkillTriggers = ({
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [agentIdsKey, client, packagedTriggers, stableAgentIds, status]);
+  }, [client, packagedTriggers, shouldLoadTriggers, stableAgentIds]);
+
+  const visibleEnabledTriggersByAgentId = useMemo(
+    () => (shouldLoadTriggers ? enabledTriggersByAgentId : {}),
+    [enabledTriggersByAgentId, shouldLoadTriggers]
+  );
 
   const movementTargetByAgentId = useMemo<Record<string, OfficeSkillTriggerMovementTarget>>(() => {
     const next: Record<string, OfficeSkillTriggerMovementTarget> = {};
@@ -116,17 +122,17 @@ export const useOfficeSkillTriggers = ({
         isAgentRunning: agent.status === "running" || Boolean(agent.runId),
         lastUserMessage: agent.lastUserMessage,
         transcriptEntries: agent.transcriptEntries,
-        triggers: enabledTriggersByAgentId[agent.agentId] ?? [],
+        triggers: visibleEnabledTriggersByAgentId[agent.agentId] ?? [],
       });
       if (trigger) {
         next[agent.agentId] = trigger.movementTarget;
       }
     }
     return next;
-  }, [agents, enabledTriggersByAgentId]);
+  }, [agents, visibleEnabledTriggersByAgentId]);
 
   return {
-    enabledTriggersByAgentId,
+    enabledTriggersByAgentId: visibleEnabledTriggersByAgentId,
     movementTargetByAgentId,
   };
 };
