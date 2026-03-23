@@ -211,7 +211,7 @@ export const AgentSkillsSetupModal = ({
                 disabled={anySkillBusy}
                 onClick={() => {
                   const approved = window.confirm(
-                    `Remove ${skill.name} from the gateway? This affects all agents.`
+                    `Remove ${skill.name} from the gateway for all agents?`
                   );
                   if (!approved) {
                     return;
@@ -224,7 +224,7 @@ export const AgentSkillsSetupModal = ({
                   onClose();
                 }}
               >
-                Remove skill from gateway
+                Remove for all agents
               </button>
             ) : null}
           </div>

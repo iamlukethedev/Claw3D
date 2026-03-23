@@ -81,7 +81,8 @@ import { AnalyticsPanel } from "@/features/office/components/panels/AnalyticsPan
 import { HistoryPanel } from "@/features/office/components/panels/HistoryPanel";
 import { InboxPanel } from "@/features/office/components/panels/InboxPanel";
 import { PlaybooksPanel } from "@/features/office/components/panels/PlaybooksPanel";
-import { SkillsMarketplacePanel } from "@/features/office/components/panels/SkillsMarketplacePanel";
+import { SkillsMarketplaceModal } from "@/features/office/components/panels/SkillsMarketplaceModal";
+import { useOfficeSkillTriggers } from "@/features/office/hooks/useOfficeSkillTriggers";
 import { useOfficeSkillsMarketplace } from "@/features/office/hooks/useOfficeSkillsMarketplace";
 import { useOfficeStandupController } from "@/features/office/hooks/useOfficeStandupController";
 import { useRunLog } from "@/features/office/hooks/useRunLog";
@@ -106,6 +107,7 @@ import {
   type OfficePhoneCallRequest,
   type OfficeTextMessageRequest,
 } from "@/lib/office/eventTriggers";
+import { buildOfficeSkillTriggerHoldMaps } from "@/lib/office/places";
 import type { MockPhoneCallScenario } from "@/lib/office/call/types";
 import type { MockTextMessageScenario } from "@/lib/office/text/types";
 import {
@@ -759,6 +761,7 @@ export function OfficeScreen({
   >({});
   const [gatewayModels, setGatewayModels] = useState<GatewayModelChoice[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [marketplaceOpen, setMarketplaceOpen] = useState(false);
   const [activeSidebarTab, setActiveSidebarTab] =
     useState<HQSidebarTab>("inbox");
   const router = useRouter();
@@ -1699,22 +1702,53 @@ export function OfficeScreen({
     onSkillActivityStart: handleMarketplaceGymStart,
     onSkillActivityEnd: handleMarketplaceGymEnd,
   });
+  const skillTriggers = useOfficeSkillTriggers({
+    client,
+    status,
+    agents: state.agents,
+  });
   const animationNowMs = Date.now();
-  const officeAnimationState = useMemo(
-    () =>
-      buildOfficeAnimationState({
-        state: officeTriggerState,
-        agents: state.agents,
-        marketplaceGymHoldByAgentId,
-        nowMs: animationNowMs,
-      }),
-    [
-      animationNowMs,
+  const officeAnimationState = useMemo(() => {
+    const base = buildOfficeAnimationState({
+      state: officeTriggerState,
+      agents: state.agents,
       marketplaceGymHoldByAgentId,
-      officeTriggerState,
-      state.agents,
-    ],
-  );
+      nowMs: animationNowMs,
+    });
+    const skillTriggerHoldMaps = buildOfficeSkillTriggerHoldMaps(
+      skillTriggers.movementTargetByAgentId,
+    );
+
+    return {
+      ...base,
+      deskHoldByAgentId: {
+        ...base.deskHoldByAgentId,
+        ...skillTriggerHoldMaps.deskHoldByAgentId,
+      },
+      githubHoldByAgentId: {
+        ...base.githubHoldByAgentId,
+        ...skillTriggerHoldMaps.githubHoldByAgentId,
+      },
+      gymHoldByAgentId: {
+        ...base.gymHoldByAgentId,
+        ...skillTriggerHoldMaps.gymHoldByAgentId,
+      },
+      qaHoldByAgentId: {
+        ...base.qaHoldByAgentId,
+        ...skillTriggerHoldMaps.qaHoldByAgentId,
+      },
+      skillGymHoldByAgentId: {
+        ...base.skillGymHoldByAgentId,
+        ...skillTriggerHoldMaps.skillGymHoldByAgentId,
+      },
+    };
+  }, [
+    animationNowMs,
+    marketplaceGymHoldByAgentId,
+    officeTriggerState,
+    skillTriggers.movementTargetByAgentId,
+    state.agents,
+  ]);
   const {
     deskHoldByAgentId,
     githubHoldByAgentId,
@@ -2851,8 +2885,7 @@ export function OfficeScreen({
         onPhoneCallComplete={handlePhoneCallComplete}
         onTextMessageComplete={handleTextMessageComplete}
         onOpenGithubSkillSetup={() => {
-          setSidebarOpen(true);
-          setActiveSidebarTab("marketplace");
+          setMarketplaceOpen(true);
         }}
       />
 
@@ -2887,6 +2920,7 @@ export function OfficeScreen({
           inboxCount={unseenInboxCount}
           onToggle={() => setSidebarOpen((prev) => !prev)}
           onTabChange={setActiveSidebarTab}
+          onOpenMarketplace={() => setMarketplaceOpen(true)}
           inboxPanel={
             <InboxPanel
               agents={state.agents}
@@ -2914,16 +2948,6 @@ export function OfficeScreen({
               standup={standupController}
             />
           }
-          marketplacePanel={
-            <SkillsMarketplacePanel
-              marketplace={marketplace}
-              onSelectAgent={handleOpenAgentChat}
-              onOpenAgentSettings={(agentId) => {
-                handleOpenAgentChat(agentId);
-                router.push("/office");
-              }}
-            />
-          }
           analyticsPanel={
             <AnalyticsPanel
               client={client}
@@ -2940,6 +2964,21 @@ export function OfficeScreen({
           }
         />
       ) : null}
+
+      <SkillsMarketplaceModal
+        open={marketplaceOpen}
+        marketplace={marketplace}
+        onClose={() => setMarketplaceOpen(false)}
+        onSelectAgent={(agentId) => {
+          handleOpenAgentChat(agentId);
+          setMarketplaceOpen(false);
+        }}
+        onOpenAgentSettings={(agentId) => {
+          handleOpenAgentChat(agentId);
+          setMarketplaceOpen(false);
+          router.push("/office");
+        }}
+      />
 
       {showOnboardingWizard ? (
         <OnboardingWizard

@@ -6,6 +6,12 @@ import type { GatewayClient, GatewayStatus } from "@/lib/gateway/GatewayClient";
 import { readGatewayAgentSkillsAllowlist } from "@/lib/gateway/agentConfig";
 import { isGatewayDisconnectLikeError } from "@/lib/gateway/GatewayClient";
 import { setAgentSkillEnabled } from "@/lib/skills/agentAccess";
+import {
+  appendPackagedSkillsToMarketplace,
+  getPackagedSkillBySkillKey,
+  listPackagedSkills,
+} from "@/lib/skills/catalog";
+import { installPackagedSkillViaGatewayAgent } from "@/lib/skills/install-gateway";
 import { resolvePreferredInstallOption } from "@/lib/skills/presentation";
 import { removeSkillFromGateway } from "@/lib/skills/remove";
 import {
@@ -50,10 +56,18 @@ export const useOfficeSkillsMarketplace = ({
   const [error, setError] = useState<string | null>(null);
   const [busySkillKey, setBusySkillKey] = useState<string | null>(null);
   const [message, setMessage] = useState<MarketplaceMessage | null>(null);
+  const packagedSkillsByKey = useMemo(
+    () => new Map(listPackagedSkills().map((skill) => [skill.skillKey, skill])),
+    []
+  );
 
   const selectedAgent = useMemo(
     () => agents.find((agent) => agent.agentId === selectedAgentId) ?? null,
     [agents, selectedAgentId],
+  );
+  const marketplaceSkills = useMemo(
+    () => appendPackagedSkillsToMarketplace(skillsReport?.skills ?? []),
+    [skillsReport]
   );
 
   useEffect(() => {
@@ -240,6 +254,36 @@ export const useOfficeSkillsMarketplace = ({
     [client, runSkillMutation],
   );
 
+  const handleInstallPackagedSkill = useCallback(
+    async (skillKey: string) => {
+      const packagedSkill = getPackagedSkillBySkillKey(skillKey);
+      if (!packagedSkill) {
+        setMessage({
+          kind: "error",
+          text: `No packaged marketplace skill was found for ${skillKey.trim() || "that entry"}.`,
+        });
+        return;
+      }
+
+      await runSkillMutation({
+        skillKey: packagedSkill.skillKey,
+        successMessage: `Successfully installed ${packagedSkill.name.trim()} in the selected workspace. Enable it for the agent from the CLAW3D tab.`,
+        run: async (_agentId, report) => {
+          await installPackagedSkillViaGatewayAgent({
+            client,
+            request: {
+              packageId: packagedSkill.packageId,
+              source: packagedSkill.installSource,
+              workspaceDir: report.workspaceDir,
+              managedSkillsDir: report.managedSkillsDir,
+            },
+          });
+        },
+      });
+    },
+    [client, runSkillMutation]
+  );
+
   const handleSetSkillGlobalEnabled = useCallback(
     async (skillKey: string, enabled: boolean) => {
       await runSkillMutation({
@@ -262,6 +306,7 @@ export const useOfficeSkillsMarketplace = ({
         successMessage: `${skill.name.trim()} removed from gateway files.`,
         run: async (_agentId, report) => {
           await removeSkillFromGateway({
+            client,
             skillKey: skill.skillKey,
             source: skill.source as
               | "openclaw-managed"
@@ -282,6 +327,8 @@ export const useOfficeSkillsMarketplace = ({
     selectedAgentId,
     setSelectedAgentId,
     skillsReport,
+    marketplaceSkills,
+    packagedSkillsByKey,
     skillsAllowlist,
     loading,
     error,
@@ -290,6 +337,7 @@ export const useOfficeSkillsMarketplace = ({
     refresh,
     handleSetSkillEnabled,
     handleInstallSkill,
+    handleInstallPackagedSkill,
     handleSetSkillGlobalEnabled,
     handleRemoveSkill,
   };

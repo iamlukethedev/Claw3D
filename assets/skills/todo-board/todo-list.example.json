@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "updatedAt": "2026-03-22T00:00:00.000Z",
+  "items": [
+    {
+      "id": "draft-roadmap",
+      "title": "Draft the TODO skill roadmap",
+      "status": "todo",
+      "createdAt": "2026-03-22T00:00:00.000Z",
+      "updatedAt": "2026-03-22T00:00:00.000Z",
+      "blockReason": null
+    },
+    {
+      "id": "gateway-access",
+      "title": "Confirm gateway install access",
+      "status": "blocked",
+      "createdAt": "2026-03-22T00:00:00.000Z",
+      "updatedAt": "2026-03-22T00:00:00.000Z",
+      "blockReason": "Waiting for gateway credentials"
+    }
+  ]
+}

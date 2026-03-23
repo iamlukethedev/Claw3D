@@ -6,9 +6,11 @@ import {
   hasInstallableMissingBinary,
   type SkillReadinessState,
 } from "@/lib/skills/presentation";
+import { getPackagedSkillBySkillKey } from "@/lib/skills/catalog";
 import type { SkillStatusEntry } from "@/lib/skills/types";
 
 export type SkillMarketplaceCollectionId =
+  | "claw3d"
   | "featured"
   | "installed"
   | "setup-required"
@@ -26,6 +28,9 @@ export type SkillMarketplaceMetadata = {
   editorBadge?: string;
   rating?: number;
   installs?: number;
+  poweredByName?: string;
+  poweredByUrl?: string;
+  hideStats?: boolean;
 };
 
 export type SkillMarketplaceEntry = {
@@ -71,6 +76,14 @@ const SKILL_MARKETPLACE_OVERRIDES: Record<string, Partial<SkillMarketplaceMetada
     featured: true,
     rating: 4.7,
     installs: 11980,
+  },
+  "todo-board": {
+    category: "Productivity",
+    tagline: "Gives agents a shared workspace TODO board with blocked-task tracking.",
+    capabilities: ["Task capture", "Blocked tracking", "Shared workspace state"],
+    featured: true,
+    editorBadge: "Claw3D test",
+    hideStats: true,
   },
 };
 
@@ -146,24 +159,38 @@ export const resolveSkillMarketplaceMetadata = (skill: SkillStatusEntry): SkillM
   const normalizedKey = skill.skillKey.trim().toLowerCase();
   const fallback = buildFallbackMetadata(skill);
   const override = SKILL_MARKETPLACE_OVERRIDES[normalizedKey];
+  const packagedSkill = getPackagedSkillBySkillKey(skill.skillKey);
   if (!override) {
-    return fallback;
+    return {
+      ...fallback,
+      poweredByName: packagedSkill?.creatorName,
+      poweredByUrl: packagedSkill?.creatorUrl,
+      hideStats: Boolean(packagedSkill),
+    };
   }
   return {
     ...fallback,
     ...override,
     capabilities: override.capabilities ?? fallback.capabilities,
+    poweredByName: packagedSkill?.creatorName,
+    poweredByUrl: packagedSkill?.creatorUrl,
+    hideStats: override.hideStats ?? Boolean(packagedSkill),
   };
 };
 
 export const buildSkillMarketplaceEntry = (skill: SkillStatusEntry): SkillMarketplaceEntry => {
+  const packagedSkill = getPackagedSkillBySkillKey(skill.skillKey);
+  const missingDetails = buildSkillMissingDetails(skill);
+  if (packagedSkill && !skill.baseDir.trim()) {
+    missingDetails.unshift("Install this packaged Claw3D skill to make it available on the gateway.");
+  }
   return {
     skill,
     readiness: deriveSkillReadinessState(skill),
     metadata: resolveSkillMarketplaceMetadata(skill),
     installable: hasInstallableMissingBinary(skill),
     removable: canRemoveSkill(skill),
-    missingDetails: buildSkillMissingDetails(skill),
+    missingDetails,
   };
 };
 
@@ -185,6 +212,11 @@ export const buildSkillMarketplaceCollections = (
   const featured = entries.filter((entry) => entry.metadata.featured).slice(0, 6);
   if (featured.length > 0) {
     collections.push({ id: "featured", label: "Featured", entries: featured });
+  }
+
+  const claw3d = entries.filter((entry) => getPackagedSkillBySkillKey(entry.skill.skillKey));
+  if (claw3d.length > 0) {
+    collections.push({ id: "claw3d", label: "Claw3D", entries: claw3d });
   }
 
   const installed = entries.filter((entry) => entry.readiness === "ready" || entry.skill.disabled);

@@ -430,6 +430,32 @@ export const deleteGatewayAgent = async (params: {
   }
 };
 
+export const removeGatewayAgentFromConfigOnly = async (params: {
+  client: GatewayClient;
+  agentId: string;
+}): Promise<{ removed: boolean }> => {
+  const agentId = params.agentId.trim();
+  if (!agentId) {
+    throw new Error("Agent id is required.");
+  }
+
+  const snapshot = await params.client.call<GatewayConfigSnapshot>("config.get", {});
+  const baseConfig = isRecord(snapshot.config) ? snapshot.config : {};
+  const list = readConfigAgentList(baseConfig);
+  const nextList = list.filter((entry) => entry.id !== agentId);
+  if (nextList.length === list.length) {
+    return { removed: false };
+  }
+
+  await applyGatewayConfigPatch({
+    client: params.client,
+    patch: { agents: { list: nextList } },
+    baseHash: snapshot.hash ?? undefined,
+    exists: snapshot.exists,
+  });
+  return { removed: true };
+};
+
 export const updateGatewayHeartbeat = async (params: {
   client: GatewayClient;
   agentId: string;

@@ -3,6 +3,8 @@ import * as childProcess from "node:child_process";
 
 const SSH_TARGET_ENV = "OPENCLAW_GATEWAY_SSH_TARGET";
 const SSH_USER_ENV = "OPENCLAW_GATEWAY_SSH_USER";
+const SSH_PORT_ENV = "OPENCLAW_GATEWAY_SSH_PORT";
+const SSH_STRICT_HOST_KEY_ENV = "OPENCLAW_GATEWAY_SSH_STRICT_HOST_KEY_CHECKING";
 
 export const resolveConfiguredSshTarget = (env: NodeJS.ProcessEnv = process.env): string | null => {
   const configuredTarget = env[SSH_TARGET_ENV]?.trim() ?? "";
@@ -15,6 +17,50 @@ export const resolveConfiguredSshTarget = (env: NodeJS.ProcessEnv = process.env)
   }
 
   return null;
+};
+
+export const resolveConfiguredSshPort = (env: NodeJS.ProcessEnv = process.env): number | null => {
+  const rawPort = env[SSH_PORT_ENV]?.trim() ?? "";
+  if (!rawPort) {
+    return null;
+  }
+  const port = Number.parseInt(rawPort, 10);
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+    throw new Error(`${SSH_PORT_ENV} must be a valid port.`);
+  }
+  return port;
+};
+
+export const resolveConfiguredSshStrictHostKeyChecking = (
+  env: NodeJS.ProcessEnv = process.env
+): "accept-new" | "yes" | "no" => {
+  const rawValue = env[SSH_STRICT_HOST_KEY_ENV]?.trim().toLowerCase() ?? "";
+  if (!rawValue) {
+    return "accept-new";
+  }
+  if (rawValue === "accept-new" || rawValue === "yes" || rawValue === "no") {
+    return rawValue;
+  }
+  throw new Error(
+    `${SSH_STRICT_HOST_KEY_ENV} must be one of: accept-new, yes, no.`
+  );
+};
+
+export const resolvePortFromGatewayUrl = (gatewayUrl: string): number | null => {
+  const trimmed = gatewayUrl.trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (!parsed.port) {
+      return null;
+    }
+    const port = Number.parseInt(parsed.port, 10);
+    return Number.isInteger(port) && port >= 1 && port <= 65_535 ? port : null;
+  } catch {
+    return null;
+  }
 };
 
 export const resolveGatewaySshTargetFromGatewayUrl = (
@@ -86,6 +132,8 @@ export const parseJsonOutput = (raw: string, label: string): unknown => {
 
 export const runSshJson = (params: {
   sshTarget: string;
+  sshPort?: number | null;
+  strictHostKeyChecking?: "accept-new" | "yes" | "no";
   argv: string[];
   label: string;
   input?: string;
@@ -100,9 +148,18 @@ export const runSshJson = (params: {
     options.maxBuffer = params.maxBuffer;
   }
 
-  const result = childProcess.spawnSync("ssh", ["-o", "BatchMode=yes", params.sshTarget, ...params.argv], {
-    ...options,
-  });
+  const sshArgs = [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    `StrictHostKeyChecking=${params.strictHostKeyChecking ?? resolveConfiguredSshStrictHostKeyChecking()}`,
+  ];
+  if (typeof params.sshPort === "number") {
+    sshArgs.push("-p", String(params.sshPort));
+  }
+  sshArgs.push(params.sshTarget, ...params.argv);
+
+  const result = childProcess.spawnSync("ssh", sshArgs, { ...options });
   if (result.error) {
     throw new Error(`Failed to execute ssh: ${result.error.message}`);
   }

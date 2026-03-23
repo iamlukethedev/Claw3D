@@ -6,7 +6,6 @@ export type HQSidebarTab =
   | "inbox"
   | "history"
   | "playbooks"
-  | "marketplace"
   | "analytics";
 
 type HQSidebarProps = {
@@ -15,10 +14,10 @@ type HQSidebarProps = {
   inboxCount: number;
   onToggle: () => void;
   onTabChange: (tab: HQSidebarTab) => void;
+  onOpenMarketplace: () => void;
   inboxPanel: ReactNode;
   historyPanel: ReactNode;
   playbooksPanel: ReactNode;
-  marketplacePanel: ReactNode;
   analyticsPanel: ReactNode;
 };
 
@@ -26,7 +25,6 @@ const TAB_LABELS: Record<HQSidebarTab, string> = {
   inbox: "Inbox",
   history: "History",
   playbooks: "Playbooks",
-  marketplace: "Marketplace",
   analytics: "Analytics",
 };
 
@@ -38,15 +36,14 @@ export function HQSidebar({
   inboxCount,
   onToggle,
   onTabChange,
+  onOpenMarketplace,
   inboxPanel,
   historyPanel,
   playbooksPanel,
-  marketplacePanel,
   analyticsPanel,
 }: HQSidebarProps) {
   const analyticsOnly = activeTab === "analytics";
-  const marketplaceOnly = activeTab === "marketplace";
-  const railOnly = analyticsOnly || marketplaceOnly;
+  const railOnly = analyticsOnly;
   const activePanel =
     activeTab === "inbox"
       ? inboxPanel
@@ -54,9 +51,7 @@ export function HQSidebar({
         ? historyPanel
         : activeTab === "playbooks"
           ? playbooksPanel
-          : activeTab === "marketplace"
-            ? marketplacePanel
-            : analyticsPanel;
+          : analyticsPanel;
 
   return (
     <aside className="pointer-events-none fixed inset-y-0 right-0 z-20 flex justify-end">
@@ -76,18 +71,10 @@ export function HQSidebar({
         <button
           type="button"
           onClick={() => {
-            onTabChange("marketplace");
-            if (!open) {
-              onToggle();
-            }
+            onOpenMarketplace();
           }}
-          className={`rounded-l-md border border-r-0 px-1.5 py-2.5 font-mono text-[10px] font-semibold tracking-[0.2em] shadow-xl backdrop-blur transition-colors ${
-            marketplaceOnly
-              ? "border-fuchsia-400/50 bg-[#16081b]/95 text-fuchsia-100"
-              : "border-fuchsia-500/25 bg-[#100611]/90 text-fuchsia-300/80 hover:border-fuchsia-400/45 hover:text-fuchsia-100"
-          }`}
-          aria-pressed={marketplaceOnly}
-          aria-label="Open marketplace sidebar"
+          className="rounded-l-md border border-r-0 border-fuchsia-500/25 bg-[#100611]/90 px-1.5 py-2.5 font-mono text-[10px] font-semibold tracking-[0.2em] text-fuchsia-300/80 shadow-xl backdrop-blur transition-colors hover:border-fuchsia-400/45 hover:text-fuchsia-100"
+          aria-label="Open marketplace"
         >
           <span className="block leading-none [writing-mode:vertical-rl]">
             MARKETPLACE
@@ -120,14 +107,12 @@ export function HQSidebar({
         <div className="pointer-events-auto flex h-full w-56 flex-col border-l border-cyan-500/20 bg-black/85 shadow-2xl backdrop-blur">
           <div className="border-b border-cyan-500/15 px-4 py-3">
             <div className="font-mono text-[10px] font-semibold tracking-[0.32em] text-cyan-300/80">
-              {analyticsOnly ? "ANALYTICS" : marketplaceOnly ? "MARKETPLACE" : "HEADQUARTERS"}
+              {analyticsOnly ? "ANALYTICS" : "HEADQUARTERS"}
             </div>
             <div className="mt-1 font-mono text-[11px] text-white/45">
               {analyticsOnly
                 ? "Cost, budgets, and performance intelligence."
-                : marketplaceOnly
-                  ? "Discover, install, and enable new skills."
-                  : "Monitor outputs, runs, and schedules."}
+                : "Monitor outputs, runs, and schedules."}
             </div>
             {railOnly ? (
               <button
