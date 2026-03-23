@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { RefreshCcw, Shuffle } from "lucide-react";
 import {
   AGENT_AVATAR_BOTTOM_STYLE_OPTIONS,
@@ -22,10 +22,16 @@ export type AgentAvatarEditorPanelProps = {
   agentName: string;
   initialProfile: AgentAvatarProfile | null | undefined;
   onSave: (profile: AgentAvatarProfile) => Promise<void> | void;
+  onDraftChange?: (profile: AgentAvatarProfile) => void;
   onCancel?: () => void;
   onSaved?: () => void;
   cancelLabel?: string;
   saveLabel?: string;
+  showActions?: boolean;
+};
+
+export type AgentAvatarEditorPanelHandle = {
+  save: () => Promise<void>;
 };
 
 const pillClassName =
@@ -34,16 +40,24 @@ const pillClassName =
 const colorSwatchClassName =
   "h-7 w-7 rounded-full border-2 transition-transform hover:scale-105";
 
-export const AgentAvatarEditorPanel = ({
-  agentId,
-  agentName,
-  initialProfile,
-  onSave,
-  onCancel,
-  onSaved,
-  cancelLabel = "Cancel",
-  saveLabel = "Save avatar",
-}: AgentAvatarEditorPanelProps) => {
+export const AgentAvatarEditorPanel = forwardRef<
+  AgentAvatarEditorPanelHandle,
+  AgentAvatarEditorPanelProps
+>(function AgentAvatarEditorPanel(
+  {
+    agentId,
+    agentName,
+    initialProfile,
+    onSave,
+    onDraftChange,
+    onCancel,
+    onSaved,
+    cancelLabel = "Cancel",
+    saveLabel = "Save avatar",
+    showActions = true,
+  }: AgentAvatarEditorPanelProps,
+  ref
+) {
   const fallbackProfile = useMemo(
     () => createDefaultAgentAvatarProfile(agentId),
     [agentId]
@@ -56,7 +70,11 @@ export const AgentAvatarEditorPanel = ({
     setDraft(resolvedInitialProfile);
   }, [resolvedInitialProfile]);
 
-  const save = async () => {
+  useEffect(() => {
+    onDraftChange?.(draft);
+  }, [draft, onDraftChange]);
+
+  const save = useCallback(async () => {
     if (saving) return;
     setSaving(true);
     try {
@@ -65,7 +83,15 @@ export const AgentAvatarEditorPanel = ({
     } finally {
       setSaving(false);
     }
-  };
+  }, [draft, onSave, onSaved, saving]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      save,
+    }),
+    [save]
+  );
 
   return (
     <div className="grid h-full min-h-0 gap-0 xl:grid-cols-[360px_minmax(0,1fr)]">
@@ -103,26 +129,28 @@ export const AgentAvatarEditorPanel = ({
       </div>
 
       <div className="min-h-0 overflow-y-auto p-5">
-        <div className="mb-6 flex items-center justify-end gap-2 border-b border-border/40 pb-4">
-          <button
-            type="button"
-            className="ui-btn-ghost px-3 py-2 text-xs"
-            onClick={onCancel}
-            disabled={saving}
-          >
-            {cancelLabel}
-          </button>
-          <button
-            type="button"
-            className="ui-btn-primary px-3 py-2 text-xs"
-            onClick={() => {
-              void save();
-            }}
-            disabled={saving}
-          >
-            {saving ? "Saving..." : saveLabel}
-          </button>
-        </div>
+        {showActions ? (
+          <div className="mb-6 flex items-center justify-end gap-2 border-b border-border/40 pb-4">
+            <button
+              type="button"
+              className="ui-btn-ghost px-3 py-2 text-xs"
+              onClick={onCancel}
+              disabled={saving}
+            >
+              {cancelLabel}
+            </button>
+            <button
+              type="button"
+              className="ui-btn-primary px-3 py-2 text-xs"
+              onClick={() => {
+                void save();
+              }}
+              disabled={saving}
+            >
+              {saving ? "Saving..." : saveLabel}
+            </button>
+          </div>
+        ) : null}
         <div className="grid gap-6 xl:grid-cols-2">
           <section className="space-y-3">
             <h3 className="font-mono text-[11px] font-semibold tracking-[0.06em] text-muted-foreground">
@@ -424,4 +452,4 @@ export const AgentAvatarEditorPanel = ({
       </div>
     </div>
   );
-};
+});

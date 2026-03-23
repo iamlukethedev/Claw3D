@@ -28,6 +28,7 @@ export function AgentIdentityFields({
         <input
           className={inputClassName}
           value={values.name}
+          placeholder="e.g. Luke"
           disabled={disabled}
           onChange={(event) => {
             onChange("name", event.target.value);
@@ -35,10 +36,11 @@ export function AgentIdentityFields({
         />
       </label>
       <label className="flex flex-col gap-2 text-xs text-muted-foreground">
-        Creature
+        Role
         <input
           className={inputClassName}
           value={values.creature}
+          placeholder="e.g. Product Designer"
           disabled={disabled}
           onChange={(event) => {
             onChange("creature", event.target.value);
@@ -50,6 +52,7 @@ export function AgentIdentityFields({
         <input
           className={inputClassName}
           value={values.vibe}
+          placeholder="e.g. Calm, sharp, and helpful"
           disabled={disabled}
           onChange={(event) => {
             onChange("vibe", event.target.value);
@@ -61,6 +64,7 @@ export function AgentIdentityFields({
         <input
           className={inputClassName}
           value={values.emoji}
+          placeholder="e.g. ✨"
           disabled={disabled}
           onChange={(event) => {
             onChange("emoji", event.target.value);

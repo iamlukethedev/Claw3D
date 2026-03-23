@@ -93,6 +93,7 @@ import type { AgentAvatarProfile } from "@/lib/avatars/profile";
 import {
   createEmptyPersonalityDraft,
   serializePersonalityFiles,
+  type PersonalityBuilderDraft,
 } from "@/lib/agents/personalityBuilder";
 import { writeGatewayAgentFiles } from "@/lib/gateway/agentFiles";
 import { randomUUID } from "@/lib/uuid";
@@ -1348,15 +1349,46 @@ export function OfficeScreen({
   const handleFinishCreateAgentAvatar = useCallback(
     async (params: {
       agentId: string;
-      identity: AgentIdentityValues;
+      draft: PersonalityBuilderDraft;
       profile: AgentAvatarProfile;
     }) => {
-      handleAvatarProfileSave(params.agentId, params.profile);
-      setCreateAgentWizardOpen(false);
+      setCreateAgentBusy(true);
       setCreateAgentModalError(null);
-      openAgentEditor(params.agentId, "IDENTITY.md");
+      try {
+        const files = serializePersonalityFiles(params.draft);
+        await writeGatewayAgentFiles({
+          client,
+          agentId: params.agentId,
+          files,
+        });
+        const currentAgent =
+          stateRef.current.agents.find((entry) => entry.agentId === params.agentId) ?? null;
+        const nextName = params.draft.identity.name.trim();
+        const currentName = currentAgent?.name.trim() ?? "";
+        if (nextName && nextName !== currentName) {
+          const renamed = await renameGatewayAgent({
+            client,
+            agentId: params.agentId,
+            name: nextName,
+          });
+          if (!renamed) {
+            throw new Error("Saved the wizard files, but could not rename the live agent.");
+          }
+        }
+        handleAvatarProfileSave(params.agentId, params.profile);
+        await loadAgents({ forceSettings: true });
+        setCreateAgentWizardOpen(false);
+        setCreateAgentModalError(null);
+        openAgentEditor(params.agentId, "IDENTITY.md");
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to finish creating the agent.";
+        setCreateAgentModalError(message);
+      } finally {
+        setCreateAgentBusy(false);
+      }
     },
-    [handleAvatarProfileSave, openAgentEditor],
+    [client, handleAvatarProfileSave, loadAgents, openAgentEditor],
   );
   const handleDeleteAgent = useCallback(
     async (agentId: string) => {
@@ -3907,7 +3939,7 @@ export function OfficeScreen({
         statusLine={createAgentStatusLine}
         onClose={handleCloseCreateAgentWizard}
         onCreateAgent={handleCreateAgentFromIdentity}
-        onFinishAvatar={handleFinishCreateAgentAvatar}
+        onFinishWizard={handleFinishCreateAgentAvatar}
       />
     </main>
   );
