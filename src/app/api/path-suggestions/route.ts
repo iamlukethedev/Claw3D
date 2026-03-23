@@ -42,8 +42,18 @@ const normalizeQuery = (query: string): string => {
   return `~/${withoutLeading}`;
 };
 
+const resolveRealPath = (value: string): string => {
+  try {
+    return fs.realpathSync(value);
+  } catch {
+    return path.resolve(value);
+  }
+};
+
 const isWithinHome = (target: string, home: string): boolean => {
-  const relative = path.relative(home, target);
+  const resolvedTarget = resolveRealPath(target);
+  const resolvedHome = resolveRealPath(home);
+  const relative = path.relative(resolvedHome, resolvedTarget);
   if (!relative) return true;
   return !relative.startsWith("..") && !path.isAbsolute(relative);
 };
