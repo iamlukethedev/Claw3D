@@ -24,6 +24,8 @@ export type AgentAvatarEditorPanelProps = {
   onSave: (profile: AgentAvatarProfile) => Promise<void> | void;
   onCancel?: () => void;
   onSaved?: () => void;
+  cancelLabel?: string;
+  saveLabel?: string;
 };
 
 const pillClassName =
@@ -39,6 +41,8 @@ export const AgentAvatarEditorPanel = ({
   onSave,
   onCancel,
   onSaved,
+  cancelLabel = "Cancel",
+  saveLabel = "Save avatar",
 }: AgentAvatarEditorPanelProps) => {
   const fallbackProfile = useMemo(
     () => createDefaultAgentAvatarProfile(agentId),
@@ -106,7 +110,7 @@ export const AgentAvatarEditorPanel = ({
             onClick={onCancel}
             disabled={saving}
           >
-            Cancel
+            {cancelLabel}
           </button>
           <button
             type="button"
@@ -116,7 +120,7 @@ export const AgentAvatarEditorPanel = ({
             }}
             disabled={saving}
           >
-            {saving ? "Saving..." : "Save avatar"}
+            {saving ? "Saving..." : saveLabel}
           </button>
         </div>
         <div className="grid gap-6 xl:grid-cols-2">

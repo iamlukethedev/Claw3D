@@ -30,7 +30,7 @@ export type PersonalityBuilderDraft = {
 
 type AgentFilesInput = Record<AgentFileName, { content: string; exists: boolean }>;
 
-const createEmptyDraft = (): PersonalityBuilderDraft => ({
+export const createEmptyPersonalityDraft = (): PersonalityBuilderDraft => ({
   identity: {
     name: "",
     creature: "",
@@ -253,7 +253,7 @@ const serializeSoulMarkdown = (draft: PersonalityBuilderDraft["soul"]) => {
 };
 
 export const parsePersonalityFiles = (files: AgentFilesInput): PersonalityBuilderDraft => {
-  const draft = createEmptyDraft();
+  const draft = createEmptyPersonalityDraft();
 
   const identity = parseLabelMap(files["IDENTITY.md"].content);
   const identityName = readFirst(identity, ["name"]);

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 
 import type { AgentState } from "@/features/agents/state/store";
 import type { GatewayClient } from "@/lib/gateway/GatewayClient";
+import { AgentIdentityFields } from "@/features/agents/components/AgentIdentityFields";
 import {
   AGENT_FILE_META,
   AGENT_FILE_PLACEHOLDERS,
@@ -140,52 +141,13 @@ export const AgentBrainPanel = ({
           Changing <span className="font-medium text-foreground">Name</span> here also renames the live agent
           when you save.
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="flex flex-col gap-2 text-xs text-muted-foreground">
-            Name
-            <input
-              className="h-10 rounded-md border border-border/80 bg-background px-3 text-sm text-foreground outline-none"
-              value={draft.identity.name}
-              disabled={agentFilesLoading || agentFilesSaving}
-              onChange={(event) => {
-                setIdentityField("name", event.target.value);
-              }}
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-xs text-muted-foreground">
-            Creature
-            <input
-              className="h-10 rounded-md border border-border/80 bg-background px-3 text-sm text-foreground outline-none"
-              value={draft.identity.creature}
-              disabled={agentFilesLoading || agentFilesSaving}
-              onChange={(event) => {
-                setIdentityField("creature", event.target.value);
-              }}
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-xs text-muted-foreground">
-            Vibe
-            <input
-              className="h-10 rounded-md border border-border/80 bg-background px-3 text-sm text-foreground outline-none"
-              value={draft.identity.vibe}
-              disabled={agentFilesLoading || agentFilesSaving}
-              onChange={(event) => {
-                setIdentityField("vibe", event.target.value);
-              }}
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-xs text-muted-foreground">
-            Emoji
-            <input
-              className="h-10 rounded-md border border-border/80 bg-background px-3 text-sm text-foreground outline-none"
-              value={draft.identity.emoji}
-              disabled={agentFilesLoading || agentFilesSaving}
-              onChange={(event) => {
-                setIdentityField("emoji", event.target.value);
-              }}
-            />
-          </label>
-        </div>
+        <AgentIdentityFields
+          values={draft.identity}
+          disabled={agentFilesLoading || agentFilesSaving}
+          onChange={(field, value) => {
+            setIdentityField(field, value);
+          }}
+        />
       </section>
     ),
     [agentFilesLoading, agentFilesSaving, draft.identity, setIdentityField],

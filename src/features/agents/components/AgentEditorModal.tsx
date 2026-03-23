@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Brain,
+  ChevronLeft,
+  ChevronRight,
   Database,
   FileText,
   HeartPulse,
   Palette,
   Shield,
+  Trash2,
   UserRound,
   Wrench,
   X,
@@ -32,6 +35,8 @@ type AgentEditorModalProps = {
   onClose: () => void;
   onAvatarSave: (agentId: string, profile: AgentAvatarProfile) => Promise<void> | void;
   onRename?: (agentId: string, name: string) => Promise<boolean>;
+  onDelete?: (agentId: string) => Promise<void> | void;
+  onNavigateAgent?: (agentId: string, section: AgentEditorSection) => void;
 };
 
 const menuButtonClassName =
@@ -102,13 +107,17 @@ export const AgentEditorModal = ({
   onClose,
   onAvatarSave,
   onRename,
+  onDelete,
+  onNavigateAgent,
 }: AgentEditorModalProps) => {
   const [activeSection, setActiveSection] = useState<AgentEditorSection>(initialSection);
-
-  useEffect(() => {
-    if (!open) return;
-    setActiveSection(initialSection);
-  }, [initialSection, open, agent.agentId]);
+  const activeAgentIndex = agents.findIndex((entry) => entry.agentId === agent.agentId);
+  const previousAgent =
+    activeAgentIndex > 0 ? agents[activeAgentIndex - 1] : null;
+  const nextAgent =
+    activeAgentIndex >= 0 && activeAgentIndex < agents.length - 1
+      ? agents[activeAgentIndex + 1]
+      : null;
 
   if (!open) return null;
 
@@ -144,6 +153,34 @@ export const AgentEditorModal = ({
               <div className="mt-1 text-xs text-muted-foreground">
                 Edit avatar and agent brain settings from the office.
               </div>
+              {onNavigateAgent ? (
+                <div className="mt-4 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!previousAgent) return;
+                      onNavigateAgent(previousAgent.agentId, activeSection);
+                    }}
+                    disabled={!previousAgent}
+                    className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-background/40 px-2.5 py-1.5 text-xs text-foreground transition-colors hover:border-border hover:bg-background/70 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                    <span>Previous</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!nextAgent) return;
+                      onNavigateAgent(nextAgent.agentId, activeSection);
+                    }}
+                    disabled={!nextAgent}
+                    className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-background/40 px-2.5 py-1.5 text-xs text-foreground transition-colors hover:border-border hover:bg-background/70 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <span>Next</span>
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             <div className="flex-1 space-y-2 overflow-y-auto p-3">
@@ -169,6 +206,25 @@ export const AgentEditorModal = ({
                 );
               })}
             </div>
+            {onDelete ? (
+              <div className="border-t border-border/40 p-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void onDelete(agent.agentId);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl border border-red-500/40 bg-red-950/55 px-3 py-3 text-left text-red-100 transition-colors hover:border-red-300/65 hover:bg-red-900/75 hover:text-white"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <div>
+                    <div className="text-sm font-semibold text-inherit">Delete Agent</div>
+                    <div className="text-xs text-red-100/85">
+                      Remove this agent from Claw3D and OpenClaw.
+                    </div>
+                  </div>
+                </button>
+              </div>
+            ) : null}
           </aside>
 
           <section className="flex min-w-0 flex-1 flex-col">

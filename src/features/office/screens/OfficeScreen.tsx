@@ -25,7 +25,10 @@ import {
   type StudioSettingsLoadOptions,
 } from "@/lib/studio/coordinator";
 import { resolveDeskAssignments } from "@/lib/studio/settings";
-import { renameGatewayAgent } from "@/lib/gateway/agentConfig";
+import {
+  createGatewayAgent,
+  renameGatewayAgent,
+} from "@/lib/gateway/agentConfig";
 import {
   runStudioBootstrapLoadOperation,
   executeStudioBootstrapLoadCommands,
@@ -53,11 +56,26 @@ import {
   AgentEditorModal,
   type AgentEditorSection,
 } from "@/features/agents/components/AgentEditorModal";
+import { AgentCreateWizardModal } from "@/features/agents/components/AgentCreateWizardModal";
+import type { AgentIdentityValues } from "@/features/agents/components/AgentIdentityFields";
 import { useChatInteractionController } from "@/features/agents/operations/useChatInteractionController";
+import {
+  applyCreateAgentBootstrapPermissions,
+  CREATE_AGENT_DEFAULT_PERMISSIONS,
+} from "@/features/agents/operations/createAgentBootstrapOperation";
+import { deleteAgentViaStudio } from "@/features/agents/operations/deleteAgentOperation";
+import { planAgentSettingsMutation } from "@/features/agents/operations/agentSettingsMutationWorkflow";
 import {
   executeHistorySyncCommands,
   runHistorySyncOperation,
 } from "@/features/agents/operations/historySyncOperation";
+import {
+  buildQueuedMutationBlock,
+  runAgentConfigMutationLifecycle,
+  runCreateAgentMutationLifecycle,
+  type CreateAgentBlockState,
+} from "@/features/agents/operations/mutationLifecycleWorkflow";
+import { useConfigMutationQueue } from "@/features/agents/operations/useConfigMutationQueue";
 import {
   RUNTIME_SYNC_DEFAULT_HISTORY_LIMIT,
   RUNTIME_SYNC_MAX_HISTORY_LIMIT,
@@ -72,6 +90,11 @@ import {
 } from "@/lib/gateway/models";
 import type { GatewayModelPolicySnapshot } from "@/lib/gateway/models";
 import type { AgentAvatarProfile } from "@/lib/avatars/profile";
+import {
+  createEmptyPersonalityDraft,
+  serializePersonalityFiles,
+} from "@/lib/agents/personalityBuilder";
+import { writeGatewayAgentFiles } from "@/lib/gateway/agentFiles";
 import { randomUUID } from "@/lib/uuid";
 import {
   HQSidebar,
@@ -165,6 +188,15 @@ type PreparedTextMessageEntry = {
   scenario: MockTextMessageScenario;
 };
 
+type OfficeDeleteMutationBlockState = {
+  kind: "delete-agent";
+  agentId: string;
+  agentName: string;
+  phase: "queued" | "mutating" | "awaiting-restart";
+  startedAt: number;
+  sawDisconnect: boolean;
+};
+
 type PhoneCallSpeakPayload = {
   agentId: string;
   requestKey: string;
@@ -211,6 +243,31 @@ const formatOpenClawValue = (value: string | null | undefined) => {
 
 const buildPhoneCallOutputLine = (text: string) => `[phone booth] ${text}`;
 const buildTextMessageOutputLine = (text: string) => `[messaging booth] ${text}`;
+
+const buildIdentityFileDraft = (identity: AgentIdentityValues) => {
+  const draft = createEmptyPersonalityDraft();
+  draft.identity = {
+    ...draft.identity,
+    ...identity,
+  };
+  return serializePersonalityFiles(draft);
+};
+
+const resolveOfficeMutationGuardMessage = (guardReason?: string) => {
+  if (guardReason === "not-connected") {
+    return "Connect to the gateway before changing the office fleet.";
+  }
+  if (guardReason === "create-block-active") {
+    return "Finish the active agent creation before starting another fleet change.";
+  }
+  if (guardReason === "rename-block-active") {
+    return "Finish the active rename before changing the office fleet.";
+  }
+  if (guardReason === "delete-block-active") {
+    return "Finish the active deletion before changing the office fleet.";
+  }
+  return "The office fleet is busy right now.";
+};
 
 const PHONE_BOOTH_ASSISTANT_FALLBACK_RE =
   /\b(?:i\s+)?can(?:not|['’]t)\s+(?:place|make)\s+(?:phone\s+)?calls?\b/i;
@@ -743,6 +800,16 @@ export function OfficeScreen({
   const [agentEditorAgentId, setAgentEditorAgentId] = useState<string | null>(null);
   const [agentEditorInitialSection, setAgentEditorInitialSection] =
     useState<AgentEditorSection>("avatar");
+  const [createAgentWizardNonce, setCreateAgentWizardNonce] = useState(0);
+  const [createAgentWizardOpen, setCreateAgentWizardOpen] = useState(false);
+  const [createAgentBusy, setCreateAgentBusy] = useState(false);
+  const [createAgentModalError, setCreateAgentModalError] = useState<string | null>(
+    null,
+  );
+  const [createAgentBlock, setCreateAgentBlock] =
+    useState<CreateAgentBlockState | null>(null);
+  const [deleteAgentBlock, setDeleteAgentBlock] =
+    useState<OfficeDeleteMutationBlockState | null>(null);
   const [preparedPhoneCallsByAgentId, setPreparedPhoneCallsByAgentId] = useState<
     Record<string, PreparedPhoneCallEntry>
   >({});
@@ -896,6 +963,22 @@ export function OfficeScreen({
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  const hasRunningAgents = useMemo(
+    () =>
+      state.agents.some(
+        (agent) => agent.status === "running" || Boolean(agent.runId),
+      ),
+    [state.agents],
+  );
+  const hasDeleteMutationBlock = deleteAgentBlock?.kind === "delete-agent";
+  const { enqueueConfigMutation } = useConfigMutationQueue({
+    status,
+    hasRunningAgents,
+    hasRestartBlockInProgress: Boolean(
+      deleteAgentBlock && deleteAgentBlock.phase !== "queued",
+    ),
+  });
 
   useEffect(() => {
     officeTriggerStateRef.current = officeTriggerState;
@@ -1107,6 +1190,299 @@ export function OfficeScreen({
     setLoading,
     status,
   ]);
+
+  const handleCloseCreateAgentWizard = useCallback(
+    (createdAgentId: string | null) => {
+      setCreateAgentWizardOpen(false);
+      setCreateAgentModalError(null);
+      if (createdAgentId) {
+        openAgentEditor(createdAgentId, "IDENTITY.md");
+      }
+    },
+    [openAgentEditor],
+  );
+  const handleOpenCreateAgentWizard = useCallback(() => {
+    setCreateAgentModalError(null);
+    setCreateAgentWizardNonce((current) => current + 1);
+    setCreateAgentWizardOpen(true);
+  }, []);
+  const clearDeletedAgentUiState = useCallback((agentId: string) => {
+    setSelectedChatAgentId((current) => (current === agentId ? null : current));
+    setAgentEditorAgentId((current) => (current === agentId ? null : current));
+    setMonitorAgentId((current) => (current === agentId ? null : current));
+    setGithubReviewAgentId((current) => (current === agentId ? null : current));
+    setQaTestingAgentId((current) => (current === agentId ? null : current));
+    setPreparedPhoneCallsByAgentId((current) => {
+      if (!(agentId in current)) return current;
+      const next = { ...current };
+      delete next[agentId];
+      return next;
+    });
+    setPreparedTextMessagesByAgentId((current) => {
+      if (!(agentId in current)) return current;
+      const next = { ...current };
+      delete next[agentId];
+      return next;
+    });
+  }, []);
+  const createAgentStatusLine = useMemo(() => {
+    if (!createAgentBlock) return null;
+    if (createAgentBlock.phase === "queued") {
+      return "Waiting for active runs to finish before creating the new agent.";
+    }
+    return `Creating ${createAgentBlock.agentName}.`;
+  }, [createAgentBlock]);
+  const deleteAgentStatusLine = useMemo(() => {
+    if (!deleteAgentBlock) return null;
+    if (deleteAgentBlock.phase === "queued") {
+      return `Waiting for active runs to finish before deleting ${deleteAgentBlock.agentName}.`;
+    }
+    return `Deleting ${deleteAgentBlock.agentName}.`;
+  }, [deleteAgentBlock]);
+  const handleCreateAgentFromIdentity = useCallback(
+    async (identity: AgentIdentityValues) => {
+      let createdAgentId: string | null = null;
+      const success = await runCreateAgentMutationLifecycle(
+        {
+          payload: {
+            name: identity.name,
+          },
+          status,
+          hasCreateBlock: Boolean(createAgentBlock),
+          hasRenameBlock: false,
+          hasDeleteBlock: Boolean(hasDeleteMutationBlock),
+          createAgentBusy,
+        },
+        {
+          enqueueConfigMutation,
+          createAgent: async (name) => {
+            const created = await createGatewayAgent({ client, name });
+            const files = buildIdentityFileDraft(identity);
+            await writeGatewayAgentFiles({
+              client,
+              agentId: created.id,
+              files: {
+                "IDENTITY.md": files["IDENTITY.md"],
+              },
+            });
+            return { id: created.id };
+          },
+          setQueuedBlock: ({ agentName, startedAt }) => {
+            const queuedCreateBlock = buildQueuedMutationBlock({
+              kind: "create-agent",
+              agentId: "",
+              agentName,
+              startedAt,
+            });
+            setCreateAgentBlock({
+              agentName: queuedCreateBlock.agentName,
+              phase: "queued",
+              startedAt: queuedCreateBlock.startedAt,
+            });
+          },
+          setCreatingBlock: (agentName) => {
+            setCreateAgentBlock((current) => {
+              if (!current || current.agentName !== agentName) return current;
+              return { ...current, phase: "creating" };
+            });
+          },
+          onCompletion: async (completion) => {
+            createdAgentId = completion.agentId;
+            await loadAgents({ forceSettings: true });
+            const createdAgent =
+              stateRef.current.agents.find(
+                (entry) => entry.agentId === completion.agentId,
+              ) ?? null;
+            if (createdAgent?.sessionKey) {
+              try {
+                await applyCreateAgentBootstrapPermissions({
+                  client,
+                  agentId: createdAgent.agentId,
+                  sessionKey: createdAgent.sessionKey,
+                  draft: { ...CREATE_AGENT_DEFAULT_PERMISSIONS },
+                  loadAgents: () => loadAgents({ forceSettings: true }),
+                });
+              } catch (error) {
+                const message =
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to apply default permissions.";
+                setError(
+                  `Agent created, but default permissions could not be applied: ${message}`,
+                );
+              }
+            }
+            dispatch({
+              type: "selectAgent",
+              agentId: completion.agentId,
+            });
+            setSelectedChatAgentId(completion.agentId);
+            setCreateAgentBlock(null);
+            setCreateAgentModalError(null);
+          },
+          setCreateAgentModalError,
+          setCreateAgentBusy,
+          clearCreateBlock: () => {
+            setCreateAgentBlock(null);
+          },
+          onError: setError,
+        },
+      );
+      return success ? createdAgentId : null;
+    },
+    [
+      client,
+      createAgentBlock,
+      createAgentBusy,
+      dispatch,
+      enqueueConfigMutation,
+      hasDeleteMutationBlock,
+      loadAgents,
+      setError,
+      status,
+    ],
+  );
+  const handleFinishCreateAgentAvatar = useCallback(
+    async (params: {
+      agentId: string;
+      identity: AgentIdentityValues;
+      profile: AgentAvatarProfile;
+    }) => {
+      handleAvatarProfileSave(params.agentId, params.profile);
+      setCreateAgentWizardOpen(false);
+      setCreateAgentModalError(null);
+      openAgentEditor(params.agentId, "IDENTITY.md");
+    },
+    [handleAvatarProfileSave, openAgentEditor],
+  );
+  const handleDeleteAgent = useCallback(
+    async (agentId: string) => {
+      const decision = planAgentSettingsMutation(
+        { kind: "delete-agent", agentId },
+        {
+          status,
+          hasCreateBlock: Boolean(createAgentBlock),
+          hasRenameBlock: false,
+          hasDeleteBlock: Boolean(hasDeleteMutationBlock),
+          cronCreateBusy: false,
+          cronRunBusyJobId: null,
+          cronDeleteBusyJobId: null,
+        },
+      );
+      if (decision.kind === "deny") {
+        setError(
+          decision.message ?? resolveOfficeMutationGuardMessage(decision.guardReason),
+        );
+        return;
+      }
+      const agent = state.agents.find(
+        (entry) => entry.agentId === decision.normalizedAgentId,
+      );
+      if (!agent) return;
+      const confirmed = window.confirm(
+        `Delete ${agent.name}? This removes the agent from gateway config, scheduled automations, and moves its state into ~/.openclaw/trash on the gateway host.`,
+      );
+      if (!confirmed) return;
+
+      await runAgentConfigMutationLifecycle({
+        kind: "delete-agent",
+        label: `Delete ${agent.name}`,
+        isLocalGateway: false,
+        deps: {
+          enqueueConfigMutation,
+          setQueuedBlock: () => {
+            const queuedBlock = buildQueuedMutationBlock({
+              kind: "delete-agent",
+              agentId: decision.normalizedAgentId,
+              agentName: agent.name,
+              startedAt: Date.now(),
+            });
+            setDeleteAgentBlock({
+              kind: "delete-agent",
+              agentId: queuedBlock.agentId,
+              agentName: queuedBlock.agentName,
+              phase: queuedBlock.phase,
+              startedAt: queuedBlock.startedAt,
+              sawDisconnect: queuedBlock.sawDisconnect,
+            });
+          },
+          setMutatingBlock: () => {
+            setDeleteAgentBlock((current) => {
+              if (!current || current.agentId !== decision.normalizedAgentId) {
+                return current;
+              }
+              return {
+                ...current,
+                phase: "mutating",
+              };
+            });
+          },
+          patchBlockAwaitingRestart: (patch) => {
+            setDeleteAgentBlock((current) => {
+              if (!current || current.agentId !== decision.normalizedAgentId) {
+                return current;
+              }
+              return {
+                ...current,
+                ...patch,
+              };
+            });
+          },
+          clearBlock: () => {
+            setDeleteAgentBlock((current) => {
+              if (!current || current.agentId !== decision.normalizedAgentId) {
+                return current;
+              }
+              return null;
+            });
+          },
+          executeMutation: async () => {
+            await deleteAgentViaStudio({
+              client,
+              agentId: decision.normalizedAgentId,
+              logError: (message, error) => console.error(message, error),
+            });
+            clearDeletedAgentUiState(decision.normalizedAgentId);
+          },
+          shouldAwaitRemoteRestart: async () => false,
+          reloadAgents: () => loadAgents({ forceSettings: true }),
+          setMobilePaneChat: () => {},
+          onError: setError,
+        },
+      });
+    },
+    [
+      clearDeletedAgentUiState,
+      client,
+      createAgentBlock,
+      enqueueConfigMutation,
+      hasDeleteMutationBlock,
+      loadAgents,
+      setError,
+      state.agents,
+      status,
+    ],
+  );
+
+  useEffect(() => {
+    if (!createAgentBlock || createAgentBlock.phase === "queued") return;
+    const maxWaitMs = 90_000;
+    const elapsed = Date.now() - createAgentBlock.startedAt;
+    const remaining = Math.max(0, maxWaitMs - elapsed);
+    const timeoutId = window.setTimeout(() => {
+      setCreateAgentBlock((current) => {
+        if (!current || current.phase === "queued") return current;
+        return null;
+      });
+      setCreateAgentBusy(false);
+      setCreateAgentWizardOpen(false);
+      setError("Agent creation timed out.");
+      void loadAgents({ forceSettings: true });
+    }, remaining);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [createAgentBlock, loadAgents, setError]);
 
   const requestAgentHistoryRefresh = useCallback(
     async (params: {
@@ -1338,6 +1714,11 @@ export function OfficeScreen({
     if (status === "disconnected") {
       connectionEpochRef.current += 1;
       setAgentsLoaded(false);
+      setCreateAgentWizardOpen(false);
+      setCreateAgentBusy(false);
+      setCreateAgentModalError(null);
+      setCreateAgentBlock(null);
+      setDeleteAgentBlock(null);
       loadAgentsInFlightRef.current = null;
       gatewayConfigSnapshot.current = null;
       lastLoadAgentsStartedAtRef.current = 0;
@@ -1662,6 +2043,19 @@ export function OfficeScreen({
     : null;
   const mainAgent =
     state.agents.find((agent) => agent.agentId === MAIN_AGENT_ID) ?? null;
+
+  useEffect(() => {
+    if (!selectedChatAgentId) return;
+    if (state.agents.some((agent) => agent.agentId === selectedChatAgentId)) return;
+    setSelectedChatAgentId(null);
+  }, [selectedChatAgentId, state.agents]);
+
+  useEffect(() => {
+    if (!agentEditorAgentId) return;
+    if (state.agents.some((agent) => agent.agentId === agentEditorAgentId)) return;
+    setAgentEditorAgentId(null);
+  }, [agentEditorAgentId, state.agents]);
+
   const runLog = useRunLog({ client, status, agents: state.agents });
   const standupAgentSnapshots = useMemo<StandupAgentSnapshot[]>(
     () =>
@@ -2836,8 +3230,12 @@ export function OfficeScreen({
             dispatch({ type: "selectAgent", agentId });
           }
         }}
+        onAddAgent={handleOpenCreateAgentWizard}
         onAgentEdit={(agentId) => {
           openAgentEditor(agentId, "avatar");
+        }}
+        onAgentDelete={(agentId) => {
+          void handleDeleteAgent(agentId);
         }}
         onDeskAssignmentChange={handleDeskAssignmentChange}
         onDeskAssignmentsReset={handleDeskAssignmentsReset}
@@ -2866,16 +3264,38 @@ export function OfficeScreen({
                 </p>
                 <p className="mt-1 text-sm text-amber-50">{emptyFleetMessage}</p>
               </div>
-              <button
-                type="button"
-                className="ui-btn-secondary shrink-0 px-3 py-2 text-xs font-semibold tracking-[0.05em] text-foreground"
-                onClick={() => {
-                  void loadAgents({ forceSettings: true });
-                }}
-              >
-                Retry
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  className="ui-btn-secondary px-3 py-2 text-xs font-semibold tracking-[0.05em] text-foreground"
+                  onClick={() => {
+                    handleOpenCreateAgentWizard();
+                  }}
+                >
+                  Add Agent
+                </button>
+                <button
+                  type="button"
+                  className="ui-btn-secondary px-3 py-2 text-xs font-semibold tracking-[0.05em] text-foreground"
+                  onClick={() => {
+                    void loadAgents({ forceSettings: true });
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteAgentStatusLine ? (
+        <div className="pointer-events-none fixed left-1/2 top-5 z-40 -translate-x-1/2 px-4">
+          <div className="pointer-events-auto rounded-lg border border-red-400/30 bg-black/85 px-4 py-3 shadow-2xl backdrop-blur">
+            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-red-200/75">
+              Fleet mutation
+            </div>
+            <div className="mt-1 text-sm text-red-50">{deleteAgentStatusLine}</div>
           </div>
         </div>
       ) : null}
@@ -2887,6 +3307,7 @@ export function OfficeScreen({
           inboxCount={unseenInboxCount}
           onToggle={() => setSidebarOpen((prev) => !prev)}
           onTabChange={setActiveSidebarTab}
+          onAddAgent={handleOpenCreateAgentWizard}
           inboxPanel={
             <InboxPanel
               agents={state.agents}
@@ -3405,6 +3826,7 @@ export function OfficeScreen({
       ) : null}
       {agentEditorAgent ? (
         <AgentEditorModal
+          key={`${agentEditorAgent.agentId}:${agentEditorInitialSection}`}
           open
           client={client}
           agents={state.agents}
@@ -3424,8 +3846,25 @@ export function OfficeScreen({
               return false;
             }
           }}
+          onDelete={async (agentId) => {
+            await handleDeleteAgent(agentId);
+          }}
+          onNavigateAgent={(agentId, section) => {
+            openAgentEditor(agentId, section);
+          }}
         />
       ) : null}
+      <AgentCreateWizardModal
+        key={createAgentWizardNonce}
+        open={createAgentWizardOpen}
+        suggestedName={`Agent ${state.agents.length + 1}`}
+        busy={createAgentBusy}
+        submitError={createAgentModalError}
+        statusLine={createAgentStatusLine}
+        onClose={handleCloseCreateAgentWizard}
+        onCreateAgent={handleCreateAgentFromIdentity}
+        onFinishAvatar={handleFinishCreateAgentAvatar}
+      />
     </main>
   );
 }

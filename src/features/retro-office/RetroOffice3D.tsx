@@ -9,6 +9,8 @@ import {
   Armchair,
   Settings2,
   Camera,
+  UserPlus,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
@@ -1901,7 +1903,9 @@ export function RetroOffice3D({
   onStandupArrivalsChange,
   onStandupStartRequested,
   onMonitorSelect,
+  onAddAgent,
   onAgentEdit,
+  onAgentDelete,
   onDeskAssignmentChange,
   onDeskAssignmentsReset,
   onGithubReviewDismiss,
@@ -1965,7 +1969,9 @@ export function RetroOffice3D({
   onStandupArrivalsChange?: (arrivedAgentIds: string[]) => void;
   onStandupStartRequested?: () => void;
   onMonitorSelect?: (agentId: string | null) => void;
+  onAddAgent?: () => void;
   onAgentEdit?: (agentId: string) => void;
+  onAgentDelete?: (agentId: string) => void;
   onDeskAssignmentChange?: (deskUid: string, agentId: string | null) => void;
   onDeskAssignmentsReset?: (deskUids: string[]) => void;
   onGithubReviewDismiss?: () => void;
@@ -2497,10 +2503,7 @@ export function RetroOffice3D({
       ) ?? null
     );
   }, [assignedDeskIndexByAgentId, deskLocations, furniture, monitorAgentId]);
-  useEffect(() => {
-    if (!immersiveOverlayActive) return;
-    setAgentRosterOpen(false);
-  }, [immersiveOverlayActive]);
+  const agentRosterVisible = agentRosterOpen && !immersiveOverlayActive;
   const selectedItem = useMemo(
     () => furniture.find((item) => item._uid === selectedUid) ?? null,
     [furniture, selectedUid],
@@ -5124,7 +5127,7 @@ export function RetroOffice3D({
             </button>
           </div>
 
-          {agentRosterOpen ? (
+          {agentRosterVisible ? (
             <div className="absolute left-1/2 top-full mt-2 w-[min(92vw,560px)] -translate-x-1/2 rounded-2xl border border-amber-900/25 bg-[#120e08]/96 p-3 shadow-2xl backdrop-blur-sm">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
@@ -5223,6 +5226,19 @@ export function RetroOffice3D({
                       >
                         <Monitor size={12} />
                       </button>
+                      {onAgentDelete ? (
+                        <button
+                          type="button"
+                          title="Delete agent"
+                          onClick={() => {
+                            onAgentDelete(agent.id);
+                            setAgentRosterOpen(false);
+                          }}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-900/30 text-red-300/70 transition-colors hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-200"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      ) : null}
                     </div>
                   );
                 })}
@@ -5953,6 +5969,16 @@ export function RetroOffice3D({
       {/* Toolbar — top right. */}
       {!immersiveOverlayActive ? (
         <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
+          {onAddAgent ? (
+            <button
+              onClick={onAddAgent}
+              title="Add agent"
+              className="flex h-7 items-center justify-center gap-1 rounded-md border border-cyan-500/35 bg-[#071018]/92 px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200 transition-all backdrop-blur-sm hover:border-cyan-400/55 hover:text-white"
+            >
+              <UserPlus size={12} />
+              <span>Add</span>
+            </button>
+          ) : null}
           {/* New Idea 7: Heatmap toggle. */}
           <button
             onClick={() => setHeatmapMode((p) => !p)}

@@ -15,6 +15,7 @@ type HQSidebarProps = {
   inboxCount: number;
   onToggle: () => void;
   onTabChange: (tab: HQSidebarTab) => void;
+  onAddAgent?: () => void;
   inboxPanel: ReactNode;
   historyPanel: ReactNode;
   playbooksPanel: ReactNode;
@@ -38,6 +39,7 @@ export function HQSidebar({
   inboxCount,
   onToggle,
   onTabChange,
+  onAddAgent,
   inboxPanel,
   historyPanel,
   playbooksPanel,
@@ -129,6 +131,15 @@ export function HQSidebar({
                   ? "Discover, install, and enable new skills."
                   : "Monitor outputs, runs, and schedules."}
             </div>
+            {!railOnly && onAddAgent ? (
+              <button
+                type="button"
+                onClick={onAddAgent}
+                className="mt-3 rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-200 transition-colors hover:border-cyan-400/40 hover:text-cyan-100"
+              >
+                Add Agent
+              </button>
+            ) : null}
             {railOnly ? (
               <button
                 type="button"
