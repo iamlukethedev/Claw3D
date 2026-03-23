@@ -547,12 +547,14 @@ export const useGatewayConnection = (
         const settings = envelope.settings ?? null;
         const gateway = settings?.gateway ?? null;
         if (cancelled) return;
-        setLocalGatewayDefaults(normalizeLocalGatewayDefaults(envelope.localGatewayDefaults));
+        const normalizedLocalDefaults = normalizeLocalGatewayDefaults(envelope.localGatewayDefaults);
+        setLocalGatewayDefaults(normalizedLocalDefaults);
         const nextGatewayUrl = gateway?.url?.trim() ? gateway.url : DEFAULT_UPSTREAM_GATEWAY_URL;
-        const nextToken =
+        const nextTokenFromSettings =
           gateway && "token" in gateway && typeof gateway.token === "string"
-            ? gateway.token
+            ? gateway.token.trim()
             : "";
+        const nextToken = nextTokenFromSettings || normalizedLocalDefaults?.token || "";
         loadedGatewaySettings.current = {
           gatewayUrl: nextGatewayUrl.trim(),
           token: nextToken,
@@ -608,32 +610,39 @@ export const useGatewayConnection = (
     setError(null);
     setConnectErrorCode(null);
     wasManualDisconnectRef.current = false;
+    const effectiveGatewayUrl = localGatewayDefaults?.url?.trim() || gatewayUrl.trim();
+    const effectiveToken = localGatewayDefaults?.token?.trim() || token.trim();
+    if (localGatewayDefaults) {
+      setGatewayUrl(localGatewayDefaults.url);
+      setToken(localGatewayDefaults.token);
+    }
     try {
       await settingsCoordinator.flushPending();
       await client.connect({
         gatewayUrl: resolveStudioProxyGatewayUrl(),
-        token,
-        authScopeKey: gatewayUrl,
+        token: effectiveToken,
+        authScopeKey: effectiveGatewayUrl,
         clientName: "openclaw-control-ui",
       });
       await ensureGatewayReloadModeHotForLocalStudio({
         client,
-        upstreamGatewayUrl: gatewayUrl,
+        upstreamGatewayUrl: effectiveGatewayUrl,
       });
       retryAttemptRef.current = 0;
     } catch (err) {
       setConnectErrorCode(err instanceof GatewayResponseError ? err.code : null);
       setError(formatGatewayError(err));
     }
-  }, [client, gatewayUrl, settingsCoordinator, token]);
+  }, [client, gatewayUrl, localGatewayDefaults, settingsCoordinator, token]);
 
   useEffect(() => {
     if (didAutoConnect.current) return;
     if (!settingsLoaded) return;
-    if (!gatewayUrl.trim()) return;
+    const effectiveGatewayUrl = localGatewayDefaults?.url?.trim() || gatewayUrl.trim();
+    if (!effectiveGatewayUrl) return;
     didAutoConnect.current = true;
     void connect();
-  }, [connect, gatewayUrl, settingsLoaded]);
+  }, [connect, gatewayUrl, localGatewayDefaults, settingsLoaded]);
 
   // Auto-retry on disconnect (gateway busy, network blip, etc.)
   useEffect(() => {
@@ -674,20 +683,21 @@ export const useGatewayConnection = (
     if (!settingsLoaded) return;
     const baseline = loadedGatewaySettings.current;
     if (!baseline) return;
-    const nextGatewayUrl = gatewayUrl.trim();
-    if (nextGatewayUrl === baseline.gatewayUrl && token === baseline.token) {
+    const nextGatewayUrl = (localGatewayDefaults?.url || gatewayUrl).trim();
+    const nextToken = (localGatewayDefaults?.token || token).trim();
+    if (nextGatewayUrl === baseline.gatewayUrl && nextToken === baseline.token) {
       return;
     }
     settingsCoordinator.schedulePatch(
       {
         gateway: {
           url: nextGatewayUrl,
-          token,
+          token: nextToken,
         },
       },
       400
     );
-  }, [gatewayUrl, settingsCoordinator, settingsLoaded, token]);
+  }, [gatewayUrl, localGatewayDefaults, settingsCoordinator, settingsLoaded, token]);
 
   const useLocalGatewayDefaults = useCallback(() => {
     if (!localGatewayDefaults) {
@@ -716,7 +726,8 @@ export const useGatewayConnection = (
   const shouldPromptForConnect =
     settingsLoaded &&
     status !== "connected" &&
-    (!gatewayUrl.trim() || !token.trim() || wasManualDisconnectRef.current || Boolean(error));
+    (!localGatewayDefaults &&
+      (!gatewayUrl.trim() || !token.trim() || wasManualDisconnectRef.current || Boolean(error)));
 
   return {
     client,
