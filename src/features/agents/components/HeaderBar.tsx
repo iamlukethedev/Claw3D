@@ -42,13 +42,14 @@ export const HeaderBar = ({
         <div aria-hidden="true" />
         <p className="truncate text-sm font-semibold tracking-[0.01em] text-foreground">Claw3D</p>
         <div className="flex items-center justify-end gap-1">
-          {status === "connecting" ? (
+          {status !== "disconnected" ? (
             <span
-              className={`ui-chip px-2 py-0.5 font-mono text-[9px] font-semibold tracking-[0.08em] ${resolveGatewayStatusBadgeClass("connecting")}`}
-              data-testid="gateway-connecting-indicator"
-              data-status="connecting"
+              className={`ui-chip px-2 py-0.5 font-mono text-[9px] font-semibold tracking-[0.08em] ${resolveGatewayStatusBadgeClass(status)}`}
+              data-testid="gateway-status-indicator"
+              data-status={status}
+              aria-label={`Gateway ${status}`}
             >
-              Connecting
+              {status === "connecting" ? "Connecting" : "Connected"}
             </span>
           ) : null}
           <ThemeToggle />

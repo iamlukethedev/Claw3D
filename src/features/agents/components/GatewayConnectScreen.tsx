@@ -85,7 +85,7 @@ export const GatewayConnectScreen = ({
   const commandField = (
     <div className="space-y-1.5">
       <div className="ui-command-surface flex items-center gap-2 rounded-md px-3 py-2">
-        <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[12px] text-white">
+        <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[12px] text-[var(--command-fg)]">
           {localGatewayCommand}
         </code>
         <button
@@ -99,12 +99,12 @@ export const GatewayConnectScreen = ({
         </button>
       </div>
       {copyStatus === "copied" ? (
-        <p className="text-xs text-white/80">Copied</p>
+        <p className="text-xs text-muted-foreground">Copied</p>
       ) : copyStatus === "failed" ? (
         <p className="ui-text-danger text-xs">Could not copy command.</p>
       ) : (
-        <p className="text-xs leading-snug text-white/80">
-          In a source checkout, use <span className="font-mono text-white">{localGatewayCommandPnpm}</span>.
+        <p className="text-xs leading-snug text-muted-foreground">
+          In a source checkout, use <span className="font-mono text-foreground">{localGatewayCommandPnpm}</span>.
         </p>
       )}
     </div>
@@ -112,7 +112,7 @@ export const GatewayConnectScreen = ({
 
   const remoteForm = (
     <div className="mt-2.5 flex flex-col gap-3">
-      <label className="flex flex-col gap-1 text-[11px] font-medium text-white/90">
+      <label className="flex flex-col gap-1 text-[11px] font-medium text-foreground/90">
         Upstream URL
         <input
           className="ui-input h-10 rounded-md px-4 font-sans text-sm text-foreground outline-none"
@@ -124,14 +124,14 @@ export const GatewayConnectScreen = ({
         />
       </label>
 
-      <div className="space-y-0.5 text-xs text-white/80">
-        <p className="font-medium text-white">Using Tailscale?</p>
+      <div className="space-y-0.5 text-xs text-muted-foreground">
+        <p className="font-medium text-foreground">Using Tailscale?</p>
         <p>
           URL: <span className="font-mono">wss://&lt;your-tailnet-host&gt;</span>
         </p>
       </div>
 
-      <label className="flex flex-col gap-1 text-[11px] font-medium text-white/90">
+      <label className="flex flex-col gap-1 text-[11px] font-medium text-foreground/90">
         Upstream token
         <div className="relative">
           <input
@@ -144,7 +144,7 @@ export const GatewayConnectScreen = ({
           />
           <button
             type="button"
-            className="ui-btn-icon absolute inset-y-0 right-1 my-auto h-8 w-8 border-transparent bg-transparent text-white/70 hover:bg-transparent hover:text-white"
+            className="ui-btn-icon absolute inset-y-0 right-1 my-auto h-8 w-8 border-transparent bg-transparent text-muted-foreground hover:bg-transparent hover:text-foreground"
             aria-label={showToken ? "Hide token" : "Show token"}
             onClick={() => setShowToken((prev) => !prev)}
           >
@@ -167,19 +167,19 @@ export const GatewayConnectScreen = ({
       </button>
 
       {status === "connecting" ? (
-        <p className="inline-flex items-center gap-1.5 text-xs text-white/80">
+        <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           Connecting…
         </p>
       ) : null}
       {error ? <p className="ui-text-danger text-xs leading-snug">{error}</p> : null}
       {showApprovalHint ? (
-        <div className="rounded-md border border-white/10 bg-white/5 px-3 py-3 text-xs text-white/85">
+        <div className="rounded-md border border-border bg-muted/40 px-3 py-3 text-xs text-muted-foreground">
           <p className="leading-snug">
             If the first connection attempt did not work, go to your OpenClaw computer and approve this
             device:
           </p>
-          <code className="mt-2 block overflow-x-auto whitespace-nowrap rounded-md bg-black/30 px-2.5 py-2 font-mono text-[11px] text-white">
+          <code className="mt-2 block overflow-x-auto whitespace-nowrap rounded-md bg-[var(--command-bg)] px-2.5 py-2 font-mono text-[11px] text-[var(--command-fg)]">
             openclaw devices approve --latest
           </code>
         </div>
@@ -198,26 +198,26 @@ export const GatewayConnectScreen = ({
               className={`h-2.5 w-2.5 ${statusDotClass}`}
             />
           )}
-          <p className="text-sm font-semibold text-white">{statusCopy}</p>
+          <p className="text-sm font-semibold text-foreground">{statusCopy}</p>
         </div>
       </div>
 
       <div className="ui-card px-4 py-5 sm:px-6">
         <div>
-          <p className="font-mono text-[10px] font-medium tracking-[0.06em] text-white/80">
+          <p className="font-mono text-[10px] font-medium tracking-[0.06em] text-muted-foreground">
             Remote gateway (recommended)
           </p>
-          <p className="mt-2 text-sm text-white/90">Default: enter your URL and token to connect.</p>
+          <p className="mt-2 text-sm text-foreground/90">Default: enter your URL and token to connect.</p>
         </div>
         {remoteForm}
       </div>
 
       <div className="ui-card px-4 py-4 sm:px-6 sm:py-5">
         <div className="space-y-1.5">
-          <p className="font-mono text-[10px] font-semibold tracking-[0.06em] text-white/80">
+          <p className="font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
             Run locally (optional)
           </p>
-          <p className="text-sm text-white/90">
+          <p className="text-sm text-foreground/90">
             Start a local gateway process on this machine, then connect.
           </p>
         </div>
@@ -226,15 +226,15 @@ export const GatewayConnectScreen = ({
           {localGatewayDefaults ? (
             <div className="ui-input rounded-md px-3 py-3">
               <div className="space-y-2">
-                <p className="text-xs text-white/80">
+                <p className="text-xs text-muted-foreground">
                   Use token from <span className="font-mono">~/.openclaw/openclaw.json</span>.
                 </p>
-                <p className="font-mono text-[11px] text-white">
+                <p className="font-mono text-[11px] text-foreground">
                   {localGatewayDefaults.url}
                 </p>
                 <button
                   type="button"
-                  className="ui-btn-secondary h-9 w-full px-3 text-xs font-semibold tracking-[0.05em] text-white"
+                  className="ui-btn-secondary h-9 w-full px-3 text-xs font-semibold tracking-[0.05em]"
                   onClick={onUseLocalDefaults}
                 >
                   Use local defaults

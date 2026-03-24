@@ -126,6 +126,8 @@ export const FleetSidebar = ({
                   }}
                   type="button"
                   data-testid={`fleet-agent-row-${agent.agentId}`}
+                  aria-label={`Select agent: ${agent.name}`}
+                  aria-pressed={selected}
                   className={`group relative ui-card flex w-full items-center gap-3 overflow-hidden border px-3 py-3 text-left transition-colors ${
                     selected
                       ? "ui-card-selected"

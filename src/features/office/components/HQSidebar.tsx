@@ -137,7 +137,11 @@ export function HQSidebar({
           </div>
 
           {!railOnly ? (
-            <div className="grid grid-cols-3 border-b border-cyan-500/15">
+            <div
+              role="tablist"
+              aria-label="Headquarters panels"
+              className="grid grid-cols-3 border-b border-cyan-500/15"
+            >
               {PRIMARY_TABS.map((tab) => {
                 const isActive = tab === activeTab;
                 const showBadge = tab === "inbox" && inboxCount > 0;
@@ -145,6 +149,10 @@ export function HQSidebar({
                   <button
                     key={tab}
                     type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-controls={`hq-panel-${tab}`}
+                    id={`hq-tab-${tab}`}
                     onClick={() => onTabChange(tab)}
                     className={`flex items-center justify-center gap-1 border-r border-cyan-500/10 px-2 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] transition-colors last:border-r-0 ${
                       isActive
@@ -154,7 +162,7 @@ export function HQSidebar({
                   >
                     <span>{TAB_LABELS[tab]}</span>
                     {showBadge ? (
-                      <span className="rounded bg-cyan-500/15 px-1.5 py-0.5 text-[10px] text-cyan-300">
+                      <span className="rounded bg-cyan-500/15 px-1.5 py-0.5 text-[10px] text-cyan-300" aria-label={`${inboxCount} unread`}>
                         {inboxCount}
                       </span>
                     ) : null}
@@ -164,7 +172,14 @@ export function HQSidebar({
             </div>
           ) : null}
 
-          <div className="min-h-0 flex-1 overflow-hidden">{activePanel}</div>
+          <div
+            role="tabpanel"
+            id={`hq-panel-${activeTab}`}
+            aria-labelledby={`hq-tab-${activeTab}`}
+            className="min-h-0 flex-1 overflow-hidden"
+          >
+            {activePanel}
+          </div>
         </div>
       ) : null}
     </aside>
