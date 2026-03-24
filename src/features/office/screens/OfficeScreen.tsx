@@ -107,6 +107,7 @@ import { InboxPanel } from "@/features/office/components/panels/InboxPanel";
 import { PlaybooksPanel } from "@/features/office/components/panels/PlaybooksPanel";
 import { SkillsMarketplaceModal } from "@/features/office/components/panels/SkillsMarketplaceModal";
 import { useOfficeSkillTriggers } from "@/features/office/hooks/useOfficeSkillTriggers";
+import { useRemoteOfficePresence } from "@/features/office/hooks/useRemoteOfficePresence";
 import { useOfficeSkillsMarketplace } from "@/features/office/hooks/useOfficeSkillsMarketplace";
 import { useOfficeStandupController } from "@/features/office/hooks/useOfficeStandupController";
 import { useRunLog } from "@/features/office/hooks/useRunLog";
@@ -452,6 +453,23 @@ const mapAgentToOffice = (agent: AgentState): OfficeAgent => {
     color: stringToColor(agent.agentId),
     item: getDeterministicItem(agent.agentId),
     avatarProfile: agent.avatarProfile ?? null,
+  };
+};
+
+const mapRemotePresenceAgentToOffice = (agent: {
+  agentId: string;
+  name: string;
+  state: "idle" | "working" | "meeting" | "error";
+}): OfficeAgent => {
+  const stableId = `remote:${agent.agentId}`;
+  const isWorking = agent.state === "working" || agent.state === "meeting";
+  return {
+    id: stableId,
+    name: agent.name || "Unknown",
+    status: agent.state === "error" ? "error" : isWorking ? "working" : "idle",
+    color: stringToColor(stableId),
+    item: getDeterministicItem(stableId),
+    avatarProfile: null,
   };
 };
 
@@ -839,10 +857,32 @@ export function OfficeScreen({
   const {
     loaded: officeTitleLoaded,
     title: officeTitle,
+    remoteOfficeEnabled,
+    remoteOfficeSourceKind,
+    remoteOfficeLabel,
+    remoteOfficePresenceUrl,
+    remoteOfficeGatewayUrl,
+    remoteOfficeTokenConfigured,
     setTitle: setOfficeTitle,
+    setRemoteOfficeEnabled,
+    setRemoteOfficeSourceKind,
+    setRemoteOfficeLabel,
+    setRemoteOfficePresenceUrl,
+    setRemoteOfficeGatewayUrl,
+    setRemoteOfficeToken,
   } = useStudioOfficePreference({
     gatewayUrl,
     settingsCoordinator,
+  });
+  const {
+    error: remoteOfficeError,
+    loaded: remoteOfficeLoaded,
+    snapshot: remoteOfficeSnapshot,
+  } = useRemoteOfficePresence({
+    enabled: remoteOfficeEnabled,
+    sourceKind: remoteOfficeSourceKind,
+    presenceUrl: remoteOfficePresenceUrl,
+    gatewayUrl: remoteOfficeGatewayUrl,
   });
   const {
     loaded: voiceRepliesLoaded,
@@ -3061,6 +3101,35 @@ export function OfficeScreen({
 
     return lines.join("\n");
   }, [state.agents]);
+  const remoteOfficeAgents = useMemo(
+    () =>
+      (remoteOfficeSnapshot?.agents ?? []).map((agent) =>
+        mapRemotePresenceAgentToOffice(agent)
+      ),
+    [remoteOfficeSnapshot]
+  );
+  const allVisibleAgents = useMemo(
+    () => [...officeAgents, ...remoteOfficeAgents],
+    [officeAgents, remoteOfficeAgents],
+  );
+  const remoteOfficeVisible =
+    remoteOfficeEnabled &&
+    (remoteOfficeSourceKind === "presence_endpoint"
+      ? remoteOfficePresenceUrl.trim().length > 0
+      : remoteOfficeGatewayUrl.trim().length > 0);
+  const remoteOfficeStatusText = !remoteOfficeVisible
+    ? "Remote office disabled."
+    : remoteOfficeError
+      ? remoteOfficeError
+      : !remoteOfficeLoaded
+        ? "Loading remote office."
+        : remoteOfficeAgents.length > 0
+          ? `${remoteOfficeAgents.length} agents visible.`
+          : remoteOfficeSourceKind === "openclaw_gateway"
+            ? "Connected to remote gateway. No agents visible yet."
+          : remoteOfficeTokenConfigured
+            ? "Connected. No agents visible yet."
+            : "No agents visible yet.";
   const normalizedOpenClawConsoleSearch = openClawConsoleSearch
     .trim()
     .toLowerCase();
@@ -3237,92 +3306,107 @@ export function OfficeScreen({
 
   return (
     <main className="h-full w-full overflow-hidden bg-black">
-      <RetroOffice3D
-        agents={officeAgents}
-        animationState={officeAnimationState}
-        deskAssignmentByDeskUid={deskAssignmentByDeskUid}
-        githubReviewAgentId={githubReviewAgentId}
-        qaTestingAgentId={qaTestingAgentId}
-        phoneBoothAgentId={activePhoneBoothAgentId}
-        phoneCallScenario={activePhoneCallScenario}
-        smsBoothAgentId={activeSmsBoothAgentId}
-        textMessageScenario={activeTextMessageScenario}
-        monitorAgentId={monitorAgentId}
-        monitorByAgentId={monitorByAgentId}
-        githubSkill={githubSkill}
-        officeTitle={officeTitle}
-        officeTitleLoaded={officeTitleLoaded}
-        voiceRepliesEnabled={voiceRepliesEnabled}
-        voiceRepliesVoiceId={voiceRepliesVoiceId}
-        voiceRepliesSpeed={voiceRepliesSpeed}
-        voiceRepliesLoaded={voiceRepliesLoaded}
-        onOfficeTitleChange={setOfficeTitle}
-        onVoiceRepliesToggle={setVoiceRepliesEnabled}
-        onVoiceRepliesVoiceChange={setVoiceRepliesVoiceId}
-        onVoiceRepliesSpeedChange={setVoiceRepliesSpeed}
-        onVoiceRepliesPreview={(voiceId, voiceName) => {
-          void previewVoiceReply({
-            text: `Hi, how can I help you? My name is ${voiceName}.`,
-            provider: voiceRepliesPreference.provider,
-            voiceId,
-            speed: voiceRepliesSpeed,
-          });
-        }}
-        atmAnalytics={{
-          client,
-          status,
-          agents: state.agents,
-          gatewayUrl,
-          settingsCoordinator,
-        }}
-        onGatewayDisconnect={disconnect}
-        onOpenOnboarding={handleOpenOnboarding}
-        feedEvents={feedEvents}
-        gatewayStatus={status}
-        runCountByAgentId={runCountByAgentId}
-        lastSeenByAgentId={lastSeenByAgentId}
-        standupMeeting={standupController.meeting}
-        standupAutoOpenBoard={standupController.openBoardByDefault}
-        onStandupArrivalsChange={(arrivedAgentIds) => {
-          void standupController.reportArrivals(arrivedAgentIds);
-        }}
-        onStandupStartRequested={() => {
-          if (
-            !standupController.meeting ||
-            standupController.meeting.phase === "complete"
-          ) {
-            void standupController.startMeeting("manual");
-          }
-        }}
-        onMonitorSelect={(agentId) => {
-          setMonitorAgentId(agentId);
-          if (agentId) {
-            setSelectedChatAgentId(agentId);
-            dispatch({ type: "selectAgent", agentId });
-          }
-        }}
-        onAddAgent={handleOpenCreateAgentWizard}
-        onAgentEdit={(agentId) => {
-          openAgentEditor(agentId, "avatar");
-        }}
-        onAgentDelete={(agentId) => {
-          void handleDeleteAgent(agentId);
-        }}
-        onDeskAssignmentChange={handleDeskAssignmentChange}
-        onDeskAssignmentsReset={handleDeskAssignmentsReset}
-        onGithubReviewDismiss={() => {
-          handleGithubReviewDismiss();
-        }}
-        onQaLabDismiss={() => {
-          handleQaDismiss();
-        }}
-        onPhoneCallSpeak={handlePhoneCallSpeak}
-        onPhoneCallComplete={handlePhoneCallComplete}
-        onTextMessageComplete={handleTextMessageComplete}
-        onOpenGithubSkillSetup={() => {
-          setMarketplaceOpen(true);
-        }}
-      />
+      <section className="relative h-full min-h-0 min-w-0 overflow-hidden">
+        <RetroOffice3D
+          agents={allVisibleAgents}
+          animationState={officeAnimationState}
+          deskAssignmentByDeskUid={deskAssignmentByDeskUid}
+          githubReviewAgentId={githubReviewAgentId}
+          qaTestingAgentId={qaTestingAgentId}
+          phoneBoothAgentId={activePhoneBoothAgentId}
+          phoneCallScenario={activePhoneCallScenario}
+          smsBoothAgentId={activeSmsBoothAgentId}
+          textMessageScenario={activeTextMessageScenario}
+          monitorAgentId={monitorAgentId}
+          monitorByAgentId={monitorByAgentId}
+          githubSkill={githubSkill}
+          officeTitle={officeTitle}
+          officeTitleLoaded={officeTitleLoaded}
+          remoteOfficeEnabled={remoteOfficeEnabled}
+          remoteOfficeSourceKind={remoteOfficeSourceKind}
+          remoteOfficeLabel={remoteOfficeLabel}
+          remoteOfficePresenceUrl={remoteOfficePresenceUrl}
+          remoteOfficeGatewayUrl={remoteOfficeGatewayUrl}
+          remoteOfficeStatusText={remoteOfficeStatusText}
+          remoteOfficeTokenConfigured={remoteOfficeTokenConfigured}
+          voiceRepliesEnabled={voiceRepliesEnabled}
+          voiceRepliesVoiceId={voiceRepliesVoiceId}
+          voiceRepliesSpeed={voiceRepliesSpeed}
+          voiceRepliesLoaded={voiceRepliesLoaded}
+          onOfficeTitleChange={setOfficeTitle}
+          onRemoteOfficeEnabledChange={setRemoteOfficeEnabled}
+          onRemoteOfficeSourceKindChange={setRemoteOfficeSourceKind}
+          onRemoteOfficeLabelChange={setRemoteOfficeLabel}
+          onRemoteOfficePresenceUrlChange={setRemoteOfficePresenceUrl}
+          onRemoteOfficeGatewayUrlChange={setRemoteOfficeGatewayUrl}
+          onRemoteOfficeTokenChange={setRemoteOfficeToken}
+          onVoiceRepliesToggle={setVoiceRepliesEnabled}
+          onVoiceRepliesVoiceChange={setVoiceRepliesVoiceId}
+          onVoiceRepliesSpeedChange={setVoiceRepliesSpeed}
+          onVoiceRepliesPreview={(voiceId, voiceName) => {
+            void previewVoiceReply({
+              text: `Hi, how can I help you? My name is ${voiceName}.`,
+              provider: voiceRepliesPreference.provider,
+              voiceId,
+              speed: voiceRepliesSpeed,
+            });
+          }}
+          atmAnalytics={{
+            client,
+            status,
+            agents: state.agents,
+            gatewayUrl,
+            settingsCoordinator,
+          }}
+          onGatewayDisconnect={disconnect}
+          onOpenOnboarding={handleOpenOnboarding}
+          feedEvents={feedEvents}
+          gatewayStatus={status}
+          runCountByAgentId={runCountByAgentId}
+          lastSeenByAgentId={lastSeenByAgentId}
+          standupMeeting={standupController.meeting}
+          standupAutoOpenBoard={standupController.openBoardByDefault}
+          onStandupArrivalsChange={(arrivedAgentIds) => {
+            void standupController.reportArrivals(arrivedAgentIds);
+          }}
+          onStandupStartRequested={() => {
+            if (
+              !standupController.meeting ||
+              standupController.meeting.phase === "complete"
+            ) {
+              void standupController.startMeeting("manual");
+            }
+          }}
+          onMonitorSelect={(agentId) => {
+            setMonitorAgentId(agentId);
+            if (agentId) {
+              setSelectedChatAgentId(agentId);
+              dispatch({ type: "selectAgent", agentId });
+            }
+          }}
+          onAddAgent={handleOpenCreateAgentWizard}
+          onAgentEdit={(agentId) => {
+            openAgentEditor(agentId, "avatar");
+          }}
+          onAgentDelete={(agentId) => {
+            void handleDeleteAgent(agentId);
+          }}
+          onDeskAssignmentChange={handleDeskAssignmentChange}
+          onDeskAssignmentsReset={handleDeskAssignmentsReset}
+          onGithubReviewDismiss={() => {
+            handleGithubReviewDismiss();
+          }}
+          onQaLabDismiss={() => {
+            handleQaDismiss();
+          }}
+          onPhoneCallSpeak={handlePhoneCallSpeak}
+          onPhoneCallComplete={handlePhoneCallComplete}
+          onTextMessageComplete={handleTextMessageComplete}
+          onOpenGithubSkillSetup={() => {
+            setMarketplaceOpen(true);
+          }}
+        />
+      </section>
 
       {showEmptyFleetBanner ? (
         <div className="pointer-events-none fixed left-1/2 top-16 z-40 w-full max-w-xl -translate-x-1/2 px-4">

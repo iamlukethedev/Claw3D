@@ -9,33 +9,36 @@ import {
 } from "@/features/retro-office/core/constants";
 import type { FurnitureItem } from "@/features/retro-office/core/types";
 
-const hasStorageFlag = (key: string) => {
+const resolveStorageKey = (key: string, namespace = "default") =>
+  namespace === "default" ? key : `${key}:${namespace}`;
+
+const hasStorageFlag = (key: string, namespace = "default") => {
   try {
-    return localStorage.getItem(key) === "1";
+    return localStorage.getItem(resolveStorageKey(key, namespace)) === "1";
   } catch {
     return false;
   }
 };
 
-const markStorageFlag = (key: string) => {
+const markStorageFlag = (key: string, namespace = "default") => {
   try {
-    localStorage.setItem(key, "1");
+    localStorage.setItem(resolveStorageKey(key, namespace), "1");
   } catch {
     /* ignore */
   }
 };
 
-export const saveFurniture = (items: FurnitureItem[]) => {
+export const saveFurniture = (items: FurnitureItem[], namespace = "default") => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    localStorage.setItem(resolveStorageKey(STORAGE_KEY, namespace), JSON.stringify(items));
   } catch {
     /* ignore */
   }
 };
 
-export const loadFurniture = (): FurnitureItem[] | null => {
+export const loadFurniture = (namespace = "default"): FurnitureItem[] | null => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(resolveStorageKey(STORAGE_KEY, namespace));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) && parsed.length > 0
@@ -46,43 +49,44 @@ export const loadFurniture = (): FurnitureItem[] | null => {
   }
 };
 
-export const hasAtmMigrationApplied = () => hasStorageFlag(ATM_MIGRATION_KEY);
+export const hasAtmMigrationApplied = (namespace = "default") =>
+  hasStorageFlag(ATM_MIGRATION_KEY, namespace);
 
-export const markAtmMigrationApplied = () => {
-  markStorageFlag(ATM_MIGRATION_KEY);
+export const markAtmMigrationApplied = (namespace = "default") => {
+  markStorageFlag(ATM_MIGRATION_KEY, namespace);
 };
 
-export const hasServerRoomMigrationApplied = () =>
-  hasStorageFlag(SERVER_ROOM_MIGRATION_KEY);
+export const hasServerRoomMigrationApplied = (namespace = "default") =>
+  hasStorageFlag(SERVER_ROOM_MIGRATION_KEY, namespace);
 
-export const markServerRoomMigrationApplied = () => {
-  markStorageFlag(SERVER_ROOM_MIGRATION_KEY);
+export const markServerRoomMigrationApplied = (namespace = "default") => {
+  markStorageFlag(SERVER_ROOM_MIGRATION_KEY, namespace);
 };
 
-export const hasGymRoomMigrationApplied = () =>
-  hasStorageFlag(GYM_ROOM_MIGRATION_KEY);
+export const hasGymRoomMigrationApplied = (namespace = "default") =>
+  hasStorageFlag(GYM_ROOM_MIGRATION_KEY, namespace);
 
-export const markGymRoomMigrationApplied = () => {
-  markStorageFlag(GYM_ROOM_MIGRATION_KEY);
+export const markGymRoomMigrationApplied = (namespace = "default") => {
+  markStorageFlag(GYM_ROOM_MIGRATION_KEY, namespace);
 };
 
-export const hasQaLabMigrationApplied = () =>
-  hasStorageFlag(QA_LAB_MIGRATION_KEY);
+export const hasQaLabMigrationApplied = (namespace = "default") =>
+  hasStorageFlag(QA_LAB_MIGRATION_KEY, namespace);
 
-export const markQaLabMigrationApplied = () => {
-  markStorageFlag(QA_LAB_MIGRATION_KEY);
+export const markQaLabMigrationApplied = (namespace = "default") => {
+  markStorageFlag(QA_LAB_MIGRATION_KEY, namespace);
 };
 
-export const hasPhoneBoothMigrationApplied = () =>
-  hasStorageFlag(PHONE_BOOTH_MIGRATION_KEY);
+export const hasPhoneBoothMigrationApplied = (namespace = "default") =>
+  hasStorageFlag(PHONE_BOOTH_MIGRATION_KEY, namespace);
 
-export const markPhoneBoothMigrationApplied = () => {
-  markStorageFlag(PHONE_BOOTH_MIGRATION_KEY);
+export const markPhoneBoothMigrationApplied = (namespace = "default") => {
+  markStorageFlag(PHONE_BOOTH_MIGRATION_KEY, namespace);
 };
 
-export const hasSmsBoothMigrationApplied = () =>
-  hasStorageFlag(SMS_BOOTH_MIGRATION_KEY);
+export const hasSmsBoothMigrationApplied = (namespace = "default") =>
+  hasStorageFlag(SMS_BOOTH_MIGRATION_KEY, namespace);
 
-export const markSmsBoothMigrationApplied = () => {
-  markStorageFlag(SMS_BOOTH_MIGRATION_KEY);
+export const markSmsBoothMigrationApplied = (namespace = "default") => {
+  markStorageFlag(SMS_BOOTH_MIGRATION_KEY, namespace);
 };

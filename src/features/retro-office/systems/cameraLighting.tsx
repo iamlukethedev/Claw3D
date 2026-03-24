@@ -4,6 +4,11 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef, type MutableRefObject, type RefObject } from "react";
 import * as THREE from "three";
 import { WORLD_H, WORLD_W } from "@/features/retro-office/core/constants";
+import {
+  DISTRICT_CAMERA_POSITION,
+  DISTRICT_CAMERA_TARGET,
+  DISTRICT_CAMERA_ZOOM,
+} from "@/features/retro-office/core/district";
 import { toWorld } from "@/features/retro-office/core/geometry";
 import type { RenderAgent } from "@/features/retro-office/core/types";
 
@@ -15,9 +20,9 @@ export type CameraPreset = {
 
 export const CAMERA_PRESETS = {
   overview: {
-    pos: [12, 12, 12],
-    target: [0, 0, 0],
-    zoom: 55,
+    pos: DISTRICT_CAMERA_POSITION,
+    target: DISTRICT_CAMERA_TARGET,
+    zoom: DISTRICT_CAMERA_ZOOM,
   },
   frontDesk: {
     pos: [-2, 8, 4],

@@ -36,6 +36,105 @@ const resolveStateFromSeed = (seed: number): OfficeAgentState => {
   return "error";
 };
 
+const asRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value && typeof value === "object" && !Array.isArray(value));
+
+const normalizeOfficeAgentState = (value: unknown): OfficeAgentState => {
+  if (value === "working" || value === "idle" || value === "meeting" || value === "error") {
+    return value;
+  }
+  return "idle";
+};
+
+export const normalizeOfficePresenceSnapshot = (
+  value: unknown,
+  fallbackWorkspaceId = "default"
+): OfficePresenceSnapshot => {
+  if (!asRecord(value)) {
+    return {
+      workspaceId: fallbackWorkspaceId,
+      timestamp: new Date().toISOString(),
+      agents: [],
+    };
+  }
+  const workspaceId =
+    typeof value.workspaceId === "string" && value.workspaceId.trim().length > 0
+      ? value.workspaceId.trim()
+      : fallbackWorkspaceId;
+  const timestamp =
+    typeof value.timestamp === "string" && value.timestamp.trim().length > 0
+      ? value.timestamp
+      : new Date().toISOString();
+  const rawAgents = Array.isArray(value.agents) ? value.agents : [];
+  const agents: OfficeAgentPresence[] = rawAgents.flatMap((entry) => {
+    if (!asRecord(entry)) return [];
+    const agentId = typeof entry.agentId === "string" ? entry.agentId.trim() : "";
+    if (!agentId) return [];
+    const name = typeof entry.name === "string" && entry.name.trim().length > 0
+      ? entry.name.trim()
+      : agentId;
+    const preferredDeskId =
+      typeof entry.preferredDeskId === "string" && entry.preferredDeskId.trim().length > 0
+        ? entry.preferredDeskId.trim()
+        : undefined;
+    return [
+      {
+        agentId,
+        name,
+        state: normalizeOfficeAgentState(entry.state),
+        ...(preferredDeskId ? { preferredDeskId } : {}),
+      },
+    ];
+  });
+  return {
+    workspaceId,
+    timestamp,
+    agents,
+  };
+};
+
+export const fetchRemoteOfficePresenceSnapshot = async (params: {
+  presenceUrl: string;
+  token?: string | null;
+  timeoutMs?: number;
+}): Promise<OfficePresenceSnapshot> => {
+  const presenceUrl = params.presenceUrl.trim();
+  if (!presenceUrl) {
+    throw new Error("Remote office presence URL is not configured.");
+  }
+  const controller = new AbortController();
+  const timeoutMs = Math.max(1_000, params.timeoutMs ?? 15_000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+    };
+    const token = params.token?.trim() ?? "";
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+      headers["X-Claw3D-Office-Token"] = token;
+    }
+    const response = await fetch(presenceUrl, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Remote office presence request failed with status ${response.status}.`);
+    }
+    const payload = (await response.json()) as unknown;
+    return normalizeOfficePresenceSnapshot(payload, "remote");
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`Remote office presence request timed out after ${timeoutMs}ms.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 export const loadOfficePresenceSnapshot = (workspaceId: string): OfficePresenceSnapshot => {
   const configPath = path.join(resolveStateDir(), OPENCLAW_CONFIG_FILENAME);
   const timestamp = new Date().toISOString();

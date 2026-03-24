@@ -12,6 +12,12 @@ import {
   QA_LAB_X,
   SCALE,
 } from "@/features/retro-office/core/constants";
+import {
+  CITY_PATH_ZONE,
+  LOCAL_OFFICE_CANVAS_WIDTH,
+  REMOTE_OFFICE_ZONE,
+} from "@/features/retro-office/core/district";
+import { toWorld } from "@/features/retro-office/core/geometry";
 
 function FramedPicture({
   position,
@@ -53,31 +59,290 @@ function FramedPicture({
   );
 }
 
+function RemoteOfficePreview({
+  centerX,
+  centerZ,
+  width,
+  height,
+  frameHeight,
+  wallThickness,
+}: {
+  centerX: number;
+  centerZ: number;
+  width: number;
+  height: number;
+  frameHeight: number;
+  wallThickness: number;
+}) {
+  const shellWidth = width * 0.88;
+  const shellHeight = height * 0.86;
+  const deskColumns = [-0.24, 0.02, 0.28] as const;
+  const deskRows = [-0.22, 0.02] as const;
+
+  return (
+    <group>
+      <mesh
+        position={[centerX, -0.01, centerZ]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+      >
+        <planeGeometry args={[width * 1.08, height * 1.08]} />
+        <meshStandardMaterial color="#37474f" roughness={0.96} metalness={0.05} />
+      </mesh>
+
+      <mesh
+        position={[centerX, 0.001, centerZ]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+      >
+        <planeGeometry args={[width, height]} />
+        <meshStandardMaterial color="#dde7ec" roughness={0.88} metalness={0.04} />
+      </mesh>
+
+      <mesh
+        position={[centerX, 0.002, centerZ]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+      >
+        <planeGeometry args={[width * 0.84, height * 0.72]} />
+        <meshStandardMaterial color="#f6fbff" roughness={0.82} metalness={0.02} />
+      </mesh>
+
+      <mesh position={[centerX, frameHeight, centerZ]} castShadow>
+        <boxGeometry args={[shellWidth, 0.08, shellHeight]} />
+        <meshStandardMaterial color="#8ec5ff" transparent opacity={0.22} />
+      </mesh>
+
+      <mesh
+        position={[centerX, frameHeight / 2, centerZ - shellHeight / 2]}
+        castShadow
+      >
+        <boxGeometry args={[shellWidth, frameHeight, wallThickness]} />
+        <meshStandardMaterial color="#b3e5fc" transparent opacity={0.3} />
+      </mesh>
+
+      <mesh
+        position={[centerX - shellWidth * 0.25, frameHeight / 2, centerZ + shellHeight / 2]}
+        castShadow
+      >
+        <boxGeometry args={[shellWidth * 0.34, frameHeight, wallThickness]} />
+        <meshStandardMaterial color="#b3e5fc" transparent opacity={0.3} />
+      </mesh>
+
+      <mesh
+        position={[centerX + shellWidth * 0.25, frameHeight / 2, centerZ + shellHeight / 2]}
+        castShadow
+      >
+        <boxGeometry args={[shellWidth * 0.34, frameHeight, wallThickness]} />
+        <meshStandardMaterial color="#b3e5fc" transparent opacity={0.3} />
+      </mesh>
+
+      {([-1, 1] as const).map((side) => (
+        <mesh
+          key={`remote-side-wall-${side}`}
+          position={[centerX + side * (shellWidth / 2), frameHeight / 2, centerZ]}
+          castShadow
+        >
+          <boxGeometry args={[wallThickness, frameHeight, shellHeight]} />
+          <meshStandardMaterial color="#b3e5fc" transparent opacity={0.3} />
+        </mesh>
+      ))}
+
+      <mesh
+        position={[centerX, frameHeight / 2, centerZ - shellHeight * 0.08]}
+        castShadow
+      >
+        <boxGeometry args={[wallThickness, frameHeight * 0.82, shellHeight * 0.48]} />
+        <meshStandardMaterial color="#90a4ae" roughness={0.72} metalness={0.14} />
+      </mesh>
+
+      <mesh
+        position={[centerX + shellWidth * 0.18, 0.22, centerZ + shellHeight * 0.18]}
+        castShadow
+      >
+        <boxGeometry args={[0.92, 0.08, 0.42]} />
+        <meshStandardMaterial color="#8d6e63" roughness={0.84} metalness={0.04} />
+      </mesh>
+
+      {deskRows.map((row) =>
+        deskColumns.map((column, index) => (
+          <group
+            key={`remote-desk-${row}-${column}`}
+            position={[centerX + width * column, 0, centerZ + height * row]}
+          >
+            <mesh position={[0, 0.14, 0]} castShadow>
+              <boxGeometry args={[0.34, 0.08, 0.2]} />
+              <meshStandardMaterial color="#6d4c41" roughness={0.82} metalness={0.05} />
+            </mesh>
+            <mesh position={[0, 0.25, -0.03]} castShadow>
+              <boxGeometry args={[0.15, 0.11, 0.03]} />
+              <meshStandardMaterial color="#263238" roughness={0.5} metalness={0.22} />
+            </mesh>
+            <mesh
+              position={[0.13, 0.09, 0.07]}
+              rotation={[0, (index % 2 === 0 ? 1 : -1) * 0.35, 0]}
+              castShadow
+            >
+              <boxGeometry args={[0.1, 0.16, 0.1]} />
+              <meshStandardMaterial color="#78909c" roughness={0.78} metalness={0.08} />
+            </mesh>
+          </group>
+        )),
+      )}
+
+      {([-1, 1] as const).map((side) => (
+        <group
+          key={`remote-sign-${side}`}
+          position={[centerX + side * (width * 0.34), 0, centerZ + height * 0.44]}
+        >
+          <mesh position={[0, 0.24, 0]} castShadow>
+            <cylinderGeometry args={[0.03, 0.03, 0.48, 10]} />
+            <meshStandardMaterial color="#90a4ae" roughness={0.58} metalness={0.28} />
+          </mesh>
+          <mesh position={[0, 0.52, 0]} castShadow>
+            <boxGeometry args={[0.34, 0.12, 0.04]} />
+            <meshStandardMaterial color="#102a43" roughness={0.46} metalness={0.18} />
+          </mesh>
+          <mesh position={[0, 0.52, 0.025]}>
+            <boxGeometry args={[0.28, 0.04, 0.01]} />
+            <meshStandardMaterial color="#4dd0e1" emissive="#4dd0e1" emissiveIntensity={0.8} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
 export function FloorAndWalls() {
-  const width = CANVAS_W * SCALE;
-  const height = CANVAS_H * SCALE;
-  const gymZoneStart = GYM_ROOM_X * SCALE - width / 2;
-  const qaZoneStart = QA_LAB_X * SCALE - width / 2;
+  const districtWidth = CANVAS_W * SCALE;
+  const districtHeight = CANVAS_H * SCALE;
+  const localOfficeWidth = LOCAL_OFFICE_CANVAS_WIDTH * SCALE;
+  const localOfficeHeight = CANVAS_H * SCALE;
+  const [districtCenterX, , districtCenterZ] = toWorld(CANVAS_W / 2, CANVAS_H / 2);
+  const [localOfficeCenterX, , localOfficeCenterZ] = toWorld(
+    LOCAL_OFFICE_CANVAS_WIDTH / 2,
+    CANVAS_H / 2,
+  );
+  const [gymZoneCenterX, , roomZoneCenterZ] = toWorld(
+    GYM_ROOM_X + GYM_ROOM_WIDTH / 2,
+    EAST_WING_ROOM_TOP_Y + EAST_WING_ROOM_HEIGHT / 2,
+  );
+  const [qaZoneCenterX] = toWorld(
+    QA_LAB_X + QA_LAB_WIDTH / 2,
+    EAST_WING_ROOM_TOP_Y + EAST_WING_ROOM_HEIGHT / 2,
+  );
+  const [pathCenterX, , pathCenterZ] = toWorld(
+    (CITY_PATH_ZONE.minX + CITY_PATH_ZONE.maxX) / 2,
+    (CITY_PATH_ZONE.minY + CITY_PATH_ZONE.maxY) / 2,
+  );
+  const [remoteOfficeCenterX, , remoteOfficeCenterZ] = toWorld(
+    (REMOTE_OFFICE_ZONE.minX + REMOTE_OFFICE_ZONE.maxX) / 2,
+    (REMOTE_OFFICE_ZONE.minY + REMOTE_OFFICE_ZONE.maxY) / 2,
+  );
   const gymZoneWidth = Math.max(0, GYM_ROOM_WIDTH * SCALE);
   const qaZoneWidth = Math.max(0, QA_LAB_WIDTH * SCALE);
-  const gymZoneCenterX = gymZoneStart + gymZoneWidth / 2;
-  const qaZoneCenterX = qaZoneStart + qaZoneWidth / 2;
-  const roomZoneStartZ = EAST_WING_ROOM_TOP_Y * SCALE - height / 2;
   const roomZoneHeight = EAST_WING_ROOM_HEIGHT * SCALE;
-  const roomZoneCenterZ = roomZoneStartZ + roomZoneHeight / 2;
   const roomFloorInset = 0.08;
   const roomZoneFloorHeight = Math.max(0, roomZoneHeight - roomFloorInset * 2);
   const gymZoneFloorWidth = Math.max(0, gymZoneWidth - roomFloorInset * 2);
   const qaZoneFloorWidth = Math.max(0, qaZoneWidth - roomFloorInset * 2);
   const qaZoneStripeHeight = roomZoneFloorHeight * 0.86;
   const qaZoneStripeWidth = qaZoneFloorWidth * 0.92;
+  const remoteOfficeWidth = (REMOTE_OFFICE_ZONE.maxX - REMOTE_OFFICE_ZONE.minX) * SCALE;
+  const remoteOfficeHeight = (REMOTE_OFFICE_ZONE.maxY - REMOTE_OFFICE_ZONE.minY) * SCALE;
+  const remoteOfficeFrameHeight = 1.08;
+  const remoteWallThickness = 0.12;
+  const localNorthWallZ = localOfficeCenterZ - localOfficeHeight / 2;
+  const localSouthWallZ = localOfficeCenterZ + localOfficeHeight / 2;
+  const localWestWallX = localOfficeCenterX - localOfficeWidth / 2;
+  const localEastWallX = localOfficeCenterX + localOfficeWidth / 2;
 
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[width, height, 22, 14]} />
+      <mesh
+        position={[districtCenterX, -0.015, districtCenterZ]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+      >
+        <planeGeometry args={[districtWidth, districtHeight, 24, 14]} />
+        <meshStandardMaterial color="#263238" roughness={0.98} metalness={0.02} />
+      </mesh>
+
+      <mesh
+        position={[districtCenterX, -0.012, districtCenterZ]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+      >
+        <planeGeometry args={[districtWidth * 0.95, districtHeight * 0.9]} />
+        <meshStandardMaterial color="#1b232a" roughness={0.96} metalness={0.04} />
+      </mesh>
+
+      <mesh
+        position={[localOfficeCenterX, 0, localOfficeCenterZ]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+      >
+        <planeGeometry args={[localOfficeWidth, localOfficeHeight, 22, 14]} />
         <meshLambertMaterial color="#c8a97e" />
       </mesh>
+
+      <mesh
+        position={[pathCenterX, 0.002, pathCenterZ]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+      >
+        <planeGeometry
+          args={[
+            (CITY_PATH_ZONE.maxX - CITY_PATH_ZONE.minX) * SCALE,
+            (CITY_PATH_ZONE.maxY - CITY_PATH_ZONE.minY) * SCALE,
+          ]}
+        />
+        <meshStandardMaterial color="#8d6e63" roughness={0.92} metalness={0.04} />
+      </mesh>
+
+      <RemoteOfficePreview
+        centerX={remoteOfficeCenterX}
+        centerZ={remoteOfficeCenterZ}
+        width={remoteOfficeWidth}
+        height={remoteOfficeHeight}
+        frameHeight={remoteOfficeFrameHeight}
+        wallThickness={remoteWallThickness}
+      />
+
+      {Array.from({ length: 10 }).map((_, index) => {
+        const [wx, , wz] = toWorld(1870 + index * 62, 360 + (index % 2 === 0 ? -54 : 54));
+        return (
+          <mesh
+            key={`city-light-${index}`}
+            position={[wx, 0.18, wz]}
+            castShadow
+            receiveShadow
+          >
+            <cylinderGeometry args={[0.04, 0.04, 0.36, 10]} />
+            <meshStandardMaterial color="#d7ccc8" roughness={0.6} metalness={0.35} />
+          </mesh>
+        );
+      })}
+
+      {Array.from({ length: 8 }).map((_, index) => {
+        const [wx, , wz] = toWorld(1890 + index * 70, 274 + (index % 2 === 0 ? 0 : 172));
+        return (
+          <mesh key={`city-planter-${index}`} position={[wx, 0.08, wz]} castShadow>
+            <boxGeometry args={[0.46, 0.14, 0.26]} />
+            <meshStandardMaterial color="#5d4037" roughness={0.86} metalness={0.08} />
+          </mesh>
+        );
+      })}
+
+      {Array.from({ length: 8 }).map((_, index) => {
+        const [wx, , wz] = toWorld(1890 + index * 70, 274 + (index % 2 === 0 ? 0 : 172));
+        return (
+          <mesh key={`city-planter-top-${index}`} position={[wx, 0.18, wz]}>
+            <boxGeometry args={[0.38, 0.08, 0.18]} />
+            <meshStandardMaterial color="#43a047" roughness={0.98} metalness={0} />
+          </mesh>
+        );
+      })}
 
       {gymZoneFloorWidth > 0 && roomZoneFloorHeight > 0 ? (
         <mesh
@@ -158,27 +423,28 @@ export function FloorAndWalls() {
       ) : null}
 
       {Array.from({ length: 18 }).map((_, index) => {
-        const z = -height / 2 + (index + 1) * (height / 18);
+        const z =
+          localOfficeCenterZ - localOfficeHeight / 2 + (index + 1) * (localOfficeHeight / 18);
         return (
           <mesh
             key={index}
-            position={[0, 0.001, z]}
+            position={[localOfficeCenterX, 0.001, z]}
             rotation={[-Math.PI / 2, 0, 0]}
           >
-            <planeGeometry args={[width, 0.008]} />
+            <planeGeometry args={[localOfficeWidth, 0.008]} />
             <meshBasicMaterial color="#a07850" transparent opacity={0.25} />
           </mesh>
         );
       })}
 
       {(() => {
-        const wallColor = "#787878";
-        const wallEmissive = "#505050";
+        const wallColor = "#8d6e63";
+        const wallEmissive = "#4e342e";
 
         return (
           <>
-            <mesh position={[0, 0.5, -height / 2]} receiveShadow>
-              <boxGeometry args={[width, 1, 0.12]} />
+            <mesh position={[localOfficeCenterX, 0.5, localNorthWallZ]} receiveShadow>
+              <boxGeometry args={[localOfficeWidth, 1, 0.12]} />
               <meshStandardMaterial
                 color={wallColor}
                 emissive={wallEmissive}
@@ -186,8 +452,8 @@ export function FloorAndWalls() {
                 roughness={0.9}
               />
             </mesh>
-            <mesh position={[0, 0.5, height / 2]} receiveShadow>
-              <boxGeometry args={[width, 1, 0.12]} />
+            <mesh position={[localOfficeCenterX, 0.5, localSouthWallZ]} receiveShadow>
+              <boxGeometry args={[localOfficeWidth, 1, 0.12]} />
               <meshStandardMaterial
                 color={wallColor}
                 emissive={wallEmissive}
@@ -195,8 +461,8 @@ export function FloorAndWalls() {
                 roughness={0.9}
               />
             </mesh>
-            <mesh position={[-width / 2, 0.5, 0]} receiveShadow>
-              <boxGeometry args={[0.12, 1, height]} />
+            <mesh position={[localWestWallX, 0.5, localOfficeCenterZ]} receiveShadow>
+              <boxGeometry args={[0.12, 1, localOfficeHeight]} />
               <meshStandardMaterial
                 color={wallColor}
                 emissive={wallEmissive}
@@ -204,8 +470,8 @@ export function FloorAndWalls() {
                 roughness={0.9}
               />
             </mesh>
-            <mesh position={[width / 2, 0.5, 0]} receiveShadow>
-              <boxGeometry args={[0.12, 1, height]} />
+            <mesh position={[localEastWallX, 0.5, localOfficeCenterZ]} receiveShadow>
+              <boxGeometry args={[0.12, 1, localOfficeHeight]} />
               <meshStandardMaterial
                 color={wallColor}
                 emissive={wallEmissive}
@@ -217,22 +483,20 @@ export function FloorAndWalls() {
         );
       })()}
 
-      {null}
-
-      <mesh position={[0, 0.03, -height / 2 + 0.04]}>
-        <boxGeometry args={[width, 0.06, 0.04]} />
+      <mesh position={[localOfficeCenterX, 0.03, localNorthWallZ + 0.04]}>
+        <boxGeometry args={[localOfficeWidth, 0.06, 0.04]} />
         <meshLambertMaterial color="#0c0c10" />
       </mesh>
-      <mesh position={[0, 0.03, height / 2 - 0.04]}>
-        <boxGeometry args={[width, 0.06, 0.04]} />
+      <mesh position={[localOfficeCenterX, 0.03, localSouthWallZ - 0.04]}>
+        <boxGeometry args={[localOfficeWidth, 0.06, 0.04]} />
         <meshLambertMaterial color="#0c0c10" />
       </mesh>
-      <mesh position={[-width / 2 + 0.04, 0.03, 0]}>
-        <boxGeometry args={[0.04, 0.06, height]} />
+      <mesh position={[localWestWallX + 0.04, 0.03, localOfficeCenterZ]}>
+        <boxGeometry args={[0.04, 0.06, localOfficeHeight]} />
         <meshLambertMaterial color="#0c0c10" />
       </mesh>
-      <mesh position={[width / 2 - 0.04, 0.03, 0]}>
-        <boxGeometry args={[0.04, 0.06, height]} />
+      <mesh position={[localEastWallX - 0.04, 0.03, localOfficeCenterZ]}>
+        <boxGeometry args={[0.04, 0.06, localOfficeHeight]} />
         <meshLambertMaterial color="#0c0c10" />
       </mesh>
     </group>
@@ -240,18 +504,19 @@ export function FloorAndWalls() {
 }
 
 export function WallPictures() {
-  const width = CANVAS_W * SCALE;
-  const height = CANVAS_H * SCALE;
-  const northZ = -height / 2 + 0.07;
-  const southZ = height / 2 - 0.07;
-  const westX = -width / 2 + 0.07;
-  const eastX = width / 2 - 0.07;
+  const localWidth = LOCAL_OFFICE_CANVAS_WIDTH * SCALE;
+  const localHeight = CANVAS_H * SCALE;
+  const [localCenterX, , localCenterZ] = toWorld(LOCAL_OFFICE_CANVAS_WIDTH / 2, CANVAS_H / 2);
+  const northZ = localCenterZ - localHeight / 2 + 0.07;
+  const southZ = localCenterZ + localHeight / 2 - 0.07;
+  const westX = localCenterX - localWidth / 2 + 0.07;
+  const eastX = localCenterX + localWidth / 2 - 0.07;
   const pictureY = 0.64;
 
   return (
     <group>
       <FramedPicture
-        position={[-7.5, pictureY, northZ]}
+        position={[localCenterX - 7.5, pictureY, northZ]}
         rotY={0}
         w={0.58}
         h={0.42}
@@ -284,7 +549,7 @@ export function WallPictures() {
       />
 
       <FramedPicture
-        position={[-1.5, pictureY, northZ]}
+        position={[localCenterX - 1.5, pictureY, northZ]}
         rotY={0}
         w={0.64}
         h={0.4}
@@ -317,7 +582,7 @@ export function WallPictures() {
       />
 
       <FramedPicture
-        position={[4, pictureY, northZ]}
+        position={[localCenterX + 4, pictureY, northZ]}
         rotY={0}
         w={0.5}
         h={0.42}
@@ -342,7 +607,7 @@ export function WallPictures() {
       />
 
       <FramedPicture
-        position={[8.5, pictureY, northZ]}
+        position={[localCenterX + 8.5, pictureY, northZ]}
         rotY={0}
         w={0.55}
         h={0.38}
@@ -374,7 +639,7 @@ export function WallPictures() {
       />
 
       <FramedPicture
-        position={[-5.5, pictureY, southZ]}
+        position={[localCenterX - 5.5, pictureY, southZ]}
         rotY={Math.PI}
         w={0.6}
         h={0.4}
@@ -399,7 +664,7 @@ export function WallPictures() {
       />
 
       <FramedPicture
-        position={[0, pictureY, southZ]}
+        position={[localCenterX, pictureY, southZ]}
         rotY={Math.PI}
         w={0.5}
         h={0.36}
@@ -429,7 +694,7 @@ export function WallPictures() {
       />
 
       <FramedPicture
-        position={[5.5, pictureY, southZ]}
+        position={[localCenterX + 5.5, pictureY, southZ]}
         rotY={Math.PI}
         w={0.46}
         h={0.42}
