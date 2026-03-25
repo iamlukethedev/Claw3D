@@ -84,8 +84,10 @@ import {
   DISTRICT_CAMERA_POSITION,
   DISTRICT_CAMERA_TARGET,
   DISTRICT_CAMERA_ZOOM,
+  LOCAL_OFFICE_CANVAS_HEIGHT,
   isRemoteOfficeAgentId,
-  pickRandomPointInZone,
+  LOCAL_OFFICE_CANVAS_WIDTH,
+  projectFurnitureIntoRemoteOfficeZone,
   REMOTE_OFFICE_ZONE,
   REMOTE_ROAM_POINTS,
 } from "@/features/retro-office/core/district";
@@ -143,6 +145,7 @@ import type {
   SceneActor,
 } from "@/features/retro-office/core/types";
 import type { NavGrid } from "@/features/retro-office/core/navigation";
+import type { OfficeLayoutSnapshot } from "@/lib/office/layoutSnapshot";
 import { AgentModel as AgentObjectModel } from "@/features/retro-office/objects/agents";
 import {
   FurnitureModel as GenericFurnitureModel,
@@ -410,6 +413,361 @@ function CameraRig() {
   return null;
 }
 
+const NOOP_FURNITURE_UID_HANDLER = (_uid: string) => {};
+const NOOP_FURNITURE_HANDLER = () => {};
+
+function ReadOnlyFurnitureClone({
+  furniture,
+}: {
+  furniture: FurnitureItem[];
+}) {
+  const deskItems = useMemo(
+    () => furniture.filter((item) => item.type === "desk_cubicle"),
+    [furniture],
+  );
+  const chairItems = useMemo(
+    () => furniture.filter((item) => item.type === "chair"),
+    [furniture],
+  );
+  const wallItems = useMemo(
+    () => furniture.filter((item) => item.type === "wall"),
+    [furniture],
+  );
+
+  return (
+    <Suspense fallback={null}>
+      <PrimitiveInstancedWallSegmentsModel items={wallItems} />
+      <InstancedFurnitureItemsModel itemType="desk_cubicle" items={deskItems} />
+      <InstancedFurnitureItemsModel itemType="chair" items={chairItems} />
+      {furniture.map((item) =>
+        item.type === "wall" || item.type === "desk_cubicle" || item.type === "chair" ? null
+        : item.type === "door" ? (
+          <PrimitiveDoorModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "round_table" ? (
+          <PrimitiveRoundTableModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "keyboard" ? (
+          <PrimitiveKeyboardModel
+            key={item._uid}
+            item={item}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "mouse" ? (
+          <PrimitiveMouseModel
+            key={item._uid}
+            item={item}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "trash" ? (
+          <PrimitiveTrashCanModel
+            key={item._uid}
+            item={item}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "mug" ? (
+          <PrimitiveMugModel
+            key={item._uid}
+            item={item}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "clock" ? (
+          <PrimitiveClockModel
+            key={item._uid}
+            item={item}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "atm" ? (
+          <InteractiveAtmMachineModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "sms_booth" ? (
+          <InteractiveSmsBoothModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            doorOpen={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "phone_booth" ? (
+          <InteractivePhoneBoothModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            doorOpen={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "server_rack" ? (
+          <InteractiveServerRackModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "server_terminal" ? (
+          <InteractiveServerTerminalModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "vending" ? (
+          <KitchenVendingMachineModel
+            key={item._uid}
+            item={item}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "sink" ? (
+          <KitchenSinkModel
+            key={item._uid}
+            item={item}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "dishwasher" ? (
+          <KitchenDishwasherModel
+            key={item._uid}
+            item={item}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "pingpong" ? (
+          <MachinePingPongTableModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "qa_terminal" ? (
+          <InteractiveQaTerminalModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "device_rack" ? (
+          <InteractiveDeviceRackModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "test_bench" ? (
+          <InteractiveTestBenchModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "treadmill" ? (
+          <InteractiveTreadmillModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "weight_bench" ? (
+          <InteractiveWeightBenchModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "dumbbell_rack" ? (
+          <InteractiveDumbbellRackModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "exercise_bike" ? (
+          <InteractiveExerciseBikeModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "rowing_machine" ? (
+          <InteractiveRowingMachineModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "kettlebell_rack" ? (
+          <InteractiveKettlebellRackModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "punching_bag" ? (
+          <InteractivePunchingBagModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "yoga_mat" ? (
+          <InteractiveYogaMatModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "stove" ? (
+          <KitchenStoveModel
+            key={item._uid}
+            item={item}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "microwave" ? (
+          <KitchenMicrowaveModel
+            key={item._uid}
+            item={item}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "wall_cabinet" ? (
+          <KitchenWallCabinetModel
+            key={item._uid}
+            item={item}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : (
+          <GenericFurnitureModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ),
+      )}
+    </Suspense>
+  );
+}
+
 function AdaptiveDprController() {
   const { gl, setDpr } = useThree();
   const currentDprRef = useRef(1.25);
@@ -526,7 +884,7 @@ function useAgentTick(
   }, []);
   const pickSpawnPoint = useCallback((agentId: string) => {
     if (isRemoteOfficeAgentId(agentId)) {
-      return pickRandomPointInZone(REMOTE_OFFICE_ZONE);
+      return REMOTE_ROAM_POINTS[Math.floor(Math.random() * REMOTE_ROAM_POINTS.length)];
     }
     return {
       x: Math.random() * 800 + 100,
@@ -1939,6 +2297,7 @@ export function RetroOffice3D({
   remoteOfficePresenceUrl = "",
   remoteOfficeGatewayUrl = "",
   remoteOfficeStatusText = "Remote office disabled.",
+  remoteLayoutSnapshot = null,
   remoteOfficeTokenConfigured = false,
   voiceRepliesEnabled = false,
   voiceRepliesVoiceId = null,
@@ -2014,6 +2373,7 @@ export function RetroOffice3D({
   remoteOfficePresenceUrl?: string;
   remoteOfficeGatewayUrl?: string;
   remoteOfficeStatusText?: string;
+  remoteLayoutSnapshot?: OfficeLayoutSnapshot | null;
   remoteOfficeTokenConfigured?: boolean;
   voiceRepliesEnabled?: boolean;
   voiceRepliesVoiceId?: string | null;
@@ -2090,6 +2450,26 @@ export function RetroOffice3D({
         ),
       ),
     ),
+  );
+  const defaultRemoteLayoutFurniture = useMemo(
+    () =>
+      projectFurnitureIntoRemoteOfficeZone({
+        furniture: furniture.filter((item) => !isRetiredPingPongLamp(item)),
+        sourceWidth: LOCAL_OFFICE_CANVAS_WIDTH,
+        sourceHeight: LOCAL_OFFICE_CANVAS_HEIGHT,
+      }),
+    [furniture],
+  );
+  const remoteLayoutFurniture = useMemo(
+    () =>
+      remoteLayoutSnapshot
+        ? projectFurnitureIntoRemoteOfficeZone({
+            furniture: remoteLayoutSnapshot.furniture,
+            sourceWidth: remoteLayoutSnapshot.width,
+            sourceHeight: remoteLayoutSnapshot.height,
+          })
+        : defaultRemoteLayoutFurniture,
+    [defaultRemoteLayoutFurniture, remoteLayoutSnapshot],
   );
   const [editMode, setEditMode] = useState(false);
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
@@ -2595,6 +2975,34 @@ export function RetroOffice3D({
       window.clearTimeout(timeoutId);
     };
   }, [furniture, storageNamespace]);
+
+  useEffect(() => {
+    if (readOnly || storageNamespace !== "default") return;
+    const gatewayUrl = atmAnalytics?.gatewayUrl?.trim() ?? "";
+    if (!gatewayUrl) return;
+    const timeoutId = window.setTimeout(() => {
+      void fetch("/api/office/layout", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          snapshot: {
+            gatewayUrl,
+            timestamp: new Date().toISOString(),
+            width: LOCAL_OFFICE_CANVAS_WIDTH,
+            height: LOCAL_OFFICE_CANVAS_HEIGHT,
+            furniture,
+          },
+        }),
+      }).catch((error) => {
+        console.error("Failed to sync office layout snapshot.", error);
+      });
+    }, 500);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [atmAnalytics?.gatewayUrl, furniture, readOnly, storageNamespace]);
 
   useEffect(() => {
     if (followAgentId && monitorAgentId) {
@@ -4933,6 +5341,10 @@ export function RetroOffice3D({
               ),
             )}
           </Suspense>
+
+          {remoteLayoutFurniture.length > 0 ? (
+            <ReadOnlyFurnitureClone furniture={remoteLayoutFurniture} />
+          ) : null}
 
           {/* Agents — purely imperative, driven by renderAgentsRef inside useFrame. */}
           {sceneAgents.map((agent) => {

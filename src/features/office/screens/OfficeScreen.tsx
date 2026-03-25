@@ -108,6 +108,7 @@ import { PlaybooksPanel } from "@/features/office/components/panels/PlaybooksPan
 import { SkillsMarketplaceModal } from "@/features/office/components/panels/SkillsMarketplaceModal";
 import { useOfficeSkillTriggers } from "@/features/office/hooks/useOfficeSkillTriggers";
 import { useRemoteOfficePresence } from "@/features/office/hooks/useRemoteOfficePresence";
+import { useRemoteOfficeLayout } from "@/features/office/hooks/useRemoteOfficeLayout";
 import { useOfficeSkillsMarketplace } from "@/features/office/hooks/useOfficeSkillsMarketplace";
 import { useOfficeStandupController } from "@/features/office/hooks/useOfficeStandupController";
 import { useRunLog } from "@/features/office/hooks/useRunLog";
@@ -883,6 +884,10 @@ export function OfficeScreen({
     sourceKind: remoteOfficeSourceKind,
     presenceUrl: remoteOfficePresenceUrl,
     gatewayUrl: remoteOfficeGatewayUrl,
+  });
+  const { snapshot: remoteOfficeLayoutSnapshot } = useRemoteOfficeLayout({
+    enabled: remoteOfficeEnabled,
+    presenceUrl: remoteOfficePresenceUrl,
   });
   const {
     loaded: voiceRepliesLoaded,
@@ -3328,6 +3333,7 @@ export function OfficeScreen({
           remoteOfficePresenceUrl={remoteOfficePresenceUrl}
           remoteOfficeGatewayUrl={remoteOfficeGatewayUrl}
           remoteOfficeStatusText={remoteOfficeStatusText}
+          remoteLayoutSnapshot={remoteOfficeLayoutSnapshot}
           remoteOfficeTokenConfigured={remoteOfficeTokenConfigured}
           voiceRepliesEnabled={voiceRepliesEnabled}
           voiceRepliesVoiceId={voiceRepliesVoiceId}
