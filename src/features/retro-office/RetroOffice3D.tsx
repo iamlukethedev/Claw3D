@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import {
+  memo,
   Suspense,
   useCallback,
   useEffect,
@@ -415,8 +416,9 @@ function CameraRig() {
 
 const NOOP_FURNITURE_UID_HANDLER = (_uid: string) => {};
 const NOOP_FURNITURE_HANDLER = () => {};
+const EMPTY_FURNITURE_ITEMS: FurnitureItem[] = [];
 
-function ReadOnlyFurnitureClone({
+const ReadOnlyFurnitureClone = memo(function ReadOnlyFurnitureClone({
   furniture,
 }: {
   furniture: FurnitureItem[];
@@ -766,7 +768,7 @@ function ReadOnlyFurnitureClone({
       )}
     </Suspense>
   );
-}
+});
 
 function AdaptiveDprController() {
   const { gl, setDpr } = useThree();
@@ -2453,23 +2455,27 @@ export function RetroOffice3D({
   );
   const defaultRemoteLayoutFurniture = useMemo(
     () =>
-      projectFurnitureIntoRemoteOfficeZone({
-        furniture: furniture.filter((item) => !isRetiredPingPongLamp(item)),
-        sourceWidth: LOCAL_OFFICE_CANVAS_WIDTH,
-        sourceHeight: LOCAL_OFFICE_CANVAS_HEIGHT,
-      }),
-    [furniture],
+      remoteOfficeEnabled
+        ? projectFurnitureIntoRemoteOfficeZone({
+            furniture: furniture.filter((item) => !isRetiredPingPongLamp(item)),
+            sourceWidth: LOCAL_OFFICE_CANVAS_WIDTH,
+            sourceHeight: LOCAL_OFFICE_CANVAS_HEIGHT,
+          })
+        : EMPTY_FURNITURE_ITEMS,
+    [furniture, remoteOfficeEnabled],
   );
   const remoteLayoutFurniture = useMemo(
     () =>
-      remoteLayoutSnapshot
+      !remoteOfficeEnabled
+        ? EMPTY_FURNITURE_ITEMS
+        : remoteLayoutSnapshot
         ? projectFurnitureIntoRemoteOfficeZone({
             furniture: remoteLayoutSnapshot.furniture,
             sourceWidth: remoteLayoutSnapshot.width,
             sourceHeight: remoteLayoutSnapshot.height,
           })
         : defaultRemoteLayoutFurniture,
-    [defaultRemoteLayoutFurniture, remoteLayoutSnapshot],
+    [defaultRemoteLayoutFurniture, remoteLayoutSnapshot, remoteOfficeEnabled],
   );
   const [editMode, setEditMode] = useState(false);
   const [selectedUid, setSelectedUid] = useState<string | null>(null);

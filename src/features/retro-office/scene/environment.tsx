@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import {
   CANVAS_H,
   CANVAS_W,
@@ -60,7 +60,7 @@ function FramedPicture({
   );
 }
 
-export function FloorAndWalls() {
+export const FloorAndWalls = memo(function FloorAndWalls() {
   const districtWidth = CANVAS_W * SCALE;
   const districtHeight = CANVAS_H * SCALE;
   const localOfficeWidth = LOCAL_OFFICE_CANVAS_WIDTH * SCALE;
@@ -529,9 +529,9 @@ export function FloorAndWalls() {
       </mesh>
     </group>
   );
-}
+});
 
-export function WallPictures() {
+export const WallPictures = memo(function WallPictures() {
   const localWidth = LOCAL_OFFICE_CANVAS_WIDTH * SCALE;
   const localHeight = CANVAS_H * SCALE;
   const [localCenterX, , localCenterZ] = toWorld(LOCAL_OFFICE_CANVAS_WIDTH / 2, CANVAS_H / 2);
@@ -865,4 +865,4 @@ export function WallPictures() {
       {null}
     </group>
   );
-}
+});
