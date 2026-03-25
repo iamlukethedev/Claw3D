@@ -198,7 +198,6 @@ import {
 import {
   CAMERA_PRESETS as CAMERA_PRESET_MAP,
   CameraAnimator as CameraPresetAnimator,
-  DayNightCycle as DayNightLighting,
   FollowCamController as FollowCamSystem,
 } from "@/features/retro-office/systems/cameraLighting";
 import {
@@ -211,7 +210,6 @@ import {
   DeskNameplates as DeskNameplateOverlay,
   HeatmapSystem as AgentHeatmapSystem,
   TrailSystem as AgentTrailSystem,
-  WeatherOverlay as WeatherAmbientOverlay,
 } from "@/features/retro-office/systems/visualSystems";
 import type { OfficeCleaningCue } from "@/lib/office/janitorReset";
 
@@ -405,12 +403,16 @@ const PALETTE: PaletteEntry[] = [
 // CAMERA SETUP — sets lookAt after mount
 // ============================================================
 
-function CameraRig() {
+function CameraRig({
+  target,
+}: {
+  target: [number, number, number];
+}) {
   const { camera } = useThree();
   useEffect(() => {
-    camera.lookAt(...DISTRICT_CAMERA_TARGET);
+    camera.lookAt(...target);
     camera.updateProjectionMatrix();
-  }, [camera]);
+  }, [camera, target]);
   return null;
 }
 
@@ -2326,6 +2328,7 @@ export function RetroOffice3D({
   onStandupArrivalsChange,
   onStandupStartRequested,
   onMonitorSelect,
+  onAgentChatSelect,
   onAddAgent,
   onAgentEdit,
   onAgentDelete,
@@ -2402,6 +2405,7 @@ export function RetroOffice3D({
   onStandupArrivalsChange?: (arrivedAgentIds: string[]) => void;
   onStandupStartRequested?: () => void;
   onMonitorSelect?: (agentId: string | null) => void;
+  onAgentChatSelect?: (agentId: string) => void;
   onAddAgent?: () => void;
   onAgentEdit?: (agentId: string) => void;
   onAgentDelete?: (agentId: string) => void;
@@ -2545,8 +2549,6 @@ export function RetroOffice3D({
   const [heatmapMode, setHeatmapMode] = useState(false);
   const [trailMode, setTrailMode] = useState(false);
   const heatGridRef = useRef<Uint16Array | null>(null);
-  // New Idea 4: day/night time ref exposed from DayNightCycle.
-  const dayNightTimeRef = useRef(0.25);
   // E3 Idea 1: mood emoji reactions above agent chips.
   const [moodByAgentId, setMoodByAgentId] = useState<
     Record<string, { emoji: string; ts: number }>
@@ -2801,7 +2803,10 @@ export function RetroOffice3D({
     const [wx, , wz] = toWorld(agent.x, agent.y);
     orbitRef.current.target.set(wx, 0, wz);
     orbitRef.current.update();
-  }, [renderAgentLookupRef]);
+    if (isRemoteOfficeAgentId(agentId)) {
+      onAgentChatSelect?.(agentId);
+    }
+  }, [onAgentChatSelect, renderAgentLookupRef]);
   const handleAgentContextMenu = useCallback((agentId: string, x: number, y: number) => {
     if (isRemoteOfficeAgentId(agentId)) return;
     setContextMenu({ id: agentId, x, y });
@@ -4844,6 +4849,12 @@ export function RetroOffice3D({
 
   // Camera constants.
   const CAM_POS = DISTRICT_CAMERA_POSITION;
+  const LOCAL_CAMERA_TARGET = useMemo(
+    () => toWorld(LOCAL_OFFICE_CANVAS_WIDTH / 2, LOCAL_OFFICE_CANVAS_HEIGHT / 2),
+    [],
+  );
+  const cameraTarget = remoteOfficeEnabled ? DISTRICT_CAMERA_TARGET : LOCAL_CAMERA_TARGET;
+  const cameraZoom = remoteOfficeEnabled ? DISTRICT_CAMERA_ZOOM : 56;
 
   return (
     <div className="relative w-full h-full bg-[#1a1008] font-mono text-white overflow-hidden">
@@ -4872,7 +4883,7 @@ export function RetroOffice3D({
           <Canvas
             orthographic
             dpr={[0.85, 1.5]}
-            camera={{ position: CAM_POS, zoom: DISTRICT_CAMERA_ZOOM, near: 0.1, far: 100 }}
+            camera={{ position: CAM_POS, zoom: cameraZoom, near: 0.1, far: 100 }}
             shadows={{ type: THREE.PCFShadowMap }}
             gl={{ antialias: true, powerPreference: "high-performance" }}
             style={{ width: "100%", height: "100%" }}
@@ -4881,7 +4892,7 @@ export function RetroOffice3D({
             }}
           >
           {/* Ensure camera looks at origin after mount. */}
-          <CameraRig />
+          <CameraRig target={cameraTarget} />
           <AdaptiveDprController />
 
           {/* Orbit / pan / zoom controls — disabled while follow cam is active or while editing furniture. */}
@@ -4927,8 +4938,17 @@ export function RetroOffice3D({
             agentLookupRef={renderAgentLookupRef}
           />
 
-          {/* Lights — day/night cycle drives ambient + sun; fill light stays constant. */}
-          <DayNightLighting externalTimeRef={dayNightTimeRef} />
+          {/* Keep office lighting static to avoid extra scene churn from ambience effects. */}
+          <ambientLight intensity={0.72} color="#d8d4c8" />
+          <directionalLight
+            position={[8, 14, 6]}
+            intensity={1.1}
+            color="#f6f1e6"
+            castShadow
+            shadow-mapSize={[1024, 1024]}
+            shadow-bias={-0.0002}
+            shadow-normalBias={0.02}
+          />
           <directionalLight
             position={[-5, 8, -4]}
             intensity={0.4}
@@ -4936,10 +4956,10 @@ export function RetroOffice3D({
           />
 
           {/* Floor + walls — always visible, no async loading. */}
-          <SceneFloorAndWalls />
+          <SceneFloorAndWalls showRemoteOffice={remoteOfficeEnabled} />
 
           {/* Wall pictures — procedural, no async loading. */}
-          <SceneWallPictures />
+          <SceneWallPictures showRemoteOffice={remoteOfficeEnabled} />
 
           {/* Environment lighting — async, wrapped in its own Suspense so floor stays visible. */}
           <Suspense fallback={null}>
@@ -5474,11 +5494,6 @@ export function RetroOffice3D({
           </Canvas>
         ) : null}
       </div>
-
-      {/* New Idea 4: Weather/ambience overlay. */}
-      {!immersiveOverlayActive ? (
-        <WeatherAmbientOverlay timeRef={dayNightTimeRef} />
-      ) : null}
 
       {/* New Idea 2: Camera preset buttons — top left. */}
       {!readOnly && !immersiveOverlayActive ? (

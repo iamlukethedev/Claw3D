@@ -48,6 +48,8 @@ const BROWSER_KEYWORD_RE =
   /\b(browser|navigate|snapshot|screenshot|tab|click|console|cookies|storage|page|url)\b/i;
 const BROWSER_INTENT_RE =
   /\b(browse|inspect|visit|navigate|open|go to|website|site|page)\b/i;
+const MONITOR_HISTORY_LINE_LIMIT = 160;
+const MONITOR_BROWSER_SCAN_ENTRY_LIMIT = 18;
 
 const extractUrls = (value: string): string[] => {
   const matches = value.match(URL_RE);
@@ -276,8 +278,9 @@ const summarizeMode = (params: {
 export const buildOfficeDeskMonitor = (
   agent: AgentState,
 ): OfficeDeskMonitor => {
+  const monitorOutputLines = agent.outputLines.slice(-MONITOR_HISTORY_LINE_LIMIT);
   const chatItems = buildAgentChatItems({
-    outputLines: agent.outputLines,
+    outputLines: monitorOutputLines,
     streamText: agent.streamText,
     liveThinkingTrace: agent.thinkingTrace ?? "",
     showThinkingTraces: agent.showThinkingTraces,
@@ -287,12 +290,13 @@ export const buildOfficeDeskMonitor = (
     .map(flattenMonitorEntry)
     .filter((entry): entry is OfficeDeskMonitorEntry => Boolean(entry));
   const latestEntries = flatEntries.slice(-6);
+  const browserScanEntries = flatEntries.slice(-MONITOR_BROWSER_SCAN_ENTRY_LIMIT);
   const browserUrl =
     [
       agent.lastUserMessage ?? "",
       agent.latestPreview ?? "",
       ...latestEntries.map((entry) => entry.text),
-      ...flatEntries.map((entry) => entry.text),
+      ...browserScanEntries.map((entry) => entry.text),
     ]
       .flatMap((text) => [
         ...extractUrls(text),

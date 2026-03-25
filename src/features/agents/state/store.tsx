@@ -137,6 +137,8 @@ const initialState: AgentStoreState = {
   error: null,
 };
 
+const MAX_AGENT_TRANSCRIPT_ENTRIES = 600;
+
 const areStringArraysEqual = (left: string[], right: string[]): boolean => {
   if (left.length !== right.length) return false;
   for (let i = 0; i < left.length; i += 1) {
@@ -147,7 +149,7 @@ const areStringArraysEqual = (left: string[], right: string[]): boolean => {
 
 const ensureTranscriptEntries = (agent: AgentState): TranscriptEntry[] => {
   if (Array.isArray(agent.transcriptEntries)) {
-    return agent.transcriptEntries;
+    return agent.transcriptEntries.slice(-MAX_AGENT_TRANSCRIPT_ENTRIES);
   }
   return buildTranscriptEntriesFromLines({
     lines: agent.outputLines,
@@ -155,7 +157,19 @@ const ensureTranscriptEntries = (agent: AgentState): TranscriptEntry[] => {
     source: "legacy",
     startSequence: 0,
     confirmed: true,
-  });
+  }).slice(-MAX_AGENT_TRANSCRIPT_ENTRIES);
+};
+
+const trimTranscriptEntries = (entries: TranscriptEntry[]): TranscriptEntry[] => {
+  return entries.length <= MAX_AGENT_TRANSCRIPT_ENTRIES
+    ? entries
+    : entries.slice(-MAX_AGENT_TRANSCRIPT_ENTRIES);
+};
+
+const trimOutputLines = (lines: string[]): string[] => {
+  return lines.length <= MAX_AGENT_TRANSCRIPT_ENTRIES
+    ? lines
+    : lines.slice(-MAX_AGENT_TRANSCRIPT_ENTRIES);
 };
 
 const nextTranscriptSequenceCounter = (
@@ -171,18 +185,18 @@ const createRuntimeAgentState = (
   existing?: AgentState | null
 ): AgentState => {
   const sameSessionKey = existing?.sessionKey === seed.sessionKey;
-  const outputLines = sameSessionKey ? (existing?.outputLines ?? []) : [];
+  const outputLines = sameSessionKey ? trimOutputLines(existing?.outputLines ?? []) : [];
   const queuedMessages = sameSessionKey ? [...(existing?.queuedMessages ?? [])] : [];
   const transcriptEntries = sameSessionKey
     ? Array.isArray(existing?.transcriptEntries)
-      ? existing.transcriptEntries
+      ? trimTranscriptEntries(existing.transcriptEntries)
       : buildTranscriptEntriesFromLines({
           lines: outputLines,
           sessionKey: seed.sessionKey,
           source: "legacy",
           startSequence: 0,
           confirmed: true,
-        })
+        }).slice(-MAX_AGENT_TRANSCRIPT_ENTRIES)
     : [];
   return {
     ...seed,
@@ -297,11 +311,12 @@ const reducer = (state: AgentStoreState, action: Action): AgentStoreState => {
             const normalized = TRANSCRIPT_V2_ENABLED
               ? sortTranscriptEntries(patchedTranscriptEntries)
               : [...patchedTranscriptEntries];
-            transcriptMutated = !areTranscriptEntriesEqual(existingEntries, normalized);
-            nextEntries = normalized;
-            nextOutputLines = buildOutputLinesFromTranscriptEntries(normalized);
+            const trimmed = trimTranscriptEntries(normalized);
+            transcriptMutated = !areTranscriptEntriesEqual(existingEntries, trimmed);
+            nextEntries = trimmed;
+            nextOutputLines = trimOutputLines(buildOutputLinesFromTranscriptEntries(trimmed));
           } else if (patchHasOutputLines) {
-            const patchedOutputLines = patch.outputLines as string[];
+            const patchedOutputLines = trimOutputLines(patch.outputLines as string[]);
             const rebuilt = buildTranscriptEntriesFromLines({
               lines: patchedOutputLines,
               sessionKey: nextSessionKey || agent.sessionKey,
@@ -310,10 +325,11 @@ const reducer = (state: AgentStoreState, action: Action): AgentStoreState => {
               confirmed: true,
             });
             const normalized = TRANSCRIPT_V2_ENABLED ? sortTranscriptEntries(rebuilt) : rebuilt;
+            const trimmed = trimTranscriptEntries(normalized);
             transcriptMutated = !areStringArraysEqual(agent.outputLines, patchedOutputLines);
-            nextEntries = normalized;
+            nextEntries = trimmed;
             nextOutputLines = TRANSCRIPT_V2_ENABLED
-              ? buildOutputLinesFromTranscriptEntries(normalized)
+              ? trimOutputLines(buildOutputLinesFromTranscriptEntries(trimmed))
               : [...patchedOutputLines];
           }
 
@@ -375,7 +391,10 @@ const reducer = (state: AgentStoreState, action: Action): AgentStoreState => {
             sequenceKey: nextSequence,
           });
           if (!nextEntry) {
-            return { ...agent, outputLines: [...agent.outputLines, action.line] };
+            return {
+              ...agent,
+              outputLines: trimOutputLines([...agent.outputLines, action.line]),
+            };
           }
           const nextEntryId = nextEntry.entryId.trim();
           const existingIndex =
@@ -402,18 +421,22 @@ const reducer = (state: AgentStoreState, action: Action): AgentStoreState => {
               });
               return acc;
             }, []);
-            nextEntries = TRANSCRIPT_V2_ENABLED ? sortTranscriptEntries(replaced) : replaced;
+            nextEntries = trimTranscriptEntries(
+              TRANSCRIPT_V2_ENABLED ? sortTranscriptEntries(replaced) : replaced
+            );
           } else {
             const appended = [...existingEntries, nextEntry];
-            nextEntries = TRANSCRIPT_V2_ENABLED ? sortTranscriptEntries(appended) : appended;
+            nextEntries = trimTranscriptEntries(
+              TRANSCRIPT_V2_ENABLED ? sortTranscriptEntries(appended) : appended
+            );
           }
 
           return {
             ...agent,
             outputLines:
               TRANSCRIPT_V2_ENABLED || hasReplacement
-                ? buildOutputLinesFromTranscriptEntries(nextEntries)
-                : [...agent.outputLines, action.line],
+                ? trimOutputLines(buildOutputLinesFromTranscriptEntries(nextEntries))
+                : trimOutputLines([...agent.outputLines, action.line]),
             transcriptEntries: nextEntries,
             transcriptRevision: (agent.transcriptRevision ?? 0) + 1,
             transcriptSequenceCounter: Math.max(

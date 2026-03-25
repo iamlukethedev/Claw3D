@@ -1,4 +1,8 @@
-import type { SummaryStatusSnapshot } from "@/features/agents/state/runtimeEventBridge";
+import type {
+  SummaryPreviewSnapshot,
+  SummaryStatusSnapshot,
+} from "@/features/agents/state/runtimeEventBridge";
+import { buildAgentMainSessionKey } from "@/lib/gateway/GatewayClient";
 import type { OfficeAgentPresence, OfficePresenceSnapshot } from "@/lib/office/presence";
 
 type GatewayAgentsListEntry = {
@@ -10,13 +14,14 @@ type GatewayAgentsListEntry = {
 };
 
 type GatewayAgentsListResult = {
+  mainKey?: string;
   agents?: GatewayAgentsListEntry[];
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object" && !Array.isArray(value));
 
-const RECENT_ACTIVITY_MS = 5 * 60 * 1000;
+const RECENT_ACTIVITY_MS = 45_000;
 
 const resolveAgentsFromHelloSnapshot = (snapshot: unknown): GatewayAgentsListEntry[] => {
   if (!isRecord(snapshot)) return [];
@@ -45,11 +50,41 @@ const normalizeGatewayAgentEntries = (
   return resolveAgentsFromHelloSnapshot(helloSnapshot);
 };
 
+const resolvePreviewState = (
+  agentId: string,
+  agentsResult: GatewayAgentsListResult | null,
+  previewSnapshot: SummaryPreviewSnapshot | null,
+): OfficeAgentPresence["state"] | null => {
+  const mainKey =
+    typeof agentsResult?.mainKey === "string" && agentsResult.mainKey.trim().length > 0
+      ? agentsResult.mainKey.trim()
+      : "main";
+  const sessionKey = buildAgentMainSessionKey(agentId, mainKey);
+  const previews = Array.isArray(previewSnapshot?.previews) ? previewSnapshot.previews : [];
+  const preview = previews.find((entry) => entry.key === sessionKey) ?? null;
+  if (!preview || !Array.isArray(preview.items) || preview.items.length === 0) {
+    return null;
+  }
+  for (let index = preview.items.length - 1; index >= 0; index -= 1) {
+    const item = preview.items[index];
+    if (!item) continue;
+    if (item.role === "assistant") return "idle";
+    if (item.role === "user") return "working";
+  }
+  return null;
+};
+
 const resolveAgentState = (
   agentId: string,
+  agentsResult: GatewayAgentsListResult | null,
   statusSummary: SummaryStatusSnapshot | null,
+  previewSnapshot: SummaryPreviewSnapshot | null,
   now = Date.now(),
 ): OfficeAgentPresence["state"] => {
+  const previewState = resolvePreviewState(agentId, agentsResult, previewSnapshot);
+  if (previewState) {
+    return previewState;
+  }
   const byAgent = Array.isArray(statusSummary?.sessions?.byAgent)
     ? statusSummary.sessions.byAgent
     : [];
@@ -69,6 +104,7 @@ export const buildOfficePresenceSnapshotFromGateway = (params: {
   agentsResult: GatewayAgentsListResult | null;
   helloSnapshot?: unknown;
   statusSummary?: SummaryStatusSnapshot | null;
+  previewSnapshot?: SummaryPreviewSnapshot | null;
   workspaceId?: string;
   now?: number;
 }): OfficePresenceSnapshot => {
@@ -89,7 +125,13 @@ export const buildOfficePresenceSnapshotFromGateway = (params: {
       {
         agentId,
         name,
-        state: resolveAgentState(agentId, params.statusSummary ?? null, now),
+        state: resolveAgentState(
+          agentId,
+          params.agentsResult,
+          params.statusSummary ?? null,
+          params.previewSnapshot ?? null,
+          now,
+        ),
       },
     ];
   });

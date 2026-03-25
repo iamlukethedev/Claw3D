@@ -2,14 +2,7 @@
 
 import { Billboard, Text } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type MutableRefObject,
-  type RefObject,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type MutableRefObject, type RefObject } from "react";
 import * as THREE from "three";
 import {
   CANVAS_H,
@@ -22,101 +15,6 @@ import type {
   OfficeAgent,
   RenderAgent,
 } from "@/features/retro-office/core/types";
-
-const WEATHER_PARTICLES_DAY = 10;
-const WEATHER_PARTICLES_NIGHT = 18;
-
-const DAY_PARTICLES = Array.from({ length: WEATHER_PARTICLES_DAY }, (_, index) => ({
-  id: index,
-  left: ((index * 137.5) % 100).toFixed(1),
-  delay: ((index * 0.43) % 4).toFixed(2),
-  duration: (6 + ((index * 0.71) % 4)).toFixed(1),
-  size: (2 + ((index * 0.6) % 3)).toFixed(1),
-  opacity: (0.06 + ((index * 0.03) % 0.1)).toFixed(2),
-}));
-
-const NIGHT_PARTICLES = Array.from(
-  { length: WEATHER_PARTICLES_NIGHT },
-  (_, index) => ({
-    id: index,
-    left: ((index * 5.3) % 100).toFixed(1),
-    delay: ((index * 0.27) % 3).toFixed(2),
-    duration: (1.2 + ((index * 0.15) % 1)).toFixed(2),
-    opacity: (0.07 + ((index * 0.025) % 0.1)).toFixed(2),
-  }),
-);
-
-export function WeatherOverlay({
-  timeRef,
-}: {
-  timeRef: MutableRefObject<number>;
-}) {
-  const [phase, setPhase] = useState<"day" | "night">("day");
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      const time = timeRef.current;
-      setPhase(time > 0.75 || time < 0.1 ? "night" : "day");
-    }, 5000);
-
-    return () => window.clearInterval(intervalId);
-  }, [timeRef]);
-
-  return (
-    <>
-      <style>{`
-        @keyframes float-up {
-          0%   { transform: translateY(100%) translateX(0px); opacity: 0; }
-          10%  { opacity: 1; }
-          90%  { opacity: 1; }
-          100% { transform: translateY(-20px) translateX(8px); opacity: 0; }
-        }
-        @keyframes rain-fall {
-          0%   { transform: translateY(-10px) translateX(0px); opacity: 0; }
-          5%   { opacity: 1; }
-          95%  { opacity: 1; }
-          100% { transform: translateY(110%) translateX(-18px); opacity: 0; }
-        }
-      `}</style>
-      <div
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-        style={{ zIndex: 5 }}
-      >
-        {phase === "day" &&
-          DAY_PARTICLES.map((particle) => (
-            <span
-              key={particle.id}
-              className="absolute rounded-full bg-white"
-              style={{
-                left: `${particle.left}%`,
-                bottom: "0",
-                width: `${particle.size}px`,
-                height: `${particle.size}px`,
-                opacity: particle.opacity,
-                animation: `float-up ${particle.duration}s ${particle.delay}s infinite linear`,
-              }}
-            />
-          ))}
-        {phase === "night" &&
-          NIGHT_PARTICLES.map((particle) => (
-            <span
-              key={particle.id}
-              className="absolute bg-blue-300"
-              style={{
-                left: `${particle.left}%`,
-                top: "0",
-                width: "1px",
-                height: "14px",
-                opacity: particle.opacity,
-                animation: `rain-fall ${particle.duration}s ${particle.delay}s infinite linear`,
-                borderRadius: "1px",
-              }}
-            />
-          ))}
-      </div>
-    </>
-  );
-}
 
 const HEAT_COLS = Math.floor(CANVAS_W / SNAP_GRID);
 const HEAT_ROWS = Math.floor(CANVAS_H / SNAP_GRID);

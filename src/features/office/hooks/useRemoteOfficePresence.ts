@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { SummaryStatusSnapshot } from "@/features/agents/state/runtimeEventBridge";
+import type {
+  SummaryPreviewSnapshot,
+  SummaryStatusSnapshot,
+} from "@/features/agents/state/runtimeEventBridge";
 import {
+  buildAgentMainSessionKey,
   GatewayClient,
   isGatewayDisconnectLikeError,
 } from "@/lib/gateway/GatewayClient";
@@ -164,6 +168,7 @@ export const useRemoteOfficePresence = ({
           configuredGatewayUrl: normalizedGatewayUrl,
         });
         const agentsResult = (await gatewayClient.call("agents.list", {})) as {
+          mainKey?: string;
           agents?: Array<{ id?: string; name?: string; identity?: { name?: string } }>;
         };
         console.info("[remote-office] Remote gateway agents list loaded.", {
@@ -183,10 +188,27 @@ export const useRemoteOfficePresence = ({
             ? statusSummary.sessions?.byAgent.length
             : 0,
         });
+        const remoteAgentIds = Array.isArray(agentsResult.agents)
+          ? agentsResult.agents
+              .map((agent) => (typeof agent.id === "string" ? agent.id.trim() : ""))
+              .filter((agentId) => agentId.length > 0)
+          : [];
+        const sessionKeys = remoteAgentIds.map((agentId) =>
+          buildAgentMainSessionKey(agentId, agentsResult.mainKey?.trim() || "main"),
+        );
+        const previewSnapshot =
+          sessionKeys.length > 0
+            ? ((await gatewayClient.call("sessions.preview", {
+                keys: sessionKeys,
+                limit: 8,
+                maxChars: 240,
+              })) as SummaryPreviewSnapshot)
+            : null;
         const nextSnapshot = buildOfficePresenceSnapshotFromGateway({
           agentsResult,
           helloSnapshot: gatewayClient.getLastHello()?.snapshot,
           statusSummary,
+          previewSnapshot,
           workspaceId: "remote-gateway",
         });
         if (cancelled) return;

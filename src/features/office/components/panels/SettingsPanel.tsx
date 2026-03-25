@@ -157,11 +157,7 @@ export function SettingsPanel({
             </div>
           </div>
           <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-200/70">
-            {remoteOfficeSourceKind === "openclaw_gateway"
-              ? "Gateway source"
-              : remoteOfficeTokenConfigured
-                ? "Token set"
-                : "No token"}
+            {remoteOfficeTokenConfigured ? "Token set" : "No token"}
           </span>
         </div>
         <div className="mt-3 grid gap-3">
@@ -253,21 +249,62 @@ export function SettingsPanel({
               </div>
             </>
           ) : (
-            <div>
-              <div className="mb-1 text-[10px] uppercase tracking-[0.14em] text-cyan-100/65">
-                Gateway URL
+            <>
+              <div>
+                <div className="mb-1 text-[10px] uppercase tracking-[0.14em] text-cyan-100/65">
+                  Gateway URL
+                </div>
+                <input
+                  type="text"
+                  value={remoteOfficeGatewayUrl}
+                  onChange={(event) => onRemoteOfficeGatewayUrlChange(event.target.value)}
+                  placeholder="wss://remote-gateway.example.com"
+                  className="w-full rounded-md border border-cyan-500/10 bg-black/25 px-3 py-2 text-[11px] text-cyan-100 outline-none transition-colors placeholder:text-cyan-100/30 focus:border-cyan-400/30"
+                />
+                <div className="mt-1 text-[10px] text-white/50">
+                  Claw3D connects from the browser directly to the remote OpenClaw gateway and derives a read-only presence snapshot.
+                </div>
               </div>
-              <input
-                type="text"
-                value={remoteOfficeGatewayUrl}
-                onChange={(event) => onRemoteOfficeGatewayUrlChange(event.target.value)}
-                placeholder="wss://remote-gateway.example.com"
-                className="w-full rounded-md border border-cyan-500/10 bg-black/25 px-3 py-2 text-[11px] text-cyan-100 outline-none transition-colors placeholder:text-cyan-100/30 focus:border-cyan-400/30"
-              />
-              <div className="mt-1 text-[10px] text-white/50">
-                Claw3D connects from the browser directly to the remote OpenClaw gateway and derives a read-only presence snapshot.
+              <div>
+                <div className="mb-1 text-[10px] uppercase tracking-[0.14em] text-cyan-100/65">
+                  Shared gateway token
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="password"
+                    value={remoteOfficeTokenDraft}
+                    onChange={(event) => setRemoteOfficeTokenDraft(event.target.value)}
+                    placeholder={remoteOfficeTokenConfigured ? "Token configured. Enter a new one to replace it." : "Enter token"}
+                    className="min-w-0 flex-1 rounded-md border border-cyan-500/10 bg-black/25 px-3 py-2 text-[11px] text-cyan-100 outline-none transition-colors placeholder:text-cyan-100/30 focus:border-cyan-400/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onRemoteOfficeTokenChange(remoteOfficeTokenDraft);
+                      setRemoteOfficeTokenDraft("");
+                    }}
+                    className="rounded-md border border-cyan-500/20 bg-cyan-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-[0.14em] text-cyan-100 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/15"
+                  >
+                    Save
+                  </button>
+                  {remoteOfficeTokenConfigured ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onRemoteOfficeTokenChange("");
+                        setRemoteOfficeTokenDraft("");
+                      }}
+                      className="rounded-md border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-[0.14em] text-rose-100 transition-colors hover:border-rose-400/40 hover:bg-rose-500/15"
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
+                <div className="mt-1 text-[10px] text-white/50">
+                  Optional. Browser-based remote presence and messaging can work without it when the remote gateway already allows your Control UI origin.
+                </div>
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
