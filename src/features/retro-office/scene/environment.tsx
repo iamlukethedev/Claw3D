@@ -193,7 +193,7 @@ export const FloorAndWalls = memo(function FloorAndWalls({
     (CITY_PATH_ZONE.minX + CITY_PATH_ZONE.maxX) / 2,
     (CITY_PATH_ZONE.minY + CITY_PATH_ZONE.maxY) / 2,
   );
-  const [remoteOfficeCenterX, , remoteOfficeCenterZ] = toWorld(
+  const [, , remoteOfficeCenterZ] = toWorld(
     (REMOTE_OFFICE_ZONE.minX + REMOTE_OFFICE_ZONE.maxX) / 2,
     (REMOTE_OFFICE_ZONE.minY + REMOTE_OFFICE_ZONE.maxY) / 2,
   );
@@ -689,11 +689,6 @@ export const WallPictures = memo(function WallPictures({
     LOCAL_OFFICE_CANVAS_WIDTH / 2,
     LOCAL_OFFICE_CANVAS_HEIGHT / 2,
   );
-  const [, , remoteCenterZ] = toWorld(
-    (REMOTE_OFFICE_ZONE.minX + REMOTE_OFFICE_ZONE.maxX) / 2,
-    (REMOTE_OFFICE_ZONE.minY + REMOTE_OFFICE_ZONE.maxY) / 2,
-  );
-  const remoteOfficeOffsetZ = remoteCenterZ - localCenterZ;
   const northZ = localCenterZ - localHeight / 2 + 0.07;
   const southZ = localCenterZ + localHeight / 2 - 0.07;
   const westX = localCenterX - localWidth / 2 + 0.07;

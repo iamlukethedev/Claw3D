@@ -156,12 +156,16 @@ describe("studio settings normalization", () => {
       },
     });
 
-    expect(normalized.office["ws://localhost:18789"]).toEqual({
-      title: "Team Orbit",
-    });
-    expect(normalized.office.bad).toEqual({
-      title: "Luke Headquarters",
-    });
+    expect(normalized.office["ws://localhost:18789"]).toEqual(
+      expect.objectContaining({
+        title: "Team Orbit",
+      }),
+    );
+    expect(normalized.office.bad).toEqual(
+      expect.objectContaining({
+        title: "Luke Headquarters",
+      }),
+    );
   });
 
   it("merges office title patches", () => {
@@ -181,8 +185,10 @@ describe("studio settings normalization", () => {
       },
     });
 
-    expect(merged.office["ws://localhost:18789"]).toEqual({
-      title: "Orbit Control",
-    });
+    expect(merged.office["ws://localhost:18789"]).toEqual(
+      expect.objectContaining({
+        title: "Orbit Control",
+      }),
+    );
   });
 });

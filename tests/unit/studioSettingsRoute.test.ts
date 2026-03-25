@@ -107,9 +107,11 @@ describe("studio settings route", () => {
       url: "ws://example.test:1234",
       tokenConfigured: true,
     });
-    expect(body.settings?.office?.["ws://example.test:1234"]).toEqual({
-      title: "Orbit Control",
-    });
+    expect(body.settings?.office?.["ws://example.test:1234"]).toEqual(
+      expect.objectContaining({
+        title: "Orbit Control",
+      }),
+    );
 
     const settingsPath = path.join(tempDir, "claw3d", "settings.json");
     expect(fs.existsSync(settingsPath)).toBe(true);
@@ -119,8 +121,10 @@ describe("studio settings route", () => {
       office?: Record<string, { title?: string }>;
     };
     expect(parsed.gateway).toEqual({ url: "ws://example.test:1234", token: "t" });
-    expect(parsed.office?.["ws://example.test:1234"]).toEqual({
-      title: "Orbit Control",
-    });
+    expect(parsed.office?.["ws://example.test:1234"]).toEqual(
+      expect.objectContaining({
+        title: "Orbit Control",
+      }),
+    );
   });
 });

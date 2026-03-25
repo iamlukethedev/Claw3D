@@ -416,7 +416,7 @@ function CameraRig({
   return null;
 }
 
-const NOOP_FURNITURE_UID_HANDLER = (_uid: string) => {};
+const NOOP_FURNITURE_UID_HANDLER = () => {};
 const NOOP_FURNITURE_HANDLER = () => {};
 const EMPTY_FURNITURE_ITEMS: FurnitureItem[] = [];
 

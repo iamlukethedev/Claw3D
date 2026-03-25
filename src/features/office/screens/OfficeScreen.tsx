@@ -560,6 +560,7 @@ const EMPTY_REMOTE_CHAT_SESSION: RemoteChatSessionState = {
   error: null,
   messages: [],
 };
+const MAX_REMOTE_MESSAGE_CHARS = 2_000;
 
 const buildRemoteRelayInstruction = (message: string) =>
   [
@@ -2728,6 +2729,14 @@ export function OfficeScreen({
     async (agentId: string, message: string) => {
       const trimmed = message.trim();
       if (!trimmed) return;
+      if (trimmed.length > MAX_REMOTE_MESSAGE_CHARS) {
+        updateRemoteChatSession(agentId, (session) => ({
+          ...session,
+          sending: false,
+          error: `Remote message must be ${MAX_REMOTE_MESSAGE_CHARS} characters or fewer.`,
+        }));
+        return;
+      }
       const remoteAgentId = isRemoteOfficeAgentId(agentId)
         ? agentId.slice("remote:".length)
         : agentId;
@@ -2759,10 +2768,10 @@ export function OfficeScreen({
         const remoteAgents = Array.isArray(agentsResult.agents)
           ? agentsResult.agents
           : [];
-        if (
-          remoteAgents.length > 0 &&
-          !remoteAgents.some((entry) => (entry.id?.trim() ?? "") === remoteAgentId)
-        ) {
+        if (remoteAgents.length === 0) {
+          throw new Error("Remote agent list is unavailable right now.");
+        }
+        if (!remoteAgents.some((entry) => (entry.id?.trim() ?? "") === remoteAgentId)) {
           throw new Error("Remote agent is no longer available.");
         }
         const sessionKey = buildAgentMainSessionKey(

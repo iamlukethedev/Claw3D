@@ -5,6 +5,7 @@ import { loadStudioSettings } from "@/lib/studio/settings-store";
 import { resolveOfficePreference } from "@/lib/studio/settings";
 
 export const runtime = "nodejs";
+const MAX_REMOTE_MESSAGE_CHARS = 2_000;
 
 type AgentsListResult = {
   mainKey?: string;
@@ -39,10 +40,25 @@ export async function POST(request: Request) {
     if (!message) {
       return NextResponse.json({ error: "Remote message is required." }, { status: 400 });
     }
+    if (message.length > MAX_REMOTE_MESSAGE_CHARS) {
+      return NextResponse.json(
+        { error: `Remote message must be ${MAX_REMOTE_MESSAGE_CHARS} characters or fewer.` },
+        { status: 400 },
+      );
+    }
 
     const settings = loadStudioSettings();
     const gatewayUrl = settings.gateway?.url?.trim() || "";
     const officePreference = resolveOfficePreference(settings, gatewayUrl);
+    if (!officePreference.remoteOfficeEnabled) {
+      return NextResponse.json({ error: "Remote office is disabled." }, { status: 400 });
+    }
+    if (officePreference.remoteOfficeSourceKind !== "openclaw_gateway") {
+      return NextResponse.json(
+        { error: "Remote messaging currently works only with the remote gateway source." },
+        { status: 400 },
+      );
+    }
     const remoteGatewayUrl = officePreference.remoteOfficeGatewayUrl.trim();
     if (!remoteGatewayUrl) {
       return NextResponse.json(
@@ -59,10 +75,13 @@ export async function POST(request: Request) {
     const agentsResult = await gatewayClient.request<AgentsListResult>("agents.list", {});
     const mainKey = agentsResult.mainKey?.trim() || "main";
     const remoteAgents = Array.isArray(agentsResult.agents) ? agentsResult.agents : [];
-    if (
-      remoteAgents.length > 0 &&
-      !remoteAgents.some((agent) => (agent.id?.trim() ?? "") === requestedAgentId)
-    ) {
+    if (remoteAgents.length === 0) {
+      return NextResponse.json(
+        { error: "Remote agent list is unavailable right now." },
+        { status: 503 },
+      );
+    }
+    if (!remoteAgents.some((agent) => (agent.id?.trim() ?? "") === requestedAgentId)) {
       return NextResponse.json({ error: "Remote agent is no longer available." }, { status: 404 });
     }
 

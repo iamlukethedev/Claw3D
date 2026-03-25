@@ -9,6 +9,7 @@ import { loadStudioSettings } from "@/lib/studio/settings-store";
 import { resolveOfficePreference } from "@/lib/studio/settings";
 
 export const runtime = "nodejs";
+const REMOTE_LAYOUT_TIMEOUT_MS = 10_000;
 
 const fetchRemoteOfficeLayoutSnapshot = async (params: {
   layoutUrl: string;
@@ -22,11 +23,26 @@ const fetchRemoteOfficeLayoutSnapshot = async (params: {
     headers.Authorization = `Bearer ${token}`;
     headers["X-Claw3D-Office-Token"] = token;
   }
-  const response = await fetch(params.layoutUrl, {
-    method: "GET",
-    headers,
-    cache: "no-store",
-  });
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => {
+    abortController.abort();
+  }, REMOTE_LAYOUT_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(params.layoutUrl, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+      signal: abortController.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Remote office layout request timed out.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if (response.status === 404) {
     return null;
   }
@@ -45,6 +61,13 @@ export async function GET(request: Request) {
       const settings = loadStudioSettings();
       const gatewayUrl = settings.gateway?.url?.trim() || "";
       const officePreference = resolveOfficePreference(settings, gatewayUrl);
+      if (
+        !officePreference.remoteOfficeEnabled ||
+        officePreference.remoteOfficeSourceKind !== "presence_endpoint" ||
+        !officePreference.remoteOfficePresenceUrl.trim()
+      ) {
+        return NextResponse.json({ snapshot: null }, { headers: { "Cache-Control": "no-store" } });
+      }
       const layoutUrl = deriveRemoteLayoutUrlFromPresenceUrl(
         officePreference.remoteOfficePresenceUrl,
       );

@@ -1,4 +1,4 @@
-import { CANVAS_H, SNAP_GRID } from "@/features/retro-office/core/constants";
+import { SNAP_GRID } from "@/features/retro-office/core/constants";
 import { snap } from "@/features/retro-office/core/geometry";
 import type { FurnitureItem } from "@/features/retro-office/core/types";
 
