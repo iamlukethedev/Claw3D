@@ -181,6 +181,7 @@ See [`.env.example`](.env.example) for the full local development template.
 - [`VISION.md`](VISION.md): project direction and long-term guardrails.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md): system boundaries, data flow, and major trade-offs.
 - [`TUTORIAL.md`](TUTORIAL.md): detailed step-by-step setup for OpenClaw + Tailscale + Claw3D.
+- [`MULTI_AGENT_BETA.md`](MULTI_AGENT_BETA.md): remote office beta setup, connection modes, and limitations.
 - [`CODE_DOCUMENTATION.md`](CODE_DOCUMENTATION.md): practical code map, extension points, and contributor onboarding order.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): local workflow, testing, and PR expectations.
 - [`SUPPORT.md`](SUPPORT.md): where to ask for help and how to route reports.
