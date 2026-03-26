@@ -3649,6 +3649,14 @@ export function OfficeScreen({
     state.agents,
   ]);
 
+  const streamingTextByAgentId = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    for (const agent of state.agents) {
+      if (agent.streamText?.trim()) map[agent.agentId] = agent.streamText.trim();
+    }
+    return map;
+  }, [state.agents]);
+
   // No longer force-close the jukebox panel when skill is disabled;
   // the panel handles the disabled state itself.
 
@@ -3771,6 +3779,7 @@ export function OfficeScreen({
           gatewayStatus={status}
           runCountByAgentId={runCountByAgentId}
           lastSeenByAgentId={lastSeenByAgentId}
+          streamingTextByAgentId={streamingTextByAgentId}
           standupMeeting={standupController.meeting}
           standupAutoOpenBoard={standupController.openBoardByDefault}
           onStandupArrivalsChange={(arrivedAgentIds) => {

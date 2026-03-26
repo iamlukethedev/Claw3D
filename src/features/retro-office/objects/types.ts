@@ -29,6 +29,7 @@ export type InteractiveFurnitureModelProps = {
 export type AgentModelProps = {
   agentId: string;
   name: string;
+  subtitle?: string | null;
   status: OfficeAgent["status"];
   color: string;
   appearance?: AgentAvatarProfile | null;

@@ -207,7 +207,7 @@ export const useOfficeSkillsMarketplace = ({
   const handleSetSkillEnabled = useCallback(
     async (skillName: string, enabled: boolean) => {
       const entry =
-        skillsReport?.skills.find(
+        skillsReport?.skills?.find(
           (skill) => skill.name.trim() === skillName.trim(),
         ) ?? null;
       await runSkillMutation({
