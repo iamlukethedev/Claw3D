@@ -103,10 +103,14 @@ const DEFAULT_UPSTREAM_GATEWAY_URL =
 
 const normalizeLocalGatewayDefaults = (value: unknown): StudioGatewaySettings | null => {
   if (!value || typeof value !== "object") return null;
-  const raw = value as { url?: unknown; token?: unknown };
+  const raw = value as { url?: unknown; token?: unknown; tokenConfigured?: unknown };
   const url = typeof raw.url === "string" ? raw.url.trim() : "";
+  if (!url) return null;
+  // Accept both full settings ({ url, token }) and the sanitized public
+  // form ({ url, tokenConfigured }) returned by /api/studio.  When only
+  // tokenConfigured is present the actual token isn't available on the
+  // client — leave it empty so the connection dialog can prompt if needed.
   const token = typeof raw.token === "string" ? raw.token.trim() : "";
-  if (!url || !token) return null;
   return { url, token };
 };
 
@@ -548,12 +552,22 @@ export const useGatewayConnection = (
         const settings = envelope.settings ?? null;
         const gateway = settings?.gateway ?? null;
         if (cancelled) return;
-        setLocalGatewayDefaults(normalizeLocalGatewayDefaults(envelope.localGatewayDefaults));
-        const nextGatewayUrl = gateway?.url?.trim() ? gateway.url : DEFAULT_UPSTREAM_GATEWAY_URL;
-        const nextToken =
-          gateway && "token" in gateway && typeof gateway.token === "string"
-            ? gateway.token
-            : "";
+        const normalizedDefaults = normalizeLocalGatewayDefaults(envelope.localGatewayDefaults);
+        setLocalGatewayDefaults(normalizedDefaults);
+        // When the user has no saved gateway URL, prefer the runtime
+        // localGatewayDefaults (from openclaw.json / CLAW3D_GATEWAY_URL)
+        // over the build-time NEXT_PUBLIC_GATEWAY_URL which may be stale
+        // or empty if the operator forgot to rebuild after .env changes.
+        const hasSavedUrl = Boolean(gateway?.url?.trim());
+        const resolvedUrl = hasSavedUrl
+          ? gateway!.url
+          : normalizedDefaults?.url || DEFAULT_UPSTREAM_GATEWAY_URL;
+        const nextGatewayUrl = resolvedUrl;
+        const nextToken = hasSavedUrl
+          ? (gateway && "token" in gateway && typeof gateway.token === "string"
+              ? gateway.token
+              : "")
+          : normalizedDefaults?.token ?? "";
         loadedGatewaySettings.current = {
           gatewayUrl: nextGatewayUrl.trim(),
           token: nextToken,

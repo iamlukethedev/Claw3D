@@ -154,6 +154,56 @@ describe("useGatewayConnection", () => {
     expect(captured.authScopeKey).toBe("ws://localhost:18789");
   });
 
+  it("auto_applies_runtime_local_defaults_when_no_saved_gateway_and_build_time_empty", async () => {
+    // Simulates #57: NEXT_PUBLIC_GATEWAY_URL was never rebuilt, but
+    // CLAW3D_GATEWAY_URL is set on the server so localGatewayDefaults
+    // comes through in the sanitized (public) form with tokenConfigured.
+    const { useGatewayConnection } = await setupAndImportHook("");
+    const coordinator = {
+      loadSettings: async () => null,
+      loadSettingsEnvelope: async () => ({
+        settings: {
+          version: 1,
+          gateway: null, // no saved gateway settings
+          focused: {},
+          avatars: {},
+          analytics: {},
+          voiceReplies: {},
+          office: {},
+          deskAssignments: {},
+          standup: {},
+        },
+        // Sanitized public form — token is replaced with tokenConfigured
+        localGatewayDefaults: { url: "ws://my-server:18789", tokenConfigured: true },
+      }),
+      schedulePatch: () => {},
+      flushPending: async () => {},
+    };
+
+    const Probe = () => {
+      const state = useGatewayConnection(coordinator);
+      return createElement(
+        "div",
+        null,
+        createElement("div", { "data-testid": "gatewayUrl" }, state.gatewayUrl),
+        createElement(
+          "div",
+          { "data-testid": "localDefaultsUrl" },
+          state.localGatewayDefaults?.url ?? ""
+        )
+      );
+    };
+
+    render(createElement(Probe));
+
+    // The runtime local defaults should be auto-applied since there are
+    // no saved settings and the build-time default is empty.
+    await waitFor(() => {
+      expect(screen.getByTestId("gatewayUrl")).toHaveTextContent("ws://my-server:18789");
+    });
+    expect(screen.getByTestId("localDefaultsUrl")).toHaveTextContent("ws://my-server:18789");
+  });
+
   it("applies_local_defaults_from_settings_envelope", async () => {
     const { useGatewayConnection } = await setupAndImportHook(null);
     const coordinator = {
