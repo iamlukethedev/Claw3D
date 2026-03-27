@@ -44,8 +44,15 @@ const readOpenclawGatewayDefaults = (): { url: string; token: string } | null =>
   }
 };
 
-export const loadLocalGatewayDefaults = () => {
-  return readOpenclawGatewayDefaults();
+export const loadLocalGatewayDefaults = (): { url: string; token: string } | null => {
+  const fromFile = readOpenclawGatewayDefaults();
+  if (fromFile) return fromFile;
+  // Fall back to env vars so operators can configure the gateway URL at
+  // runtime without openclaw.json and without a rebuild.
+  const envUrl = process.env.CLAW3D_GATEWAY_URL?.trim();
+  const envToken = process.env.CLAW3D_GATEWAY_TOKEN?.trim();
+  if (envUrl) return { url: envUrl, token: envToken ?? "" };
+  return null;
 };
 
 export const loadStudioSettings = (): StudioSettings => {
