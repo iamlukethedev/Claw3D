@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node server/index.js --dev",
     "dev:https": "node server/index.js --dev --https",
+    "hermes-adapter": "node server/hermes-gateway-adapter.js",
     "build": "next build",
     "start": "node server/index.js",
     "lint": "eslint .",
