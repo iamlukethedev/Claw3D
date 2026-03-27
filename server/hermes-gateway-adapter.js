@@ -50,15 +50,17 @@ You have tools to build and manage your team autonomously:
 
 - **spawn_agent**: Create a new specialist agent with a name, role, instructions, and settings (wipe/continuity/boundaries).
 - **delegate_task**: Send a task to a specific agent and receive their response.
-- **list_team**: See all current team members and their IDs.
-- **configure_agent**: Update an agent's name, instructions, or settings.
+- **list_team**: See all current team members and their IDs, names, and roles.
+- **configure_agent**: Update an agent's name, role/title, instructions, or settings.
 - **dismiss_agent**: Remove an agent from the team.
+- **read_agent_context**: Read the recent conversation history of another agent to understand what they are currently working on, what they have already done, or what their status is. Use this for coordination — before delegating a task, check if the agent already has relevant context.
 
 When given a goal:
 1. Analyse what specialist roles are needed.
 2. spawn_agent for each specialist.
 3. delegate_task to assign work and coordinate.
-4. Synthesise results into a final answer for the user.
+4. Use read_agent_context to check what an agent has done or is doing before re-delegating.
+5. Synthesise results into a final answer for the user.
 
 Each spawned agent will appear as an animated character in the 3D office — walking when active, standing when idle.
 Be concise in your responses to the user; do the heavy lifting via tool calls.`;
@@ -143,6 +145,21 @@ const TEAM_TOOLS = [
         properties: {
           agent_id: { type: "string" },
           reason: { type: "string" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "read_agent_context",
+      description: "Read the recent conversation history of another agent to understand what they are working on, what they have already done, or what their current status is. Useful for coordination and avoiding duplicate work.",
+      parameters: {
+        type: "object",
+        required: ["agent_id"],
+        properties: {
+          agent_id: { type: "string", description: "ID of the agent whose context you want to read" },
+          last_n: { type: "number", description: "How many recent messages to return (default 10, max 40)" },
         },
       },
     },
@@ -504,15 +521,43 @@ function execDismissAgent(args) {
   return JSON.stringify({ ok: true, dismissed: targetId });
 }
 
+function execReadAgentContext(args) {
+  const targetId = typeof args.agent_id === "string" ? args.agent_id.trim() : "";
+  const agent = agentRegistry.get(targetId);
+  if (!agent) return JSON.stringify({ ok: false, error: `Agent ${targetId} not found` });
+  const lastN = Math.min(40, Math.max(1, typeof args.last_n === "number" ? Math.floor(args.last_n) : 10));
+  const sessionKey = `agent:${targetId}:${MAIN_KEY}`;
+  const history = getHistory(sessionKey);
+  const messages = history.slice(-lastN);
+  if (messages.length === 0) {
+    return JSON.stringify({ ok: true, agent_id: targetId, name: agent.name, role: agent.role || "", message_count: 0, context: "(no conversation history yet)" });
+  }
+  const contextLines = messages.map((m) => {
+    const role = m.role === "assistant" ? agent.name : "User";
+    const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+    return `[${role}]: ${content.slice(0, 800)}${content.length > 800 ? "…" : ""}`;
+  });
+  return JSON.stringify({
+    ok: true,
+    agent_id: targetId,
+    name: agent.name,
+    role: agent.role || "",
+    message_count: history.length,
+    showing_last: messages.length,
+    context: contextLines.join("\n\n"),
+  });
+}
+
 async function executeToolCall(tc, sendEvent) {
   console.log(`[hermes-adapter] Tool call: ${tc.name}`, JSON.stringify(tc.args).slice(0, 120));
   switch (tc.name) {
-    case "spawn_agent":     return execSpawnAgent(tc.args, sendEvent);
-    case "delegate_task":   return execDelegateTask(tc.args, sendEvent);
-    case "list_team":       return execListTeam();
-    case "configure_agent": return execConfigureAgent(tc.args);
-    case "dismiss_agent":   return execDismissAgent(tc.args);
-    default:                return JSON.stringify({ ok: false, error: `Unknown tool: ${tc.name}` });
+    case "spawn_agent":          return execSpawnAgent(tc.args, sendEvent);
+    case "delegate_task":        return execDelegateTask(tc.args, sendEvent);
+    case "list_team":            return execListTeam();
+    case "configure_agent":      return execConfigureAgent(tc.args);
+    case "dismiss_agent":        return execDismissAgent(tc.args);
+    case "read_agent_context":   return execReadAgentContext(tc.args);
+    default:                     return JSON.stringify({ ok: false, error: `Unknown tool: ${tc.name}` });
   }
 }
 
