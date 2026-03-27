@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GitBranch, Plus, Sparkles, Trash2, Wand2, X } from "lucide-react";
 import { AgentAvatarPreview3D } from "@/features/agents/components/AgentAvatarPreview3D";
 import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
@@ -119,7 +119,6 @@ export function CompanyBuilderModal({
   const [replaceConfirmOpen, setReplaceConfirmOpen] = useState(false);
   const [orgChartOpen, setOrgChartOpen] = useState(false);
   const [hoveredOrgRoleId, setHoveredOrgRoleId] = useState<string | null>(null);
-  const [pendingAutoGenerateBrief, setPendingAutoGenerateBrief] = useState<string | null>(null);
   const roleListContainerRef = useRef<HTMLElement | null>(null);
   const pendingRoleScrollRef = useRef(false);
 
@@ -151,25 +150,26 @@ export function CompanyBuilderModal({
     });
   }, [plan]);
 
-  useEffect(() => {
-    const brief = pendingAutoGenerateBrief;
-    if (!brief || busy) return;
-    setPendingAutoGenerateBrief(null);
-    void onGeneratePlan(brief)
-      .then((nextPlan) => {
-        setPlan(nextPlan);
-      })
-      .catch((error) => {
-        console.error("Failed to auto-generate company plan.", error);
-      });
-  }, [busy, onGeneratePlan, pendingAutoGenerateBrief]);
+  const fireAutoGenerate = useCallback(
+    (brief: string) => {
+      void onGeneratePlan(brief)
+        .then((nextPlan) => {
+          setPlan(nextPlan);
+        })
+        .catch((error) => {
+          console.error("Failed to auto-generate company plan.", error);
+        });
+    },
+    [onGeneratePlan],
+  );
 
-  useEffect(() => {
-    if (!orgChartOpen || !plan?.roles.length) return;
-    setHoveredOrgRoleId((current) =>
-      current && plan.roles.some((role) => role.id === current) ? current : plan.roles[0]?.id ?? null
-    );
-  }, [orgChartOpen, plan]);
+  const orgChartDefaultRoleId = orgChartOpen && plan?.roles.length
+    ? plan.roles[0]?.id ?? null
+    : null;
+  const resolvedHoveredOrgRoleId =
+    hoveredOrgRoleId && plan?.roles.some((role) => role.id === hoveredOrgRoleId)
+      ? hoveredOrgRoleId
+      : orgChartDefaultRoleId;
 
   const triggerCreateCompany = () => {
     if (!plan) return;
@@ -181,7 +181,7 @@ export function CompanyBuilderModal({
   if (!open) return null;
 
   const hoveredOrgRole =
-    plan?.roles.find((role) => role.id === hoveredOrgRoleId) ?? plan?.roles[0] ?? null;
+    plan?.roles.find((role) => role.id === resolvedHoveredOrgRoleId) ?? plan?.roles[0] ?? null;
 
   return (
     <div className="fixed inset-0 z-[100100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
@@ -336,7 +336,7 @@ export function CompanyBuilderModal({
                   <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-100/85">
                     Your current {agentCount === 1 ? "agent will" : `${agentCount} agents will`} be
                     deleted and replaced by this company when you create it. This action is
-                    irreversible and will delete the old agents' workspaces.
+                    irreversible and will delete the old agents&apos; workspaces.
                   </div>
                 ) : null}
                 {!canUseAi ? (
@@ -726,7 +726,7 @@ export function CompanyBuilderModal({
               <p className="text-sm leading-6 text-white/65">
                 Your current {agentCount === 1 ? "agent will" : `${agentCount} agents will`} be
                 deleted and replaced by this new company. This action is irreversible and will
-                delete the old agents' workspaces. Are you sure you want to continue?
+                delete the old agents&apos; workspaces. Are you sure you want to continue?
               </p>
             </div>
             <div className="mt-6 flex items-center justify-end gap-3">
@@ -785,7 +785,7 @@ export function CompanyBuilderModal({
                   <button
                     type="button"
                     className={`flex w-full max-w-xs flex-col items-center rounded-2xl border px-5 py-5 text-center transition ${
-                      hoveredOrgRoleId === plan.roles[0]?.id
+                      resolvedHoveredOrgRoleId === plan.roles[0]?.id
                         ? "border-cyan-400/40 bg-cyan-500/12"
                         : "border-cyan-500/20 bg-cyan-500/10 hover:border-cyan-300/35"
                     }`}
@@ -820,7 +820,7 @@ export function CompanyBuilderModal({
                             key={role.id || `org-chart-role-${index + 2}`}
                             type="button"
                             className={`flex flex-col items-center rounded-2xl border px-4 py-5 text-center transition ${
-                              hoveredOrgRoleId === role.id
+                              resolvedHoveredOrgRoleId === role.id
                                 ? "border-cyan-400/40 bg-cyan-500/10"
                                 : "border-white/10 bg-white/[0.03] hover:border-cyan-300/25"
                             }`}
@@ -939,8 +939,8 @@ export function CompanyBuilderModal({
                         businessDescription: trimmedPrompt,
                         improvedBrief,
                       });
-                      setPendingAutoGenerateBrief(improvedBrief);
                       setPromptModalOpen(false);
+                      fireAutoGenerate(improvedBrief);
                     } catch {}
                   })();
                 }}
