@@ -5,7 +5,8 @@
  * layout suited for the wizard modal.
  */
 import { useState } from "react";
-import { CheckCircle2, Eye, EyeOff, Loader2, Wifi, WifiOff } from "lucide-react";
+import { CheckCircle2, Eye, EyeOff, Wifi, WifiOff } from "lucide-react";
+import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
 
 export type ConnectStepProps = {
   gatewayUrl: string;
@@ -33,8 +34,8 @@ export const ConnectStep = ({
   if (connected) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-8">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20">
-          <CheckCircle2 className="h-6 w-6 text-emerald-400" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20">
+          <CheckCircle2 className="h-6 w-6 text-amber-300" />
         </div>
         <p className="text-sm font-semibold text-white">Connected!</p>
         <p className="text-xs text-white/60">
@@ -57,7 +58,7 @@ export const ConnectStep = ({
             Gateway URL
           </span>
           <input
-            className="h-9 rounded-md border border-white/10 bg-white/5 px-3 font-mono text-sm text-white outline-none placeholder:text-white/30 focus:border-emerald-500/50"
+            className="h-9 rounded-md border border-white/10 bg-white/5 px-3 font-mono text-sm text-white outline-none placeholder:text-white/30 focus:border-amber-400/50"
             type="text"
             value={gatewayUrl}
             onChange={(e) => onGatewayUrlChange(e.target.value)}
@@ -72,7 +73,7 @@ export const ConnectStep = ({
           </span>
           <div className="relative">
             <input
-              className="h-9 w-full rounded-md border border-white/10 bg-white/5 px-3 pr-9 font-mono text-sm text-white outline-none placeholder:text-white/30 focus:border-emerald-500/50"
+              className="h-9 w-full rounded-md border border-white/10 bg-white/5 px-3 pr-9 font-mono text-sm text-white outline-none placeholder:text-white/30 focus:border-amber-400/50"
               type={showToken ? "text" : "password"}
               value={token}
               onChange={(e) => onTokenChange(e.target.value)}
@@ -96,13 +97,13 @@ export const ConnectStep = ({
 
         <button
           type="button"
-          className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-amber-500 px-4 text-xs font-semibold text-[#1a1206] transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
           onClick={onConnect}
           disabled={connecting || !gatewayUrl.trim()}
         >
           {connecting ? (
             <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <RunningAvatarLoader size={16} trackWidth={32} inline />
               Connecting…
             </>
           ) : (

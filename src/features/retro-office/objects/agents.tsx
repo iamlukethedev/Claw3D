@@ -14,6 +14,16 @@ import type {
 } from "@/features/retro-office/core/types";
 import { AgentModelProps } from "@/features/retro-office/objects/types";
 
+const MAX_NAMEPLATE_TEXT_LENGTH = 10;
+
+const formatAgentNameplateText = (value: string): string => {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  if (normalized.length <= MAX_NAMEPLATE_TEXT_LENGTH) return normalized;
+  const [firstName] = normalized.split(" ");
+  return firstName || normalized;
+};
+
 export const AgentModel = memo(function AgentModel({
   agentId,
   name,
@@ -111,21 +121,23 @@ export const AgentModel = memo(function AgentModel({
                     : workoutStyle === "box"
                       ? 0.04
                       : 0.02
-          : agent.pingPongUntil
-            ? 0.08
-            : 0;
+            : agent.pingPongUntil
+              ? 0.08
+              : 0;
     const bounce =
       agent.state === "walking"
         ? Math.sin(frameValue * WALK_ANIM_SPEED) * 0.04
         : isDancing
-          ? 0.03 + Math.abs(Math.sin(agent.frame * 0.22 + (agent.phaseOffset ?? 0))) * 0.05
+          ? 0.03 +
+            Math.abs(Math.sin(agent.frame * 0.22 + (agent.phaseOffset ?? 0))) *
+              0.05
           : isWorkout
-          ? workoutStyle === "stretch"
-            ? 0.012 + Math.abs(workoutPhase) * 0.018
-            : workoutStyle === "row"
-              ? 0.015 + Math.abs(workoutPhase) * 0.028
-              : 0.02 + Math.abs(workoutPhase) * 0.04
-          : 0;
+            ? workoutStyle === "stretch"
+              ? 0.012 + Math.abs(workoutPhase) * 0.018
+              : workoutStyle === "row"
+                ? 0.015 + Math.abs(workoutPhase) * 0.028
+                : 0.02 + Math.abs(workoutPhase) * 0.04
+            : 0;
     const breathe =
       agent.state === "standing" || isWorkout || agent.pingPongUntil
         ? Math.sin(frameValue * 0.03) * 0.01
@@ -142,8 +154,10 @@ export const AgentModel = memo(function AgentModel({
       } else if (agent.state === "walking") {
         leftArmRef.current.rotation.x = walkPhase * 0.4;
       } else if (isDancing) {
-        leftArmRef.current.rotation.x = -0.8 + Math.sin(agent.frame * 0.22) * 0.9;
-        leftArmRef.current.rotation.z = -0.45 + Math.cos(agent.frame * 0.16) * 0.18;
+        leftArmRef.current.rotation.x =
+          -0.8 + Math.sin(agent.frame * 0.22) * 0.9;
+        leftArmRef.current.rotation.z =
+          -0.45 + Math.cos(agent.frame * 0.16) * 0.18;
         leftArmRef.current.rotation.y = -0.08;
         groupRef.current.rotation.z = Math.sin(agent.frame * 0.12) * 0.08;
       } else if (isWorkout) {
@@ -199,8 +213,10 @@ export const AgentModel = memo(function AgentModel({
       } else if (agent.state === "walking") {
         rightArmRef.current.rotation.x = -walkPhase * 0.4;
       } else if (isDancing) {
-        rightArmRef.current.rotation.x = -0.8 - Math.sin(agent.frame * 0.22) * 0.9;
-        rightArmRef.current.rotation.z = 0.45 - Math.cos(agent.frame * 0.16) * 0.18;
+        rightArmRef.current.rotation.x =
+          -0.8 - Math.sin(agent.frame * 0.22) * 0.9;
+        rightArmRef.current.rotation.z =
+          0.45 - Math.cos(agent.frame * 0.16) * 0.18;
         rightArmRef.current.rotation.y = 0.08;
         groupRef.current.rotation.z = Math.sin(agent.frame * 0.12) * 0.08;
       } else if (isWorkout) {
@@ -252,18 +268,18 @@ export const AgentModel = memo(function AgentModel({
           : isDancing
             ? Math.sin(agent.frame * 0.22 + (agent.phaseOffset ?? 0)) * 0.35
             : isWorkout
-            ? workoutStyle === "run"
-              ? workoutPhase * 0.7
-              : workoutStyle === "bike"
-                ? workoutPhase * 0.82
-                : workoutStyle === "row"
-                  ? 0.14 + Math.max(0, workoutPhase) * 0.42
-                  : workoutStyle === "stretch"
-                    ? -0.2 + Math.abs(workoutPhase) * 0.08
-                    : workoutStyle === "box"
-                      ? 0.06 + workoutPhase * 0.14
-                      : workoutPhase * 0.18
-            : 0;
+              ? workoutStyle === "run"
+                ? workoutPhase * 0.7
+                : workoutStyle === "bike"
+                  ? workoutPhase * 0.82
+                  : workoutStyle === "row"
+                    ? 0.14 + Math.max(0, workoutPhase) * 0.42
+                    : workoutStyle === "stretch"
+                      ? -0.2 + Math.abs(workoutPhase) * 0.08
+                      : workoutStyle === "box"
+                        ? 0.06 + workoutPhase * 0.14
+                        : workoutPhase * 0.18
+              : 0;
     }
     if (rightLegRef.current) {
       rightLegRef.current.rotation.x =
@@ -272,22 +288,25 @@ export const AgentModel = memo(function AgentModel({
           : isDancing
             ? -Math.sin(agent.frame * 0.22 + (agent.phaseOffset ?? 0)) * 0.35
             : isWorkout
-            ? workoutStyle === "run"
-              ? -workoutPhase * 0.7
-              : workoutStyle === "bike"
-                ? -workoutPhase * 0.82
-                : workoutStyle === "row"
-                  ? 0.14 + Math.max(0, -workoutPhase) * 0.42
-                  : workoutStyle === "stretch"
-                    ? -0.12 + Math.abs(workoutPhase) * 0.08
-                    : workoutStyle === "box"
-                      ? 0.06 - workoutPhase * 0.14
-                      : -workoutPhase * 0.18
-            : 0;
+              ? workoutStyle === "run"
+                ? -workoutPhase * 0.7
+                : workoutStyle === "bike"
+                  ? -workoutPhase * 0.82
+                  : workoutStyle === "row"
+                    ? 0.14 + Math.max(0, -workoutPhase) * 0.42
+                    : workoutStyle === "stretch"
+                      ? -0.12 + Math.abs(workoutPhase) * 0.08
+                      : workoutStyle === "box"
+                        ? 0.06 - workoutPhase * 0.14
+                        : -workoutPhase * 0.18
+              : 0;
     }
 
     const working =
-      agent.state === "sitting" || isWorkout || isDancing || agent.status === "working";
+      agent.state === "sitting" ||
+      isWorkout ||
+      isDancing ||
+      agent.status === "working";
     const isError = agent.status === "error";
     const isAway = agent.state === "away";
 
@@ -620,6 +639,9 @@ export const AgentModel = memo(function AgentModel({
         : "#8dc4ff"
     : "transparent";
   const speechBubbleBorderInset = activeSpeechBubble ? 0.03 : 0;
+  const nameplateText = name ? formatAgentNameplateText(name) : "";
+  const nameplateFontSize =
+    nameplateText.length > 9 ? 0.118 : nameplateText.length > 7 ? 0.13 : 0.144;
 
   return (
     <group
@@ -1045,7 +1067,7 @@ export const AgentModel = memo(function AgentModel({
           depthWrite={false}
         />
       </mesh>
-      {!activeSpeechBubble && name ? (
+      {!activeSpeechBubble && nameplateText ? (
         <Billboard position={[0, 1.05, 0]}>
           <mesh position={[0, 0, -0.001]}>
             <planeGeometry args={[0.82, 0.24]} />
@@ -1061,14 +1083,14 @@ export const AgentModel = memo(function AgentModel({
           </mesh>
           <Text
             position={[-0.02, 0, 0.001]}
-            fontSize={0.16}
+            fontSize={nameplateFontSize}
             color="#e8dfc0"
             anchorX="center"
             anchorY="middle"
             maxWidth={0.68}
             font={undefined}
           >
-            {name}
+            {nameplateText}
           </Text>
         </Billboard>
       ) : null}

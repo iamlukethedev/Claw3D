@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
 import { AgentStoreProvider } from "@/features/agents/state/store";
 import { OfficeScreen } from "@/features/office/screens/OfficeScreen";
 
@@ -18,10 +19,12 @@ function OfficeLoadingFallback() {
       role="status"
     >
       <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary" />
-        <p className="font-mono text-[11px] tracking-[0.08em] text-muted-foreground">
-          Loading…
-        </p>
+        <RunningAvatarLoader
+          size={28}
+          trackWidth={76}
+          label="Loading..."
+          labelClassName="text-muted-foreground"
+        />
       </div>
     </div>
   );

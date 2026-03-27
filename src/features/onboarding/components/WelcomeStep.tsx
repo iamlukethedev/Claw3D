@@ -48,7 +48,7 @@ export const WelcomeStep = () => (
           className="rounded-lg border border-white/8 bg-white/[0.03] px-3.5 py-3"
         >
           <div className="flex items-center gap-2">
-            <Icon className="h-4 w-4 shrink-0 text-emerald-400" />
+            <Icon className="h-4 w-4 shrink-0 text-amber-300" />
             <span className="text-xs font-semibold text-white">{title}</span>
           </div>
           <p className="mt-1.5 text-[11px] leading-snug text-white/55">

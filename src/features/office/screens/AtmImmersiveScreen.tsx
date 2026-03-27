@@ -2,6 +2,7 @@
 
 import { Check, Landmark, Lock, RefreshCw, Wallet } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
+import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
 import {
   type OfficeUsageAnalyticsParams,
   useOfficeUsageAnalyticsViewModel,
@@ -271,7 +272,11 @@ export function AtmImmersiveScreen(props: OfficeUsageAnalyticsParams) {
                 onClick={() => void usage.refresh()}
                 className="inline-flex items-center gap-2 rounded-full border border-[#7dfff0]/24 bg-[#072528] px-4 py-2 text-[11px] uppercase tracking-[0.22em] text-[#b7fff8] transition-colors hover:border-[#7dfff0]/40 hover:bg-[#0a3035]"
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${usage.loading ? "animate-spin" : ""}`} />
+                {usage.loading ? (
+                  <RunningAvatarLoader size={16} trackWidth={32} inline />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
                 Refresh
               </button>
             }

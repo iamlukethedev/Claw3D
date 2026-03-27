@@ -42,6 +42,13 @@ describe("getStepIndex", () => {
     const idx = ONBOARDING_STEPS.findIndex((s) => s.id === "connect");
     expect(getStepIndex("connect")).toBe(idx);
   });
+
+  it("includes the company step before completion", () => {
+    const companyIndex = getStepIndex("company");
+    const completeIndex = getStepIndex("complete");
+    expect(companyIndex).toBeGreaterThan(getStepIndex("agents"));
+    expect(companyIndex).toBe(completeIndex - 1);
+  });
 });
 
 describe("getNextStep", () => {
