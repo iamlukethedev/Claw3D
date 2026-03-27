@@ -10,6 +10,7 @@ import {
   ShieldX,
   MessageSquare,
 } from "lucide-react";
+import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
 
 import type {
   GitHubDashboardResponse,
@@ -432,9 +433,11 @@ export function GithubImmersiveScreen({
               }}
               className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] text-white/72 transition-colors hover:border-white/20 hover:text-white"
             >
-              <RefreshCw
-                className={`h-3.5 w-3.5 ${loading || detailLoading ? "animate-spin" : ""}`}
-              />
+              {loading || detailLoading ? (
+                <RunningAvatarLoader size={16} trackWidth={32} inline />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
               Refresh
             </button>
             {dashboard?.viewerLogin ? (
@@ -465,9 +468,7 @@ export function GithubImmersiveScreen({
       {isInitialLoading ? (
         <div className="flex min-h-0 flex-1 items-center justify-center px-8 py-10">
           <div className="flex max-w-md flex-col items-center rounded-3xl border border-cyan-300/12 bg-[#081122]/78 px-8 py-10 text-center shadow-[0_20px_80px_rgba(0,0,0,0.38)]">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-cyan-300/18 bg-cyan-300/8">
-              <RefreshCw className="h-6 w-6 animate-spin text-cyan-100" />
-            </div>
+            <RunningAvatarLoader size={40} trackWidth={104} />
             <div className="mt-5 text-[11px] uppercase tracking-[0.28em] text-cyan-100/55">
               Loading GitHub
             </div>

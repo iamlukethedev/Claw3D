@@ -50,8 +50,8 @@ export const AgentsStep = ({ agentCount, connected }: AgentsStepProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
-        <Users className="h-5 w-5 text-emerald-400" />
+      <div className="flex items-center gap-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-3">
+        <Users className="h-5 w-5 text-amber-300" />
         <div>
           <p className="text-sm font-semibold text-white">
             {agentCount} agent{agentCount !== 1 ? "s" : ""} discovered

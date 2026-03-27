@@ -2295,6 +2295,7 @@ const getAgentInitials = (name: string | null | undefined): string => {
 
 export function RetroOffice3D({
   agents,
+  officeCenterSignal = 0,
   animationState = null,
   readOnly = false,
   storageNamespace = "default",
@@ -2365,6 +2366,7 @@ export function RetroOffice3D({
   onJukeboxInteract,
 }: {
   agents: OfficeAgent[];
+  officeCenterSignal?: number;
   animationState?: Pick<
     OfficeAnimationState,
     | "cleaningCues"
@@ -4958,6 +4960,21 @@ export function RetroOffice3D({
     ? DISTRICT_CAMERA_TARGET
     : LOCAL_CAMERA_TARGET;
   const cameraZoom = remoteOfficeEnabled ? DISTRICT_CAMERA_ZOOM : 56;
+  const lastOfficeCenterSignalRef = useRef(officeCenterSignal);
+
+  useEffect(() => {
+    cameraPresetRef.current = {
+      pos: CAM_POS,
+      target: cameraTarget,
+      zoom: cameraZoom,
+    };
+  }, [CAM_POS, cameraTarget, cameraZoom]);
+
+  useEffect(() => {
+    if (officeCenterSignal === lastOfficeCenterSignalRef.current) return;
+    lastOfficeCenterSignalRef.current = officeCenterSignal;
+    cameraPresetRef.current = CAMERA_PRESET_MAP.overview;
+  }, [officeCenterSignal]);
 
   return (
     <div className="relative w-full h-full bg-[#1a1008] font-mono text-white overflow-hidden">

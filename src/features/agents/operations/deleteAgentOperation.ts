@@ -155,3 +155,23 @@ export const deleteAgentRecordViaStudio = async (params: {
     throw err;
   }
 };
+
+export const trashAgentStateViaStudio = async (params: {
+  agentId: string;
+  fetchJson?: FetchJson;
+}): Promise<TrashAgentStateResult> => {
+  const trimmedAgentId = params.agentId.trim();
+  if (!trimmedAgentId) {
+    throw new Error("Agent id is required.");
+  }
+  const fetchJson = params.fetchJson ?? defaultFetchJson;
+  const { result } = await fetchJson<{ result: TrashAgentStateResult }>(
+    "/api/gateway/agent-state",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agentId: trimmedAgentId }),
+    }
+  );
+  return result;
+};

@@ -16,6 +16,7 @@ type HQSidebarProps = {
   onTabChange: (tab: HQSidebarTab) => void;
   onOpenMarketplace: () => void;
   onAddAgent?: () => void;
+  onOpenCompanyBuilder?: () => void;
   inboxPanel: ReactNode;
   historyPanel: ReactNode;
   playbooksPanel: ReactNode;
@@ -39,6 +40,7 @@ export function HQSidebar({
   onTabChange,
   onOpenMarketplace,
   onAddAgent,
+  onOpenCompanyBuilder,
   inboxPanel,
   historyPanel,
   playbooksPanel,
@@ -123,6 +125,15 @@ export function HQSidebar({
                 className="mt-3 rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-200 transition-colors hover:border-cyan-400/40 hover:text-cyan-100"
               >
                 Add Agent
+              </button>
+            ) : null}
+            {!railOnly && onOpenCompanyBuilder ? (
+              <button
+                type="button"
+                onClick={onOpenCompanyBuilder}
+                className="mt-2 rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-emerald-200 transition-colors hover:border-emerald-400/40 hover:text-emerald-100"
+              >
+                Build Company
               </button>
             ) : null}
             {railOnly ? (

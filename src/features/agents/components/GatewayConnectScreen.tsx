@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { Check, Copy, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Check, Copy, Eye, EyeOff } from "lucide-react";
 import type { GatewayStatus } from "@/lib/gateway/GatewayClient";
 import { isLocalGatewayUrl } from "@/lib/gateway/local-gateway";
 import type { StudioGatewaySettings } from "@/lib/studio/settings";
+import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
 
 type GatewayConnectScreenProps = {
   gatewayUrl: string;
@@ -168,7 +169,7 @@ export const GatewayConnectScreen = ({
 
       {status === "connecting" ? (
         <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <RunningAvatarLoader size={16} trackWidth={32} inline />
           Connecting…
         </p>
       ) : null}
@@ -192,7 +193,7 @@ export const GatewayConnectScreen = ({
       <div className="ui-card px-4 py-2">
         <div className="flex items-center gap-2">
           {status === "connecting" ? (
-            <Loader2 className="h-4 w-4 animate-spin text-[color:var(--status-connecting-fg)]" />
+            <RunningAvatarLoader size={18} trackWidth={36} inline />
           ) : (
             <span
               className={`h-2.5 w-2.5 ${statusDotClass}`}

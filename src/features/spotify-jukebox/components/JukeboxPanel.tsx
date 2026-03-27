@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
 import { useJukeboxStore } from "../store";
 import {
   startSpotifyAuth,
@@ -302,7 +303,7 @@ function PlayerView() {
         </div>
         {isLoadingPlayer && !track ? (
           <div className="flex items-center gap-3 text-slate-500">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-600 border-t-cyan-500" />
+            <RunningAvatarLoader size={16} trackWidth={32} inline />
             <span className="text-sm">Loading player…</span>
           </div>
         ) : track ? (
@@ -374,7 +375,7 @@ function PlayerView() {
           />
           {isSearching && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-600 border-t-cyan-500" />
+            <RunningAvatarLoader size={14} trackWidth={28} />
             </div>
           )}
         </div>

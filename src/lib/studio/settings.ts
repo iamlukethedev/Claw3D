@@ -70,6 +70,13 @@ export type StudioOfficePreference = {
   remoteOfficePresenceUrl: string;
   remoteOfficeGatewayUrl: string;
   remoteOfficeToken: string;
+  companyName: string;
+  companyPrompt: string;
+  companyImprovedBrief: string;
+  companySummary: string;
+  companyGeneratedAt: string | null;
+  companyRoleTitles: string[];
+  companyPlanJson: string;
 };
 
 export type StudioOfficePreferencePublic = {
@@ -80,6 +87,13 @@ export type StudioOfficePreferencePublic = {
   remoteOfficePresenceUrl: string;
   remoteOfficeGatewayUrl: string;
   remoteOfficeTokenConfigured: boolean;
+  companyName: string;
+  companyPrompt: string;
+  companyImprovedBrief: string;
+  companySummary: string;
+  companyGeneratedAt: string | null;
+  companyRoleTitles: string[];
+  companyPlanJson: string;
 };
 
 export type StudioOfficePreferencePatch = {
@@ -90,6 +104,13 @@ export type StudioOfficePreferencePatch = {
   remoteOfficePresenceUrl?: string | null;
   remoteOfficeGatewayUrl?: string | null;
   remoteOfficeToken?: string | null;
+  companyName?: string | null;
+  companyPrompt?: string | null;
+  companyImprovedBrief?: string | null;
+  companySummary?: string | null;
+  companyGeneratedAt?: string | null;
+  companyRoleTitles?: string[] | null;
+  companyPlanJson?: string | null;
 };
 
 export type StudioDeskAssignments = Record<string, string>;
@@ -346,6 +367,17 @@ const normalizeRemoteOfficeGatewayUrl = (value: unknown) => {
   }
 };
 
+const normalizeCompanyField = (value: unknown) => coerceString(value).slice(0, 10_000);
+
+const normalizeCompanyRoleTitles = (value: unknown, fallback: string[] = []) => {
+  if (!Array.isArray(value)) return fallback;
+  return value
+    .filter((entry): entry is string => typeof entry === "string")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0)
+    .slice(0, 32);
+};
+
 export const defaultStudioOfficePreference = (): StudioOfficePreference => ({
   title: DEFAULT_OFFICE_TITLE,
   remoteOfficeEnabled: false,
@@ -354,6 +386,13 @@ export const defaultStudioOfficePreference = (): StudioOfficePreference => ({
   remoteOfficePresenceUrl: "",
   remoteOfficeGatewayUrl: "",
   remoteOfficeToken: "",
+  companyName: "",
+  companyPrompt: "",
+  companyImprovedBrief: "",
+  companySummary: "",
+  companyGeneratedAt: null,
+  companyRoleTitles: [],
+  companyPlanJson: "",
 });
 
 export const defaultStudioOfficePreferencePublic =
@@ -365,6 +404,13 @@ export const defaultStudioOfficePreferencePublic =
     remoteOfficePresenceUrl: "",
     remoteOfficeGatewayUrl: "",
     remoteOfficeTokenConfigured: false,
+    companyName: "",
+    companyPrompt: "",
+    companyImprovedBrief: "",
+    companySummary: "",
+    companyGeneratedAt: null,
+    companyRoleTitles: [],
+    companyPlanJson: "",
   });
 
 export const sanitizeStudioOfficePreference = (
@@ -377,6 +423,13 @@ export const sanitizeStudioOfficePreference = (
   remoteOfficePresenceUrl: value.remoteOfficePresenceUrl,
   remoteOfficeGatewayUrl: value.remoteOfficeGatewayUrl,
   remoteOfficeTokenConfigured: value.remoteOfficeToken.length > 0,
+  companyName: value.companyName,
+  companyPrompt: value.companyPrompt,
+  companyImprovedBrief: value.companyImprovedBrief,
+  companySummary: value.companySummary,
+  companyGeneratedAt: value.companyGeneratedAt,
+  companyRoleTitles: value.companyRoleTitles,
+  companyPlanJson: value.companyPlanJson,
 });
 
 const normalizeStandupScheduleConfig = (
@@ -669,6 +722,21 @@ const normalizeOfficePreference = (
       value.remoteOfficeToken === null
         ? ""
         : coerceString(value.remoteOfficeToken) || fallback.remoteOfficeToken,
+    companyName: normalizeCompanyField(value.companyName ?? fallback.companyName),
+    companyPrompt: normalizeCompanyField(value.companyPrompt ?? fallback.companyPrompt),
+    companyImprovedBrief: normalizeCompanyField(
+      value.companyImprovedBrief ?? fallback.companyImprovedBrief
+    ),
+    companySummary: normalizeCompanyField(value.companySummary ?? fallback.companySummary),
+    companyGeneratedAt: normalizeOptionalIsoString(
+      value.companyGeneratedAt,
+      fallback.companyGeneratedAt
+    ),
+    companyRoleTitles: normalizeCompanyRoleTitles(
+      value.companyRoleTitles,
+      fallback.companyRoleTitles
+    ),
+    companyPlanJson: normalizeCompanyField(value.companyPlanJson ?? fallback.companyPlanJson),
   };
 };
 
