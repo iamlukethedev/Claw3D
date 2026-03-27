@@ -111,6 +111,22 @@ const SKILL_MARKETPLACE_OVERRIDES: Record<
     editorBadge: "Office demo",
     hideStats: true,
   },
+  "claw3d-text": {
+    category: "Communication",
+    tagline: "Send text messages through the Claw3D office SMS booth.",
+    capabilities: ["SMS sending", "Two-step compose flow", "Studio API integration"],
+    featured: true,
+    editorBadge: "Claw3D test",
+    hideStats: true,
+  },
+  "claw3d-voice": {
+    category: "Communication",
+    tagline: "Make voice calls and generate voice replies through the Claw3D office phone booth.",
+    capabilities: ["Voice calls", "TTS voice replies", "Audio transcription"],
+    featured: true,
+    editorBadge: "Claw3D test",
+    hideStats: true,
+  },
 };
 
 const hashString = (value: string): number => {

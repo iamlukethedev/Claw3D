@@ -3,7 +3,7 @@ import type {
   SkillStatusEntry,
 } from "@/lib/skills/types";
 
-export type PackagedSkillId = "soundclaw" | "todo-board";
+export type PackagedSkillId = "soundclaw" | "todo-board" | "claw3d-text" | "claw3d-voice";
 
 export type PackagedSkillDefinition = {
   packageId: PackagedSkillId;
@@ -41,6 +41,24 @@ const PACKAGED_SKILLS: PackagedSkillDefinition[] = [
     installSource: "openclaw-workspace",
     creatorName: "iamlukethedev",
     creatorUrl: "https://github.com/iamlukethedev",
+  },
+  {
+    packageId: "claw3d-text",
+    skillKey: "claw3d-text",
+    name: "claw3d-text",
+    description: "Send text messages through the Claw3D office SMS booth.",
+    installSource: "openclaw-workspace",
+    creatorName: "Neo",
+    creatorUrl: "https://github.com/robotica4us-collab",
+  },
+  {
+    packageId: "claw3d-voice",
+    skillKey: "claw3d-voice",
+    name: "claw3d-voice",
+    description: "Make voice calls and generate voice replies through the Claw3D office phone booth.",
+    installSource: "openclaw-workspace",
+    creatorName: "Neo",
+    creatorUrl: "https://github.com/robotica4us-collab",
   },
 ];
 

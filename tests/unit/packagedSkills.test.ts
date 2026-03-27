@@ -9,14 +9,25 @@ import { readPackagedSkillFiles } from "@/lib/skills/packaged";
 
 const resolveAssetDir = (packageId: string) => path.join(process.cwd(), "assets/skills", packageId);
 
+const listFilesRecursively = (dir: string, prefix = ""): string[] => {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isFile()) {
+      files.push(relative);
+    } else if (entry.isDirectory()) {
+      files.push(...listFilesRecursively(path.join(dir, entry.name), relative));
+    }
+  }
+  return files;
+};
+
 describe("packaged skills", () => {
   it("keeps packaged skill files synchronized with the asset source files", () => {
     for (const packagedSkill of listPackagedSkills()) {
       const assetDir = resolveAssetDir(packagedSkill.packageId);
-      const expectedFiles = readdirSync(assetDir, { withFileTypes: true })
-        .filter((entry) => entry.isFile())
-        .map((entry) => entry.name)
-        .sort();
+      const expectedFiles = listFilesRecursively(assetDir).sort();
       const packagedFiles = readPackagedSkillFiles(packagedSkill.packageId);
       const packagedRelativePaths = packagedFiles.map((file) => file.relativePath).sort();
 
