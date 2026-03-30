@@ -12,14 +12,12 @@
       ]
     }
   ],
-  "rewrites": {
-    "beforeFiles": [
-      { "source": "/about", "destination": "/" },
-      { "source": "/services", "destination": "/" },
-      { "source": "/contact", "destination": "/" },
-      { "source": "/pricing", "destination": "/" },
-      { "source": "/login", "destination": "/" },
-      { "source": "/apply", "destination": "/" }
-    ]
-  }
+  "rewrites": [
+    { "source": "/about", "destination": "/" },
+    { "source": "/services", "destination": "/" },
+    { "source": "/contact", "destination": "/" },
+    { "source": "/pricing", "destination": "/" },
+    { "source": "/login", "destination": "/" },
+    { "source": "/apply", "destination": "/" }
+  ]
 }
