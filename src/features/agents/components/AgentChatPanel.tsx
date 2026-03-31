@@ -13,8 +13,9 @@ import {
 import type { AgentState as AgentRecord } from "@/features/agents/state/store";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Check, ChevronRight, Clock, Cog, Mic, Pencil, Square, Trash2, X } from "lucide-react";
+import { Check, ChevronRight, Clock, Mic, Pencil, Square, Trash2, X } from "lucide-react";
 import type { GatewayModelChoice } from "@/lib/gateway/models";
+import type { AgentAvatarProfile } from "@/lib/avatars/profile";
 import { rewriteMediaLinesToMarkdown } from "@/lib/text/media-markdown";
 import { normalizeAssistantDisplayText } from "@/lib/text/assistantText";
 import { isNearBottom } from "@/lib/dom";
@@ -52,6 +53,10 @@ const ASSISTANT_GUTTER_CLASS = "pl-[44px]";
 const ASSISTANT_MAX_WIDTH_DEFAULT_CLASS = "max-w-[68ch]";
 const ASSISTANT_MAX_WIDTH_EXPANDED_CLASS = "max-w-[1120px]";
 const CHAT_TOP_THRESHOLD_PX = 8;
+const CHAT_SELECT_STYLE = {
+  backgroundColor: "#17120a",
+  color: "#ffffff",
+} as const;
 const EMPTY_CHAT_INTRO_MESSAGES = [
   "How can I help you today?",
   "What should we accomplish today?",
@@ -120,7 +125,6 @@ type AgentChatPanelProps = {
   stopBusy: boolean;
   stopDisabledReason?: string | null;
   onLoadMoreHistory: () => void;
-  onOpenSettings: () => void;
   onRename?: (name: string) => Promise<boolean>;
   onNewSession?: () => Promise<void> | void;
   onModelChange: (value: string | null) => void;
@@ -361,6 +365,7 @@ const UserMessageCard = memo(function UserMessageCard({
 
 const AssistantMessageCard = memo(function AssistantMessageCard({
   avatarSeed,
+  avatarProfile,
   avatarUrl,
   name,
   timestampMs,
@@ -372,6 +377,7 @@ const AssistantMessageCard = memo(function AssistantMessageCard({
   streaming,
 }: {
   avatarSeed: string;
+  avatarProfile?: AgentAvatarProfile | null;
   avatarUrl: string | null;
   name: string;
   timestampMs?: number;
@@ -398,7 +404,13 @@ const AssistantMessageCard = memo(function AssistantMessageCard({
     <div className="w-full self-start">
       <div className={`relative w-full ${widthClass} ${ASSISTANT_GUTTER_CLASS}`}>
         <div className="absolute left-[4px] top-[2px]">
-          <AgentAvatar seed={avatarSeed} name={name} avatarUrl={avatarUrl} size={22} />
+          <AgentAvatar
+            seed={avatarSeed}
+            name={name}
+            avatarProfile={avatarProfile}
+            avatarUrl={avatarUrl}
+            size={22}
+          />
         </div>
         <div className="flex items-center justify-between gap-3 py-0.5">
           <div className="type-meta min-w-0 truncate font-mono text-foreground/90">
@@ -500,11 +512,13 @@ const AssistantMessageCard = memo(function AssistantMessageCard({
 
 const AssistantIntroCard = memo(function AssistantIntroCard({
   avatarSeed,
+  avatarProfile,
   avatarUrl,
   name,
   title,
 }: {
   avatarSeed: string;
+  avatarProfile?: AgentAvatarProfile | null;
   avatarUrl: string | null;
   name: string;
   title: string;
@@ -513,7 +527,13 @@ const AssistantIntroCard = memo(function AssistantIntroCard({
     <div className="w-full self-start">
       <div className={`relative w-full ${ASSISTANT_MAX_WIDTH_DEFAULT_CLASS} ${ASSISTANT_GUTTER_CLASS}`}>
         <div className="absolute left-[4px] top-[2px]">
-          <AgentAvatar seed={avatarSeed} name={name} avatarUrl={avatarUrl} size={22} />
+          <AgentAvatar
+            seed={avatarSeed}
+            name={name}
+            avatarProfile={avatarProfile}
+            avatarUrl={avatarUrl}
+            size={22}
+          />
         </div>
         <div className="flex items-center justify-between gap-3 py-0.5">
           <div className="type-meta min-w-0 truncate font-mono text-foreground/90">
@@ -535,6 +555,7 @@ const AgentChatFinalItems = memo(function AgentChatFinalItems({
   agentId,
   name,
   avatarSeed,
+  avatarProfile,
   avatarUrl,
   chatItems,
   running,
@@ -543,6 +564,7 @@ const AgentChatFinalItems = memo(function AgentChatFinalItems({
   agentId: string;
   name: string;
   avatarSeed: string;
+  avatarProfile?: AgentAvatarProfile | null;
   avatarUrl: string | null;
   chatItems: AgentChatItem[];
   running: boolean;
@@ -567,6 +589,7 @@ const AgentChatFinalItems = memo(function AgentChatFinalItems({
           <AssistantMessageCard
             key={`chat-${agentId}-assistant-${index}`}
             avatarSeed={avatarSeed}
+            avatarProfile={avatarProfile}
             avatarUrl={avatarUrl}
             name={name}
             timestampMs={block.timestampMs ?? (streaming ? runStartedAt ?? undefined : undefined)}
@@ -585,6 +608,7 @@ const AgentChatTranscript = memo(function AgentChatTranscript({
   agentId,
   name,
   avatarSeed,
+  avatarProfile,
   avatarUrl,
   status,
   historyMaybeTruncated,
@@ -607,6 +631,7 @@ const AgentChatTranscript = memo(function AgentChatTranscript({
   agentId: string;
   name: string;
   avatarSeed: string;
+  avatarProfile?: AgentAvatarProfile | null;
   avatarUrl: string | null;
   status: AgentRecord["status"];
   historyMaybeTruncated: boolean;
@@ -766,6 +791,7 @@ const AgentChatTranscript = memo(function AgentChatTranscript({
           {!hasTranscriptContent ? (
             <AssistantIntroCard
               avatarSeed={avatarSeed}
+              avatarProfile={avatarProfile}
               avatarUrl={avatarUrl}
               name={name}
               title={emptyStateTitle}
@@ -776,6 +802,7 @@ const AgentChatTranscript = memo(function AgentChatTranscript({
                 agentId={agentId}
                 name={name}
                 avatarSeed={avatarSeed}
+                avatarProfile={avatarProfile}
                 avatarUrl={avatarUrl}
                 chatItems={chatItems}
                 running={status === "running"}
@@ -784,6 +811,7 @@ const AgentChatTranscript = memo(function AgentChatTranscript({
               {showLiveAssistantCard ? (
                 <AssistantMessageCard
                   avatarSeed={avatarSeed}
+                  avatarProfile={avatarProfile}
                   avatarUrl={avatarUrl}
                   name={name}
                   timestampMs={runStartedAt ?? undefined}
@@ -961,10 +989,10 @@ const AgentChatComposer = memo(function AgentChatComposer({
         <div className="flex min-w-0 items-center gap-2">
           <InlineHoverTooltip text="Choose model">
             <select
-              className="ui-input ui-control-important h-6 min-w-0 rounded-md px-1.5 text-[10px] font-semibold text-foreground"
+              className="ui-input ui-control-important h-6 min-w-0 rounded-md border-white/10 px-1.5 text-[10px] font-semibold text-white"
               aria-label="Model"
               value={modelValue}
-              style={{ width: `${modelSelectWidthCh}ch` }}
+              style={{ ...CHAT_SELECT_STYLE, width: `${modelSelectWidthCh}ch` }}
               onChange={(event) => {
                 const nextValue = event.target.value.trim();
                 onModelChange(nextValue ? nextValue : null);
@@ -984,10 +1012,10 @@ const AgentChatComposer = memo(function AgentChatComposer({
           {allowThinking ? (
             <InlineHoverTooltip text="Select reasoning effort">
               <select
-                className="ui-input ui-control-important h-6 rounded-md px-1.5 text-[10px] font-semibold text-foreground"
+                className="ui-input ui-control-important h-6 rounded-md border-white/10 px-1.5 text-[10px] font-semibold text-white"
                 aria-label="Thinking"
                 value={thinkingValue}
-                style={{ width: `${thinkingSelectWidthCh}ch` }}
+                style={{ ...CHAT_SELECT_STYLE, width: `${thinkingSelectWidthCh}ch` }}
                 onChange={(event) => {
                   const nextValue = event.target.value.trim();
                   onThinkingChange(nextValue ? nextValue : null);
@@ -1173,7 +1201,6 @@ export const AgentChatPanel = ({
   stopBusy,
   stopDisabledReason = null,
   onLoadMoreHistory,
-  onOpenSettings,
   onRename,
   onNewSession,
   onModelChange,
@@ -1341,6 +1368,7 @@ export const AgentChatPanel = ({
   const allowThinking = selectedModel?.reasoning !== false;
 
   const avatarSeed = agent.avatarSeed ?? agent.agentId;
+  const avatarProfile = agent.avatarProfile ?? null;
   const emptyStateTitle = useMemo(
     () => resolveEmptyChatIntroMessage(agent.agentId, agent.sessionEpoch),
     [agent.agentId, agent.sessionEpoch]
@@ -1473,6 +1501,7 @@ export const AgentChatPanel = ({
               <AgentAvatar
                 seed={avatarSeed}
                 name={agent.name}
+                avatarProfile={avatarProfile}
                 avatarUrl={agent.avatarUrl ?? null}
                 size={52}
                 isSelected={isSelected}
@@ -1562,7 +1591,7 @@ export const AgentChatPanel = ({
 
           <div className="mt-0.5 flex items-center gap-2">
             <button
-              className="nodrag inline-flex items-center whitespace-nowrap rounded border border-[color:var(--status-approval-border)] bg-[color:var(--status-approval-bg)] px-2 py-0.5 font-mono text-[9px] font-medium tracking-[0.02em] text-[color:var(--status-approval-fg)] transition hover:bg-[color:var(--status-approval-bg)] hover:text-[color:var(--status-approval-fg)] disabled:cursor-not-allowed disabled:opacity-40"
+              className="nodrag inline-flex items-center whitespace-nowrap rounded border border-[color:var(--status-approval-border)] bg-[color:var(--status-approval-bg)] px-2 py-0.5 font-mono text-[9px] font-medium tracking-[0.02em] text-white transition hover:bg-[color:var(--status-approval-bg)] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
               type="button"
               data-testid="agent-new-session-toggle"
               aria-label="Start new session"
@@ -1574,17 +1603,6 @@ export const AgentChatPanel = ({
             >
               {newSessionBusy ? "Starting..." : "New session"}
             </button>
-            <button
-              className="nodrag ui-btn-icon"
-              style={{ "--ui-btn-icon-size": "1.25rem" } as React.CSSProperties}
-              type="button"
-              data-testid="agent-settings-toggle"
-              aria-label="Open behavior"
-              title="Behavior"
-              onClick={onOpenSettings}
-            >
-              <Cog className="h-3.5 w-3.5" />
-            </button>
           </div>
         </div>
       </div>
@@ -1594,6 +1612,7 @@ export const AgentChatPanel = ({
           agentId={agent.agentId}
           name={agent.name}
           avatarSeed={avatarSeed}
+          avatarProfile={avatarProfile}
           avatarUrl={agent.avatarUrl ?? null}
           status={agent.status}
           historyMaybeTruncated={agent.historyMaybeTruncated}

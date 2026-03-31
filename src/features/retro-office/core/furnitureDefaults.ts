@@ -62,9 +62,9 @@ const DEFAULT_JUKEBOX: FurnitureSeed = {
 
 const DEFAULT_KANBAN_BOARD: FurnitureSeed = {
   type: "kanban_board",
-  x: 24,
-  y: 210,
-  facing: 90,
+  x: 460,
+  y: -60,
+  facing: 180,
 };
 
 const PREVIOUS_SERVER_ROOM_ITEMS_BOTTOM_RIGHT: FurnitureSeed[] = [
@@ -426,9 +426,8 @@ const DEFAULT_FURNITURE: FurnitureSeed[] = [
   { type: "chair", x: 120, y: 480, facing: 180 },
   { type: "chair", x: 50, y: 150, facing: 105 },
   { type: "chair", x: 60, y: 80, facing: 60 },
-  { type: "executive_desk", x: 420, y: 60, w: 130, h: 65 },
-  { type: "chair", x: 540, y: 60, facing: 0 },
-  { type: "bookshelf", x: 500, y: 30, w: 80, h: 120 },
+  { type: "chair", x: 550, y: 50, facing: 0 },
+  { type: "bookshelf", x: 600, y: 30, w: 80, h: 120 },
   { type: "couch", x: 270, y: 90, w: 40, h: 80, vertical: true, facing: 180 },
   { type: "fridge", x: 1050, y: 20, w: 40, h: 80 },
   { type: "stove", x: 920, y: 20 },
@@ -440,7 +439,11 @@ const DEFAULT_FURNITURE: FurnitureSeed[] = [
   { type: "coffee_machine", x: 880, y: 30, elevation: 0.56 },
   { type: "wall_cabinet", x: 960, y: 10, w: 80, h: 20, elevation: 0.9 },
   { type: "wall_cabinet", x: 880, y: 10, w: 80, h: 20, elevation: 0.9 },
-  ...DEFAULT_DINING_ITEMS,
+  { type: "round_table", x: 890, y: 100, r: 50 },
+  { type: "chair", x: 930, y: 100, facing: 0 },
+  { type: "chair", x: 930, y: 180, facing: 180 },
+  { type: "chair", x: 880, y: 130, facing: 90 },
+  { type: "chair", x: 970, y: 130, facing: 270 },
   { type: "vending", x: 790, y: 10 },
   { type: "trash", x: 210, y: 20 },
   { type: "desk_cubicle", x: 100, y: 300, id: "desk_0" },
@@ -493,7 +496,7 @@ const DEFAULT_FURNITURE: FurnitureSeed[] = [
   { type: "couch", x: 1000, y: 380, w: 100, h: 40, facing: 90 },
   { type: "couch", x: 390, y: 630, w: 100, h: 40 },
   { type: "table_rect", x: 980, y: 380, w: 60, h: 30, facing: 270 },
-  DEFAULT_PINGPONG_TABLE,
+  { type: "pingpong", x: 950, y: 600, w: 100, h: 60 },
   { type: "beanbag", x: 1000, y: 330, color: "#e65100", facing: 90 },
   { type: "beanbag", x: 1000, y: 410, color: "#1565c0", facing: 90 },
   DEFAULT_ATM_MACHINE,
@@ -604,24 +607,8 @@ export const ensureOfficeJukebox = (items: FurnitureItem[]): FurnitureItem[] => 
 };
 
 export const ensureOfficeKanbanBoard = (items: FurnitureItem[]): FurnitureItem[] => {
-  let found = false;
-  const nextItems = items.map((item) => {
-    if (item.type !== "kanban_board") return item;
-    found = true;
-    if (item.x === 350 && item.y === 520) {
-      return {
-        ...item,
-        x: DEFAULT_KANBAN_BOARD.x,
-        y: DEFAULT_KANBAN_BOARD.y,
-        facing: DEFAULT_KANBAN_BOARD.facing,
-        w: 130,
-        h: 65,
-      };
-    }
-    return item;
-  });
-  if (found) return nextItems;
-  return [...nextItems, { ...DEFAULT_KANBAN_BOARD, _uid: nextUid() }];
+  if (items.some((item) => item.type === "kanban_board")) return items;
+  return [...items, { ...DEFAULT_KANBAN_BOARD, _uid: nextUid() }];
 };
 
 export const ensureOfficePhoneBooth = (

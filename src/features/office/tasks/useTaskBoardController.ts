@@ -102,7 +102,7 @@ const TASK_REQUEST_PREFIX_RE =
   /^(?:please\s+|pls\s+|can you\s+|could you\s+|would you\s+|will you\s+|i need you to\s+|help me\s+|let'?s\s+)/i;
 
 const TASK_REQUEST_VERB_RE =
-  /\b(?:research|check|find|look up|search|summarize|review|analyze|investigate|create|build|make|write|draft|plan|prepare|generate|fix|update|implement|refactor|debug|compare|collect|compile|send|schedule|call|message|reply|respond|explain|walk through|show me|give me|tell me)\b/i;
+  /\b(?:re[sc]?[ea]rch|check|find|look up|search|summarize|review|analy[sz]e|investigate|create|build|make|write|draft|plan|prepare|generate|fix|update|implement|refactor|debug|compare|collect|compile|send|schedule|call|message|reply|respond|explain|walk through|show me|give me|tell me|look into|set up|setup|deploy|configure|test|monitor|fetch|download|upload|add|remove|delete|clean|install|run|execute|list|describe|outline|figure out|sort out)\b/i;
 
 const CONVERSATIONAL_MESSAGE_RE =
   /^(?:\?+|hi|hello|hey|yo|sup|ping|test|are you there|you there|still there|ok|okay|k|kk|yes|yeah|yep|no|nope|nah|thanks|thank you|thx|cool|nice|great|awesome|sounds good|got it|understood|roger|lol|what'?s up|how are you|good morning|good afternoon|good evening)[!.? ]*$/i;
@@ -115,10 +115,7 @@ export const isActionableTaskRequest = (value: string): boolean => {
   if (!text) return false;
   if (isHeartbeatPrompt(text)) return false;
 
-  const normalized = text
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
+  const normalized = text.toLowerCase().replace(/\s+/g, " ").trim();
 
   if (!/[a-z0-9]/i.test(normalized)) return false;
   if (CONVERSATIONAL_MESSAGE_RE.test(normalized)) return false;
@@ -129,21 +126,26 @@ export const isActionableTaskRequest = (value: string): boolean => {
   if (TASK_REQUEST_VERB_RE.test(normalized)) return true;
 
   const words = normalized.split(" ").filter(Boolean);
-  if (words.length <= 4) return false;
+  if (words.length <= 2) return false;
 
   if (
     /^(?:what|which|who|where|when|why|how)\b/.test(normalized) &&
     !/\b(?:status|progress|issue|problem|error|bug|latest|news|docs|documentation|plan|report|summary)\b/.test(
-      normalized
+      normalized,
     )
   ) {
     return false;
   }
 
-  return /[?.!]$/.test(normalized) && words.length >= 5;
+  // Enough substance to be a real request.
+  if (words.length >= 4) return true;
+
+  return /[?.!]$/.test(normalized) && words.length >= 3;
 };
 
-const makeCard = (input: Partial<TaskBoardCard> & Pick<TaskBoardCard, "id" | "title">): TaskBoardCard => {
+const makeCard = (
+  input: Partial<TaskBoardCard> & Pick<TaskBoardCard, "id" | "title">,
+): TaskBoardCard => {
   const nowIso = new Date().toISOString();
   return {
     id: input.id,
@@ -168,7 +170,7 @@ const makeCard = (input: Partial<TaskBoardCard> & Pick<TaskBoardCard, "id" | "ti
 
 const resolveAgentIdFromSession = (
   agents: AgentState[],
-  sessionKey: string | null
+  sessionKey: string | null,
 ): string | null => {
   const trimmed = sessionKey?.trim() ?? "";
   if (!trimmed) return null;
@@ -179,7 +181,7 @@ const resolveAgentIdFromSession = (
 };
 
 export const parseExplicitTaskEvent = (
-  event: EventFrame
+  event: EventFrame,
 ): TaskBoardExplicitEvent | null => {
   if (!TASK_EVENT_NAMES.has(event.event)) return null;
   const payload = isRecord(event.payload) ? event.payload : {};
@@ -187,7 +189,7 @@ export const parseExplicitTaskEvent = (
     trimOrNull(payload.taskId) ??
     trimOrNull(payload.id) ??
     (event.event === "playbook_triggered"
-      ? trimOrNull(payload.playbookJobId) ?? trimOrNull(payload.jobId)
+      ? (trimOrNull(payload.playbookJobId) ?? trimOrNull(payload.jobId))
       : null);
   if (!taskId) return null;
   const sourceEventId = `${event.event}:${event.seq ?? stableIdFragment(JSON.stringify(payload))}`;
@@ -199,7 +201,9 @@ export const parseExplicitTaskEvent = (
     description: trimOrNull(payload.description) ?? trimOrNull(payload.text),
     status: isTaskBoardStatus(payload.status) ? payload.status : null,
     assignedAgentId:
-      trimOrNull(payload.assignedAgentId) ?? trimOrNull(payload.agentId) ?? null,
+      trimOrNull(payload.assignedAgentId) ??
+      trimOrNull(payload.agentId) ??
+      null,
     playbookJobId:
       trimOrNull(payload.playbookJobId) ?? trimOrNull(payload.jobId) ?? null,
     runId: trimOrNull(payload.runId),
@@ -222,7 +226,7 @@ export const parseExplicitTaskEvent = (
 
 const buildCardFromExplicitEvent = (
   explicit: TaskBoardExplicitEvent,
-  existing?: TaskBoardCard | null
+  existing?: TaskBoardCard | null,
 ): TaskBoardCard => {
   const fallbackTitle =
     explicit.kind === "playbook_triggered" ? "Triggered playbook task" : "Task";
@@ -235,15 +239,18 @@ const buildCardFromExplicitEvent = (
       explicit.status ??
       existing?.status ??
       (explicit.kind === "playbook_triggered" ? "todo" : "todo"),
-    source: explicit.kind === "playbook_triggered" ? "playbook" : "openclaw_event",
+    source:
+      explicit.kind === "playbook_triggered" ? "playbook" : "openclaw_event",
     sourceEventId: explicit.sourceEventId,
-    assignedAgentId: explicit.assignedAgentId ?? existing?.assignedAgentId ?? null,
+    assignedAgentId:
+      explicit.assignedAgentId ?? existing?.assignedAgentId ?? null,
     createdAt: existing?.createdAt ?? explicit.occurredAt,
     updatedAt: explicit.occurredAt,
     playbookJobId: explicit.playbookJobId ?? existing?.playbookJobId ?? null,
     runId: explicit.runId ?? existing?.runId ?? null,
     channel: explicit.channel ?? existing?.channel ?? null,
-    externalThreadId: explicit.externalThreadId ?? existing?.externalThreadId ?? null,
+    externalThreadId:
+      explicit.externalThreadId ?? existing?.externalThreadId ?? null,
     lastActivityAt: explicit.occurredAt,
     notes: existing?.notes ?? [],
     isArchived: explicit.archived ?? existing?.isArchived ?? false,
@@ -253,7 +260,7 @@ const buildCardFromExplicitEvent = (
 
 const buildCardFromGatewayTask = (
   task: GatewayTaskRecord,
-  existing?: TaskBoardCard | null
+  existing?: TaskBoardCard | null,
 ): TaskBoardCard =>
   makeCard({
     ...(existing ?? {}),
@@ -269,8 +276,10 @@ const buildCardFromGatewayTask = (
     playbookJobId: task.playbookJobId ?? existing?.playbookJobId ?? null,
     runId: task.runId ?? existing?.runId ?? null,
     channel: task.channel ?? existing?.channel ?? null,
-    externalThreadId: task.externalThreadId ?? existing?.externalThreadId ?? null,
-    lastActivityAt: task.lastActivityAt ?? existing?.lastActivityAt ?? task.updatedAt,
+    externalThreadId:
+      task.externalThreadId ?? existing?.externalThreadId ?? null,
+    lastActivityAt:
+      task.lastActivityAt ?? existing?.lastActivityAt ?? task.updatedAt,
     notes: task.notes ?? existing?.notes ?? [],
     isArchived: task.archived ?? existing?.isArchived ?? false,
     isInferred: false,
@@ -278,7 +287,7 @@ const buildCardFromGatewayTask = (
 
 const buildCardFromSharedTaskRecord = (
   task: SharedTaskRecord,
-  existing?: TaskBoardCard | null
+  existing?: TaskBoardCard | null,
 ): TaskBoardCard =>
   makeCard({
     ...(existing ?? {}),
@@ -294,8 +303,10 @@ const buildCardFromSharedTaskRecord = (
     playbookJobId: task.playbookJobId ?? existing?.playbookJobId ?? null,
     runId: task.runId ?? existing?.runId ?? null,
     channel: task.channel ?? existing?.channel ?? null,
-    externalThreadId: task.externalThreadId ?? existing?.externalThreadId ?? null,
-    lastActivityAt: task.lastActivityAt ?? existing?.lastActivityAt ?? task.updatedAt,
+    externalThreadId:
+      task.externalThreadId ?? existing?.externalThreadId ?? null,
+    lastActivityAt:
+      task.lastActivityAt ?? existing?.lastActivityAt ?? task.updatedAt,
     notes: task.notes ?? existing?.notes ?? [],
     isArchived: task.isArchived ?? existing?.isArchived ?? false,
     isInferred: false,
@@ -306,7 +317,7 @@ const cardTextKey = (card: Pick<TaskBoardCard, "title" | "assignedAgentId">) =>
 
 const matchesExplicitCard = (
   candidate: TaskBoardCard,
-  explicitCard: TaskBoardCard
+  explicitCard: TaskBoardCard,
 ) => {
   if (candidate.id === explicitCard.id) return true;
   if (
@@ -332,7 +343,7 @@ const deriveChatRequestCard = (
   options: {
     source: TaskBoardSource;
     isInferred: boolean;
-  }
+  },
 ): TaskBoardCard | null => {
   if (event.event !== "chat") return null;
   const payload = isRecord(event.payload) ? event.payload : {};
@@ -372,7 +383,7 @@ const deriveChatRequestCard = (
 };
 
 export const deriveRecoveredAgentRequestCard = (
-  agent: AgentState
+  agent: AgentState,
 ): TaskBoardCard | null => {
   const transcriptEntries = Array.isArray(agent.transcriptEntries)
     ? agent.transcriptEntries
@@ -383,9 +394,11 @@ export const deriveRecoveredAgentRequestCard = (
     const text = normalizeTaskRequestText(entry.text);
     if (!isActionableTaskRequest(text)) continue;
     const timestamp =
-      typeof entry.timestampMs === "number" && Number.isFinite(entry.timestampMs)
+      typeof entry.timestampMs === "number" &&
+      Number.isFinite(entry.timestampMs)
         ? new Date(entry.timestampMs).toISOString()
-        : typeof agent.lastActivityAt === "number" && Number.isFinite(agent.lastActivityAt)
+        : typeof agent.lastActivityAt === "number" &&
+            Number.isFinite(agent.lastActivityAt)
           ? new Date(agent.lastActivityAt).toISOString()
           : new Date().toISOString();
     const requestKey = `history:${agent.sessionKey}:${entry.sequenceKey}`;
@@ -406,14 +419,17 @@ export const deriveRecoveredAgentRequestCard = (
     });
   }
 
-  const fallbackText = normalizeTaskRequestText(agent.lastUserMessage?.trim() ?? "");
+  const fallbackText = normalizeTaskRequestText(
+    agent.lastUserMessage?.trim() ?? "",
+  );
   if (!isActionableTaskRequest(fallbackText)) return null;
   const fallbackTimestamp =
-    typeof agent.lastActivityAt === "number" && Number.isFinite(agent.lastActivityAt)
+    typeof agent.lastActivityAt === "number" &&
+    Number.isFinite(agent.lastActivityAt)
       ? new Date(agent.lastActivityAt).toISOString()
       : new Date().toISOString();
   const fallbackKey = `history:${agent.sessionKey}:fallback:${stableIdFragment(
-    `${fallbackText}:${fallbackTimestamp}`
+    `${fallbackText}:${fallbackTimestamp}`,
   )}`;
   return makeCard({
     id: fallbackKey,
@@ -434,7 +450,7 @@ export const deriveRecoveredAgentRequestCard = (
 
 export const deriveFallbackChatCard = (
   event: EventFrame,
-  agents: AgentState[]
+  agents: AgentState[],
 ): TaskBoardCard | null =>
   deriveChatRequestCard(event, agents, {
     source: "fallback_inferred",
@@ -443,7 +459,7 @@ export const deriveFallbackChatCard = (
 
 export const deriveLiveSessionTaskCard = (
   event: EventFrame,
-  agents: AgentState[]
+  agents: AgentState[],
 ): TaskBoardCard | null =>
   deriveChatRequestCard(event, agents, {
     source: "openclaw_event",
@@ -452,7 +468,7 @@ export const deriveLiveSessionTaskCard = (
 
 export const syncCardWithLinkedRun = (
   card: TaskBoardCard,
-  runLog: RunRecord[]
+  runLog: RunRecord[],
 ): TaskBoardCard => {
   if (!card.runId) return card;
   const run = runLog.find((entry) => entry.runId === card.runId);
@@ -464,7 +480,7 @@ export const syncCardWithLinkedRun = (
         ? "blocked"
         : card.status === "done"
           ? "done"
-          : "done";
+          : "review";
   const updatedAt = new Date(run.endedAt ?? run.startedAt).toISOString();
   return {
     ...card,
@@ -477,7 +493,7 @@ export const syncCardWithLinkedRun = (
 
 const syncCardWithAgent = (
   card: TaskBoardCard,
-  agents: AgentState[]
+  agents: AgentState[],
 ): TaskBoardCard => {
   if (!card.assignedAgentId) return card;
   const agent = agents.find((entry) => entry.agentId === card.assignedAgentId);
@@ -486,13 +502,18 @@ const syncCardWithAgent = (
     return {
       ...card,
       status: "blocked",
-      lastActivityAt: new Date(agent.lastActivityAt ?? Date.now()).toISOString(),
+      lastActivityAt: new Date(
+        agent.lastActivityAt ?? Date.now(),
+      ).toISOString(),
     };
   }
   return card;
 };
 
-const compareDuplicatePriority = (left: TaskBoardCard, right: TaskBoardCard) => {
+const compareDuplicatePriority = (
+  left: TaskBoardCard,
+  right: TaskBoardCard,
+) => {
   const leftDone = left.status === "done" ? 1 : 0;
   const rightDone = right.status === "done" ? 1 : 0;
   if (leftDone !== rightDone) return rightDone - leftDone;
@@ -504,21 +525,20 @@ const compareDuplicatePriority = (left: TaskBoardCard, right: TaskBoardCard) => 
 
 const buildPlaybookCards = (
   jobs: CronJobSummary[],
-  existingCards: TaskBoardCard[]
+  existingCards: TaskBoardCard[],
 ): TaskBoardCard[] =>
   jobs.map((job) => {
     const existing =
       existingCards.find((card) => card.playbookJobId === job.id) ??
       existingCards.find((card) => card.id === `playbook:${job.id}`) ??
       null;
-    const inferredStatus: TaskBoardStatus =
-      job.state.runningAtMs
-        ? "in_progress"
-        : job.state.lastStatus === "error"
-          ? "blocked"
-          : existing?.status === "done"
-            ? "done"
-            : "todo";
+    const inferredStatus: TaskBoardStatus = job.state.runningAtMs
+      ? "in_progress"
+      : job.state.lastStatus === "error"
+        ? "blocked"
+        : existing?.status === "done"
+          ? "done"
+          : "todo";
     return makeCard({
       ...(existing ?? {}),
       id: existing?.id ?? `playbook:${job.id}`,
@@ -536,8 +556,9 @@ const buildPlaybookCards = (
       runId: existing?.runId ?? null,
       channel: existing?.channel ?? null,
       externalThreadId: existing?.externalThreadId ?? null,
-      lastActivityAt:
-        new Date(job.state.runningAtMs ?? job.state.lastRunAtMs ?? job.updatedAtMs).toISOString(),
+      lastActivityAt: new Date(
+        job.state.runningAtMs ?? job.state.lastRunAtMs ?? job.updatedAtMs,
+      ).toISOString(),
       notes: existing?.notes ?? [],
       isArchived: existing?.isArchived ?? false,
       isInferred: true,
@@ -546,7 +567,7 @@ const buildPlaybookCards = (
 
 const buildStandupSeedCards = (
   standup: OfficeStandupController,
-  existingCards: TaskBoardCard[]
+  existingCards: TaskBoardCard[],
 ): TaskBoardCard[] => {
   const config = standup.config;
   if (!config) return [];
@@ -562,7 +583,9 @@ const buildStandupSeedCards = (
       return makeCard({
         ...(existing ?? {}),
         id: existing?.id ?? `standup:${agentId}`,
-        title: existing?.title ?? truncateTitle(title || note || blockers, "Standup task"),
+        title:
+          existing?.title ??
+          truncateTitle(title || note || blockers, "Standup task"),
         description:
           existing?.description ||
           [title, blockers ? `Blockers: ${blockers}` : "", note]
@@ -573,12 +596,14 @@ const buildStandupSeedCards = (
             ? "blocked"
             : existing?.status === "done"
               ? "done"
-              : existing?.status ?? "todo",
+              : (existing?.status ?? "todo"),
         source: "fallback_inferred",
         sourceEventId: existing?.sourceEventId ?? `standup:${agentId}`,
         assignedAgentId: agentId,
-        createdAt: existing?.createdAt ?? entry.updatedAt ?? new Date().toISOString(),
-        updatedAt: entry.updatedAt ?? existing?.updatedAt ?? new Date().toISOString(),
+        createdAt:
+          existing?.createdAt ?? entry.updatedAt ?? new Date().toISOString(),
+        updatedAt:
+          entry.updatedAt ?? existing?.updatedAt ?? new Date().toISOString(),
         playbookJobId: existing?.playbookJobId ?? null,
         runId: existing?.runId ?? null,
         channel: existing?.channel ?? null,
@@ -615,7 +640,7 @@ const buildActiveRunOptions = (runs: RunRecord[]) =>
       runId: run.runId,
       agentId: run.agentId,
       label: `${run.agentName} · ${run.trigger.toUpperCase()} · ${new Date(
-        run.startedAt
+        run.startedAt,
       ).toLocaleTimeString()}`,
     }));
 
@@ -636,7 +661,10 @@ export const useTaskBoardController = ({
   runLog: RunRecord[];
   standup: OfficeStandupController;
 }) => {
-  const [state, dispatch] = useReducer(taskBoardReducer, defaultTaskBoardPreference());
+  const [state, dispatch] = useReducer(
+    taskBoardReducer,
+    defaultTaskBoardPreference(),
+  );
   const stateRef = useRef(state);
   const hydratedRef = useRef(false);
   const recoveredAgentRequestKeyRef = useRef<Record<string, string>>({});
@@ -647,57 +675,70 @@ export const useTaskBoardController = ({
   const [sharedTasksLoading, setSharedTasksLoading] = useState(false);
   const [sharedTasksError, setSharedTasksError] = useState<string | null>(null);
   const [sharedTasksSupported, setSharedTasksSupported] = useState(true);
-  const [taskCaptureDebug, setTaskCaptureDebug] = useState<TaskCaptureDebugState>({
-    lastStatus: "idle",
-    lastUpdatedAt: null,
-    lastTitle: null,
-    lastTaskId: null,
-    lastSessionKey: null,
-    lastMessage: null,
-    detectedCount: 0,
-  });
+  const [taskCaptureDebug, setTaskCaptureDebug] =
+    useState<TaskCaptureDebugState>({
+      lastStatus: "idle",
+      lastUpdatedAt: null,
+      lastTitle: null,
+      lastTaskId: null,
+      lastSessionKey: null,
+      lastMessage: null,
+      detectedCount: 0,
+    });
   const [gatewayTasksLoading, setGatewayTasksLoading] = useState(false);
-  const [gatewayTasksError, setGatewayTasksError] = useState<string | null>(null);
+  const [gatewayTasksError, setGatewayTasksError] = useState<string | null>(
+    null,
+  );
   const [gatewayTasksSupported, setGatewayTasksSupported] = useState<
     "unknown" | "supported" | "unsupported"
   >("unknown");
+  const sharedRefreshInFlightRef = useRef(false);
 
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
 
-  const archiveMatchingInferredCards = useCallback((explicitCard: TaskBoardCard) => {
-    for (const card of stateRef.current.cards) {
-      if (!card.isInferred || card.isArchived) continue;
-      if (!matchesExplicitCard(card, explicitCard)) continue;
-      dispatch({
-        type: "update",
-        cardId: card.id,
-        patch: {
-          isArchived: true,
-          updatedAt: explicitCard.updatedAt,
-        },
-      });
-    }
-  }, []);
+  const archiveMatchingInferredCards = useCallback(
+    (explicitCard: TaskBoardCard) => {
+      for (const card of stateRef.current.cards) {
+        if (!card.isInferred || card.isArchived) continue;
+        if (!matchesExplicitCard(card, explicitCard)) continue;
+        dispatch({
+          type: "update",
+          cardId: card.id,
+          patch: {
+            isArchived: true,
+            updatedAt: explicitCard.updatedAt,
+          },
+        });
+      }
+    },
+    [],
+  );
 
-  const applyGatewayTaskRecord = useCallback((task: GatewayTaskRecord) => {
-    const existing =
-      stateRef.current.cards.find((card) => card.id === task.id) ?? null;
-    const nextCard = buildCardFromGatewayTask(task, existing);
-    dispatch({ type: "upsert", card: nextCard });
-    archiveMatchingInferredCards(nextCard);
-    return nextCard;
-  }, [archiveMatchingInferredCards]);
+  const applyGatewayTaskRecord = useCallback(
+    (task: GatewayTaskRecord) => {
+      const existing =
+        stateRef.current.cards.find((card) => card.id === task.id) ?? null;
+      const nextCard = buildCardFromGatewayTask(task, existing);
+      dispatch({ type: "upsert", card: nextCard });
+      archiveMatchingInferredCards(nextCard);
+      return nextCard;
+    },
+    [archiveMatchingInferredCards],
+  );
 
-  const applySharedTaskRecord = useCallback((task: SharedTaskRecord) => {
-    const existing =
-      stateRef.current.cards.find((card) => card.id === task.id) ?? null;
-    const nextCard = buildCardFromSharedTaskRecord(task, existing);
-    dispatch({ type: "upsert", card: nextCard });
-    archiveMatchingInferredCards(nextCard);
-    return nextCard;
-  }, [archiveMatchingInferredCards]);
+  const applySharedTaskRecord = useCallback(
+    (task: SharedTaskRecord) => {
+      const existing =
+        stateRef.current.cards.find((card) => card.id === task.id) ?? null;
+      const nextCard = buildCardFromSharedTaskRecord(task, existing);
+      dispatch({ type: "upsert", card: nextCard });
+      archiveMatchingInferredCards(nextCard);
+      return nextCard;
+    },
+    [archiveMatchingInferredCards],
+  );
 
   const persistLiveSessionTask = useCallback(
     async (task: TaskBoardCard) => {
@@ -725,7 +766,7 @@ export const useTaskBoardController = ({
         if (error instanceof TaskStoreRequestError && error.status === 404) {
           setSharedTasksSupported(false);
           setSharedTasksError(
-            "Shared task store route is unavailable. Restart the dev server to enable task sync."
+            "Shared task store route is unavailable. Restart the dev server to enable task sync.",
           );
           setTaskCaptureDebug((current) => ({
             ...current,
@@ -739,7 +780,9 @@ export const useTaskBoardController = ({
           return;
         }
         setSharedTasksError(
-          error instanceof Error ? error.message : "Failed to sync live request into shared task store."
+          error instanceof Error
+            ? error.message
+            : "Failed to sync live request into shared task store.",
         );
         setTaskCaptureDebug((current) => ({
           ...current,
@@ -749,11 +792,13 @@ export const useTaskBoardController = ({
           lastTaskId: task.id,
           lastSessionKey: task.externalThreadId,
           lastMessage:
-            error instanceof Error ? error.message : "Failed to sync live request into shared task store.",
+            error instanceof Error
+              ? error.message
+              : "Failed to sync live request into shared task store.",
         }));
       }
     },
-    [applySharedTaskRecord, sharedTasksSupported]
+    [applySharedTaskRecord, sharedTasksSupported],
   );
 
   useEffect(() => {
@@ -793,7 +838,7 @@ export const useTaskBoardController = ({
           },
         },
       },
-      150
+      150,
     );
   }, [gatewayUrl, settingsCoordinator, state.cards, state.selectedCardId]);
 
@@ -809,7 +854,9 @@ export const useTaskBoardController = ({
       const result = await listCronJobs(client, { includeDisabled: true });
       setCronJobs(result.jobs);
     } catch (error) {
-      setCronError(error instanceof Error ? error.message : "Failed to load playbooks.");
+      setCronError(
+        error instanceof Error ? error.message : "Failed to load playbooks.",
+      );
     } finally {
       setCronLoading(false);
     }
@@ -820,6 +867,8 @@ export const useTaskBoardController = ({
       setSharedTasksLoading(false);
       return;
     }
+    if (sharedRefreshInFlightRef.current) return;
+    sharedRefreshInFlightRef.current = true;
     setSharedTasksLoading(true);
     setSharedTasksError(null);
     try {
@@ -832,14 +881,17 @@ export const useTaskBoardController = ({
       if (error instanceof TaskStoreRequestError && error.status === 404) {
         setSharedTasksSupported(false);
         setSharedTasksError(
-          "Shared task store route is unavailable. Restart the dev server to enable task sync."
+          "Shared task store route is unavailable. Restart the dev server to enable task sync.",
         );
         return;
       }
       setSharedTasksError(
-        error instanceof Error ? error.message : "Failed to load shared task store."
+        error instanceof Error
+          ? error.message
+          : "Failed to load shared task store.",
       );
     } finally {
+      sharedRefreshInFlightRef.current = false;
       setSharedTasksLoading(false);
     }
   }, [applySharedTaskRecord, sharedTasksSupported]);
@@ -865,7 +917,9 @@ export const useTaskBoardController = ({
         return;
       }
       setGatewayTasksError(
-        error instanceof Error ? error.message : "Failed to load tasks from OpenClaw."
+        error instanceof Error
+          ? error.message
+          : "Failed to load tasks from OpenClaw.",
       );
     } finally {
       setGatewayTasksLoading(false);
@@ -898,17 +952,25 @@ export const useTaskBoardController = ({
     const playbookCards = buildPlaybookCards(cronJobs, stateRef.current.cards);
     const standupCards = buildStandupSeedCards(standup, stateRef.current.cards);
     if (playbookCards.length === 0 && standupCards.length === 0) return;
-    dispatch({ type: "upsertMany", cards: [...playbookCards, ...standupCards] });
+    dispatch({
+      type: "upsertMany",
+      cards: [...playbookCards, ...standupCards],
+    });
   }, [cronJobs, standup]);
 
   useEffect(() => {
     if (!hydratedRef.current) return;
     const nextCards = stateRef.current.cards.map((card) =>
-      syncCardWithAgent(syncCardWithLinkedRun(card, runLog), agents)
+      syncCardWithAgent(syncCardWithLinkedRun(card, runLog), agents),
     );
-    const changed = nextCards.some((card, index) => card !== stateRef.current.cards[index]);
+    const changed = nextCards.some(
+      (card, index) => card !== stateRef.current.cards[index],
+    );
     if (!changed) return;
-    dispatch({ type: "hydrate", preference: { ...stateRef.current, cards: sortTaskBoardCards(nextCards) } });
+    dispatch({
+      type: "hydrate",
+      preference: { ...stateRef.current, cards: sortTaskBoardCards(nextCards) },
+    });
   }, [agents, runLog]);
 
   useEffect(() => {
@@ -925,7 +987,7 @@ export const useTaskBoardController = ({
         (card) =>
           !card.isInferred &&
           !card.isArchived &&
-          matchesExplicitCard(recoveredTask, card)
+          matchesExplicitCard(recoveredTask, card),
       );
       setTaskCaptureDebug((current) => ({
         lastStatus: hasPersistedMatch ? current.lastStatus : "detected",
@@ -976,19 +1038,22 @@ export const useTaskBoardController = ({
         return nextCard;
       } catch (error) {
         setSharedTasksError(
-          error instanceof Error ? error.message : "Failed to create task in shared store."
+          error instanceof Error
+            ? error.message
+            : "Failed to create task in shared store.",
         );
         dispatch({ type: "upsert", card });
         dispatch({ type: "select", cardId: card.id });
         return card;
       }
     },
-    [applySharedTaskRecord]
+    [applySharedTaskRecord],
   );
 
   const updateCard = useCallback(
     async (cardId: string, patch: Partial<TaskBoardCard>) => {
-      const existing = stateRef.current.cards.find((card) => card.id === cardId) ?? null;
+      const existing =
+        stateRef.current.cards.find((card) => card.id === cardId) ?? null;
       dispatch({ type: "update", cardId, patch });
       if (!existing || existing.isInferred) return;
       try {
@@ -1002,18 +1067,22 @@ export const useTaskBoardController = ({
         });
         applySharedTaskRecord(updated);
       } catch (error) {
+        dispatch({ type: "upsert", card: existing });
         setSharedTasksError(
-          error instanceof Error ? error.message : "Failed to update task in shared store."
+          error instanceof Error
+            ? error.message
+            : "Failed to update task in shared store.",
         );
       }
     },
-    [applySharedTaskRecord]
+    [applySharedTaskRecord],
   );
 
   const moveCard = useCallback(
     async (cardId: string, nextStatus: TaskBoardStatus) => {
+      const existing =
+        stateRef.current.cards.find((card) => card.id === cardId) ?? null;
       dispatch({ type: "move", cardId, status: nextStatus });
-      const existing = stateRef.current.cards.find((card) => card.id === cardId) ?? null;
       if (!existing || existing.isInferred) return;
       try {
         const updated = await upsertSharedTaskRecord({
@@ -1026,17 +1095,21 @@ export const useTaskBoardController = ({
         });
         applySharedTaskRecord(updated);
       } catch (error) {
+        dispatch({ type: "upsert", card: existing });
         setSharedTasksError(
-          error instanceof Error ? error.message : "Failed to move task in shared store."
+          error instanceof Error
+            ? error.message
+            : "Failed to move task in shared store.",
         );
       }
     },
-    [applySharedTaskRecord]
+    [applySharedTaskRecord],
   );
 
   const removeCard = useCallback(
     async (cardId: string) => {
-      const existing = stateRef.current.cards.find((card) => card.id === cardId) ?? null;
+      const existing =
+        stateRef.current.cards.find((card) => card.id === cardId) ?? null;
       if (!existing) return;
       if (existing.isInferred) {
         dispatch({
@@ -1049,16 +1122,20 @@ export const useTaskBoardController = ({
         });
         return;
       }
+      dispatch({ type: "update", cardId, patch: { isArchived: true } });
       try {
         const archived = await archiveSharedTaskRecord(cardId);
         applySharedTaskRecord(archived);
       } catch (error) {
+        dispatch({ type: "upsert", card: existing });
         setSharedTasksError(
-          error instanceof Error ? error.message : "Failed to archive task in shared store."
+          error instanceof Error
+            ? error.message
+            : "Failed to archive task in shared store.",
         );
       }
     },
-    [applySharedTaskRecord]
+    [applySharedTaskRecord],
   );
 
   useEffect(() => {
@@ -1099,7 +1176,9 @@ export const useTaskBoardController = ({
           dispatch({ type: "remove", cardId: explicit.taskId });
           return;
         }
-        const existing = stateRef.current.cards.find((card) => card.id === explicit.taskId) ?? null;
+        const existing =
+          stateRef.current.cards.find((card) => card.id === explicit.taskId) ??
+          null;
         const nextCard = buildCardFromExplicitEvent(explicit, existing);
         dispatch({
           type: "upsert",
@@ -1117,14 +1196,15 @@ export const useTaskBoardController = ({
           lastTitle: liveSessionTask.title,
           lastTaskId: liveSessionTask.id,
           lastSessionKey: liveSessionTask.externalThreadId,
-          lastMessage: "Inbound user request detected and queued for persistence.",
+          lastMessage:
+            "Inbound user request detected and queued for persistence.",
           detectedCount: current.detectedCount + 1,
         }));
         const hasPersistedMatch = stateRef.current.cards.some(
           (card) =>
             !card.isInferred &&
             !card.isArchived &&
-            matchesExplicitCard(liveSessionTask, card)
+            matchesExplicitCard(liveSessionTask, card),
         );
         if (!hasPersistedMatch) {
           dispatch({ type: "upsert", card: liveSessionTask });
@@ -1146,10 +1226,44 @@ export const useTaskBoardController = ({
             (card) =>
               card.assignedAgentId === agentId &&
               !card.isArchived &&
-              (card.runId === runId || (!card.runId && card.status !== "done"))
+              (card.runId === runId || (!card.runId && card.status !== "done")),
           )
-          .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt));
+          .sort(
+            (left, right) =>
+              Date.parse(right.updatedAt) - Date.parse(left.updatedAt),
+          );
         const candidate = candidates[0];
+
+        if (!candidate && phase === "start") {
+          // OpenClaw started an agent run -- trust that as the classification signal.
+          const agent = agents.find((a) => a.agentId === agentId);
+          const userText = normalizeTaskRequestText(
+            agent?.lastUserMessage?.trim() ?? "",
+          );
+          if (userText) {
+            const nowIso = new Date().toISOString();
+            const cardId = `run:${sessionKey ?? agentId}:${runId}`;
+            const newCard = makeCard({
+              id: cardId,
+              title: truncateTitle(userText, "Incoming request"),
+              description: userText,
+              status: "in_progress",
+              source: "openclaw_event",
+              sourceEventId: cardId,
+              assignedAgentId: agentId,
+              createdAt: nowIso,
+              updatedAt: nowIso,
+              runId,
+              externalThreadId: sessionKey,
+              lastActivityAt: nowIso,
+              isInferred: true,
+            });
+            dispatch({ type: "upsert", card: newCard });
+            void persistLiveSessionTask(newCard);
+          }
+          return;
+        }
+
         if (!candidate) return;
         if (phase === "start") {
           void updateCard(candidate.id, {
@@ -1170,19 +1284,18 @@ export const useTaskBoardController = ({
         if (phase === "end") {
           void updateCard(candidate.id, {
             runId,
-            status: "done",
+            status: "review",
             lastActivityAt: new Date().toISOString(),
           });
         }
       }
     },
-    [agents, archiveMatchingInferredCards, persistLiveSessionTask, updateCard]
+    [agents, archiveMatchingInferredCards, persistLiveSessionTask, updateCard],
   );
 
-  const selectedCard =
-    state.selectedCardId
-      ? state.cards.find((card) => card.id === state.selectedCardId) ?? null
-      : null;
+  const selectedCard = state.selectedCardId
+    ? (state.cards.find((card) => card.id === state.selectedCardId) ?? null)
+    : null;
 
   const cardsByStatus = useMemo(() => {
     const grouped = {
@@ -1203,8 +1316,11 @@ export const useTaskBoardController = ({
 
   const visibleCardCount = useMemo(
     () =>
-      Object.values(cardsByStatus).reduce((total, cards) => total + cards.length, 0),
-    [cardsByStatus]
+      Object.values(cardsByStatus).reduce(
+        (total, cards) => total + cards.length,
+        0,
+      ),
+    [cardsByStatus],
   );
 
   const taskCaptureDebugInfo = useMemo(
@@ -1216,7 +1332,14 @@ export const useTaskBoardController = ({
       sharedTasksLoading,
       sharedTasksError,
     }),
-    [sharedTasksError, sharedTasksLoading, sharedTasksSupported, state.cards.length, taskCaptureDebug, visibleCardCount]
+    [
+      sharedTasksError,
+      sharedTasksLoading,
+      sharedTasksSupported,
+      state.cards.length,
+      taskCaptureDebug,
+      visibleCardCount,
+    ],
   );
 
   return {

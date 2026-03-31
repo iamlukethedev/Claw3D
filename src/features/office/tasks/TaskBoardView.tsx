@@ -1,6 +1,6 @@
 "use client";
 
-import type { DragEvent } from "react";
+import type { DragEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import type { AgentState } from "@/features/agents/state/store";
@@ -205,11 +205,22 @@ export function TaskBoardView({
                           key={card.id}
                           type="button"
                           draggable
+                          aria-label={`${card.title} — ${STATUS_LABELS[card.status]}. Arrow keys to move between columns.`}
                           onDragStart={(event) => {
                             event.dataTransfer.setData("text/task-card-id", card.id);
                             event.dataTransfer.effectAllowed = "move";
                           }}
                           onClick={() => onSelectCard(selectedCard?.id === card.id ? null : card.id)}
+                          onKeyDown={(event: ReactKeyboardEvent) => {
+                            const currentIdx = STATUS_ORDER.indexOf(card.status);
+                            if (event.key === "ArrowRight" && currentIdx < STATUS_ORDER.length - 1) {
+                              event.preventDefault();
+                              onMoveCard(card.id, STATUS_ORDER[currentIdx + 1]!);
+                            } else if (event.key === "ArrowLeft" && currentIdx > 0) {
+                              event.preventDefault();
+                              onMoveCard(card.id, STATUS_ORDER[currentIdx - 1]!);
+                            }
+                          }}
                           className={`flex w-full flex-col rounded-lg border px-3 py-3 text-left transition-colors ${
                             selectedCard?.id === card.id
                               ? "border-cyan-400/35 bg-cyan-500/[0.10]"

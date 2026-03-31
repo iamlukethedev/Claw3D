@@ -4833,9 +4833,6 @@ export function OfficeScreen({
                     chatController.stopBusyAgentId === focusedChatAgent.agentId
                   }
                   onLoadMoreHistory={() => {}}
-                  onOpenSettings={() => {
-                    router.push("/office");
-                  }}
                   onNewSession={() =>
                     chatController.handleNewSession(focusedChatAgent.agentId)
                   }

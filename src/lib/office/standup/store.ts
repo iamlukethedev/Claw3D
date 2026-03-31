@@ -6,6 +6,8 @@ import type { StandupMeeting, StandupMeetingStore } from "@/lib/office/standup/t
 
 const STORE_DIR = "claw3d";
 const STORE_FILE = "standup-store.json";
+const GATHERING_MEETING_MAX_AGE_MS = 5 * 60 * 1000;
+const ACTIVE_MEETING_MAX_AGE_MS = 20 * 60 * 1000;
 
 const ensureDirectory = (dirPath: string) => {
   if (!fs.existsSync(dirPath)) {
@@ -36,6 +38,24 @@ const normalizeMeeting = (value: unknown): StandupMeeting | null => {
   return value as StandupMeeting;
 };
 
+const isActiveMeetingStale = (
+  meeting: StandupMeeting | null,
+  nowMs: number = Date.now()
+): boolean => {
+  if (!meeting) return false;
+  if (meeting.phase === "gathering") {
+    const startedAtMs = Date.parse(meeting.startedAt);
+    if (!Number.isFinite(startedAtMs)) return false;
+    return nowMs - startedAtMs > GATHERING_MEETING_MAX_AGE_MS;
+  }
+  if (meeting.phase !== "in_progress") {
+    return false;
+  }
+  const updatedAtMs = Date.parse(meeting.updatedAt);
+  if (!Number.isFinite(updatedAtMs)) return false;
+  return nowMs - updatedAtMs > ACTIVE_MEETING_MAX_AGE_MS;
+};
+
 const readStore = (): StandupMeetingStore => {
   const storePath = resolveStorePath();
   if (!fs.existsSync(storePath)) {
@@ -44,9 +64,11 @@ const readStore = (): StandupMeetingStore => {
   const raw = fs.readFileSync(storePath, "utf8");
   const parsed = JSON.parse(raw) as unknown;
   if (!isRecord(parsed)) return defaultStore();
+  const activeMeeting = normalizeMeeting(parsed.activeMeeting);
+  const lastMeeting = normalizeMeeting(parsed.lastMeeting);
   return {
-    activeMeeting: normalizeMeeting(parsed.activeMeeting),
-    lastMeeting: normalizeMeeting(parsed.lastMeeting),
+    activeMeeting: isActiveMeetingStale(activeMeeting) ? null : activeMeeting,
+    lastMeeting,
   };
 };
 

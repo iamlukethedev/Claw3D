@@ -1739,7 +1739,6 @@ const AgentsPageScreen = () => {
                         stopBusy={stopBusyAgentId === focusedAgent.agentId}
                         stopDisabledReason={focusedAgentStopDisabledReason}
                         onLoadMoreHistory={() => loadMoreAgentHistory(focusedAgent.agentId)}
-                        onOpenSettings={() => handleOpenAgentSettingsRoute(focusedAgent.agentId)}
                         onRename={(name) =>
                           settingsMutationController.handleRenameAgent(focusedAgent.agentId, name)
                         }

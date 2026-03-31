@@ -1,11 +1,14 @@
 import Image from "next/image";
 import { useMemo } from "react";
+import type { AgentAvatarProfile } from "@/lib/avatars/profile";
 
 import { buildAvatarDataUrl } from "@/lib/avatars/multiavatar";
+import { buildAgentAvatarPortraitDataUrl } from "@/lib/avatars/profilePortrait";
 
 type AgentAvatarProps = {
   seed: string;
   name: string;
+  avatarProfile?: AgentAvatarProfile | null;
   avatarUrl?: string | null;
   size?: number;
   isSelected?: boolean;
@@ -14,15 +17,17 @@ type AgentAvatarProps = {
 export const AgentAvatar = ({
   seed,
   name,
+  avatarProfile,
   avatarUrl,
   size = 112,
   isSelected = false,
 }: AgentAvatarProps) => {
   const src = useMemo(() => {
+    if (avatarProfile) return buildAgentAvatarPortraitDataUrl(avatarProfile);
     const trimmed = avatarUrl?.trim();
     if (trimmed) return trimmed;
     return buildAvatarDataUrl(seed);
-  }, [avatarUrl, seed]);
+  }, [avatarProfile, avatarUrl, seed]);
 
   return (
     <div

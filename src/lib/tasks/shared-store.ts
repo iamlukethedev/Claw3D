@@ -1,4 +1,6 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import type { TaskBoardCard, TaskBoardSource, TaskBoardStatus } from "@/features/office/tasks/types";
@@ -134,9 +136,31 @@ const readStore = (): SharedTaskStore => {
   }
 };
 
+const MAX_TITLE_LENGTH = 500;
+const MAX_DESCRIPTION_LENGTH = 5_000;
+const MAX_NOTE_LENGTH = 2_000;
+const MAX_NOTES_COUNT = 50;
+const MAX_TASKS = 500;
+
 const writeStore = (store: SharedTaskStore) => {
-  fs.writeFileSync(resolveStorePath(), JSON.stringify(store, null, 2), "utf8");
+  const storePath = resolveStorePath();
+  const dir = path.dirname(storePath);
+  const tmpPath = path.join(dir, `.tasks-${crypto.randomUUID()}.tmp`);
+  try {
+    fs.writeFileSync(tmpPath, JSON.stringify(store, null, 2), "utf8");
+    fs.renameSync(tmpPath, storePath);
+  } catch (error) {
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch {
+      // Best-effort cleanup.
+    }
+    throw error;
+  }
 };
+
+const truncateField = (value: string, max: number) =>
+  value.length <= max ? value : value.slice(0, max);
 
 const appendHistory = (
   existing: SharedTaskRecord | null,
@@ -201,12 +225,18 @@ export const upsertSharedTask = (
   const store = readStore();
   const existing = store.tasks.find((entry) => entry.id === task.id) ?? null;
   const nowIso = task.updatedAt?.trim() || new Date().toISOString();
+  const rawStatus = task.status ?? existing?.status ?? "todo";
+  const rawSource = (task.source as TaskBoardSource | undefined) ?? existing?.source ?? "claw3d_manual";
+  const notes = (task.notes ? [...task.notes] : [...(existing?.notes ?? [])])
+    .slice(0, MAX_NOTES_COUNT)
+    .map((n) => truncateField(n, MAX_NOTE_LENGTH));
+
   const next: SharedTaskRecord = {
     id: task.id.trim(),
-    title: task.title.trim() || existing?.title || "Untitled task",
-    description: task.description?.trim() ?? existing?.description ?? "",
-    status: task.status ?? existing?.status ?? "todo",
-    source: (task.source as TaskBoardSource | undefined) ?? existing?.source ?? "claw3d_manual",
+    title: truncateField(task.title.trim() || existing?.title || "Untitled task", MAX_TITLE_LENGTH),
+    description: truncateField(task.description?.trim() ?? existing?.description ?? "", MAX_DESCRIPTION_LENGTH),
+    status: isTaskBoardStatus(rawStatus) ? rawStatus : "todo",
+    source: isTaskBoardSource(rawSource) ? rawSource : "claw3d_manual",
     sourceEventId: task.sourceEventId ?? existing?.sourceEventId ?? null,
     assignedAgentId: task.assignedAgentId ?? existing?.assignedAgentId ?? null,
     createdAt: task.createdAt?.trim() || existing?.createdAt || nowIso,
@@ -216,7 +246,7 @@ export const upsertSharedTask = (
     channel: task.channel ?? existing?.channel ?? null,
     externalThreadId: task.externalThreadId ?? existing?.externalThreadId ?? null,
     lastActivityAt: task.lastActivityAt ?? existing?.lastActivityAt ?? nowIso,
-    notes: task.notes ? [...task.notes] : [...(existing?.notes ?? [])],
+    notes,
     isArchived: task.isArchived ?? existing?.isArchived ?? false,
     isInferred: false,
     history: [],
@@ -226,6 +256,14 @@ export const upsertSharedTask = (
   if (index >= 0) {
     store.tasks[index] = next;
   } else {
+    if (store.tasks.length >= MAX_TASKS) {
+      const archivedIndex = store.tasks.findIndex((t) => t.isArchived);
+      if (archivedIndex >= 0) {
+        store.tasks.splice(archivedIndex, 1);
+      } else {
+        store.tasks.shift();
+      }
+    }
     store.tasks.push(next);
   }
   store.updatedAt = nowIso;

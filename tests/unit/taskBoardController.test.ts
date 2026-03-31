@@ -116,6 +116,22 @@ describe("task board controller helpers", () => {
     );
   });
 
+  it("accepts messages with common verb typos", () => {
+    expect(isActionableTaskRequest("Rearch who is Luke the dev")).toBe(true);
+    expect(isActionableTaskRequest("Reserch best practices for React")).toBe(true);
+    expect(isActionableTaskRequest("Resarch the latest trends")).toBe(true);
+  });
+
+  it("accepts 5+ word messages without punctuation", () => {
+    expect(isActionableTaskRequest("do a deep dive into kubernetes networking")).toBe(true);
+    expect(isActionableTaskRequest("check the logs from last deployment")).toBe(true);
+  });
+
+  it("rejects very short non-verb messages", () => {
+    expect(isActionableTaskRequest("ok sure")).toBe(false);
+    expect(isActionableTaskRequest("hi")).toBe(false);
+  });
+
   it("recovers latest user asks from agent transcript history", () => {
     const card = deriveRecoveredAgentRequestCard(
       makeAgent({
@@ -222,7 +238,7 @@ describe("task board controller helpers", () => {
       outcome: "error",
     };
 
-    expect(syncCardWithLinkedRun(baseCard, [okRun]).status).toBe("done");
+    expect(syncCardWithLinkedRun(baseCard, [okRun]).status).toBe("review");
     expect(syncCardWithLinkedRun(baseCard, [errorRun]).status).toBe("blocked");
   });
 });
