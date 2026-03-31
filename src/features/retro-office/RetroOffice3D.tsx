@@ -7157,81 +7157,85 @@ export function RetroOffice3D({
         </div>
       ) : null}
 
-      {/* Ideas 3 + 6 + 8: Mini status bar — bottom left. */}
-      <div className="absolute bottom-3 left-3 flex flex-col items-start gap-1.5 z-10 pointer-events-none select-none">
-        {/* Idea 3: Activity feed entries — newest on bottom. */}
-        {statusFeedEvents
-          .slice(0, 4)
-          .reverse()
-          .map((ev) => (
-            <div
-              key={`${ev.id}-${ev.ts}`}
-              className="flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-[10px] font-mono"
-            >
-              <span className="text-amber-400/80 font-semibold">{ev.name}</span>
-              <span className="text-amber-600/70">{ev.text}</span>
-            </div>
-          ))}
-        {/* Ideas 6 + 8: Gateway status, agent counts, vibe score. */}
-        <div className="flex items-center gap-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-[10px] font-mono">
-          <span className="text-amber-500/60">
-            {agents.filter((a) => a.status === "working").length} working
-          </span>
-          <span className="opacity-30">·</span>
-          <span className="text-amber-500/60">
-            {agents.filter((a) => a.status === "idle").length} idle
-          </span>
-          <span className="opacity-30">·</span>
-          <span className="text-amber-500/60">
-            {agents.filter((a) => a.status === "error").length} error
-          </span>
-          {/* New Idea 6: Vibe score with animated EQ bars. */}
-          {(() => {
-            const workingCount = agents.filter(
-              (a) => a.status === "working",
-            ).length;
-            const ratio = workingCount / Math.max(agents.length, 1);
-            const label =
-              ratio < 0.2 ? "quiet" : ratio < 0.6 ? "active" : "buzzing";
-            const animDur = ratio < 0.2 ? "1.8s" : ratio < 0.6 ? "1s" : "0.5s";
-            return (
-              <>
-                <span className="opacity-30">·</span>
-                <span
-                  className="flex items-end gap-px h-3"
-                  style={{ ["--eq-dur" as string]: animDur }}
+      {!immersiveOverlayActive ? (
+        <>
+          {/* Ideas 3 + 6 + 8: Mini status bar — bottom left. */}
+          <div className="absolute bottom-3 left-3 flex flex-col items-start gap-1.5 z-10 pointer-events-none select-none">
+            {/* Idea 3: Activity feed entries — newest on bottom. */}
+            {statusFeedEvents
+              .slice(0, 4)
+              .reverse()
+              .map((ev) => (
+                <div
+                  key={`${ev.id}-${ev.ts}`}
+                  className="flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-[10px] font-mono"
                 >
-                  {[0.6, 1, 0.7].map((h, i) => (
-                    <span
-                      key={i}
-                      className="w-[3px] bg-amber-500/60 rounded-sm"
-                      style={{
-                        height: `${h * 100}%`,
-                        animation: `eq-bar ${animDur} ${i * 0.15}s infinite ease-in-out alternate`,
-                      }}
-                    />
-                  ))}
-                </span>
-                <span className="text-amber-500/50">{label}</span>
-              </>
-            );
-          })()}
-          {!editMode && !spaceDown && (
-            <>
-              <span className="opacity-30">·</span>
-              <span className="text-amber-400/40">
-                drag · scroll · space+drag · dbl-click
+                  <span className="text-amber-400/80 font-semibold">{ev.name}</span>
+                  <span className="text-amber-600/70">{ev.text}</span>
+                </div>
+              ))}
+            {/* Ideas 6 + 8: Gateway status, agent counts, vibe score. */}
+            <div className="flex items-center gap-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-[10px] font-mono">
+              <span className="text-amber-500/60">
+                {agents.filter((a) => a.status === "working").length} working
               </span>
-            </>
-          )}
-          {spaceDown && (
-            <>
               <span className="opacity-30">·</span>
-              <span className="text-amber-300/80">pan mode</span>
-            </>
-          )}
-        </div>
-      </div>
+              <span className="text-amber-500/60">
+                {agents.filter((a) => a.status === "idle").length} idle
+              </span>
+              <span className="opacity-30">·</span>
+              <span className="text-amber-500/60">
+                {agents.filter((a) => a.status === "error").length} error
+              </span>
+              {/* New Idea 6: Vibe score with animated EQ bars. */}
+              {(() => {
+                const workingCount = agents.filter(
+                  (a) => a.status === "working",
+                ).length;
+                const ratio = workingCount / Math.max(agents.length, 1);
+                const label =
+                  ratio < 0.2 ? "quiet" : ratio < 0.6 ? "active" : "buzzing";
+                const animDur = ratio < 0.2 ? "1.8s" : ratio < 0.6 ? "1s" : "0.5s";
+                return (
+                  <>
+                    <span className="opacity-30">·</span>
+                    <span
+                      className="flex items-end gap-px h-3"
+                      style={{ ["--eq-dur" as string]: animDur }}
+                    >
+                      {[0.6, 1, 0.7].map((h, i) => (
+                        <span
+                          key={i}
+                          className="w-[3px] bg-amber-500/60 rounded-sm"
+                          style={{
+                            height: `${h * 100}%`,
+                            animation: `eq-bar ${animDur} ${i * 0.15}s infinite ease-in-out alternate`,
+                          }}
+                        />
+                      ))}
+                    </span>
+                    <span className="text-amber-500/50">{label}</span>
+                  </>
+                );
+              })()}
+              {!editMode && !spaceDown && (
+                <>
+                  <span className="opacity-30">·</span>
+                  <span className="text-amber-400/40">
+                    drag · scroll · space+drag · dbl-click
+                  </span>
+                </>
+              )}
+              {spaceDown && (
+                <>
+                  <span className="opacity-30">·</span>
+                  <span className="text-amber-300/80">pan mode</span>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      ) : null}
       <style>{`
         @keyframes eq-bar {
           from { transform: scaleY(0.3); }
