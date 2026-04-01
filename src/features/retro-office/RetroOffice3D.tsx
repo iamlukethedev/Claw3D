@@ -5160,35 +5160,41 @@ export function RetroOffice3D({
 
   // Camera constants.
   const LOCAL_CAMERA_TARGET = useMemo(
-    () =>
-      toWorld(LOCAL_OFFICE_CANVAS_WIDTH / 2, LOCAL_OFFICE_CANVAS_HEIGHT / 2),
+    () => toWorld(LOCAL_OFFICE_CANVAS_WIDTH / 2, LOCAL_OFFICE_CANVAS_HEIGHT / 2 + 150),
     [],
   );
   const CAM_POS = useMemo<[number, number, number]>(() => {
     if (remoteOfficeEnabled) return DISTRICT_CAMERA_POSITION;
     return [
-      LOCAL_CAMERA_TARGET[0] + (DISTRICT_CAMERA_POSITION[0] - DISTRICT_CAMERA_TARGET[0]),
-      LOCAL_CAMERA_TARGET[1] + (DISTRICT_CAMERA_POSITION[1] - DISTRICT_CAMERA_TARGET[1]),
-      LOCAL_CAMERA_TARGET[2] + (DISTRICT_CAMERA_POSITION[2] - DISTRICT_CAMERA_TARGET[2]),
+      LOCAL_CAMERA_TARGET[0] + 14,
+      LOCAL_CAMERA_TARGET[1] + 16,
+      LOCAL_CAMERA_TARGET[2] + 17,
     ];
   }, [remoteOfficeEnabled, LOCAL_CAMERA_TARGET]);
   const cameraTarget = remoteOfficeEnabled
     ? DISTRICT_CAMERA_TARGET
     : LOCAL_CAMERA_TARGET;
-  const cameraZoom = remoteOfficeEnabled ? DISTRICT_CAMERA_ZOOM : 56;
-  const overviewPresetRef = useRef({ pos: CAM_POS, target: cameraTarget, zoom: cameraZoom });
-  overviewPresetRef.current = { pos: CAM_POS, target: cameraTarget, zoom: cameraZoom };
+  const cameraZoom = remoteOfficeEnabled ? DISTRICT_CAMERA_ZOOM : 39;
+  const overviewPreset = useMemo(
+    () => ({ pos: CAM_POS, target: cameraTarget, zoom: cameraZoom }),
+    [CAM_POS, cameraTarget, cameraZoom],
+  );
+  const overviewPresetRef = useRef(overviewPreset);
   const lastOfficeCenterSignalRef = useRef(officeCenterSignal);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability -- overview camera preset is intentionally kept in sync here.
+    overviewPresetRef.current = overviewPreset;
     cameraPresetRef.current = overviewPresetRef.current;
-  }, [CAM_POS, cameraTarget, cameraZoom]);
+  }, [overviewPreset]);
 
   useEffect(() => {
     if (officeCenterSignal === lastOfficeCenterSignalRef.current) return;
     lastOfficeCenterSignalRef.current = officeCenterSignal;
+    // eslint-disable-next-line react-hooks/immutability -- overview camera preset is intentionally kept in sync here.
+    overviewPresetRef.current = overviewPreset;
     cameraPresetRef.current = overviewPresetRef.current;
-  }, [officeCenterSignal, CAM_POS, cameraTarget, cameraZoom]);
+  }, [officeCenterSignal, overviewPreset]);
 
   return (
     <div className="relative w-full h-full bg-[#1a1008] font-mono text-white overflow-hidden">
