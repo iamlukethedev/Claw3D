@@ -194,10 +194,10 @@ export const GatewayConnectScreen = ({
       </button>
 
       {status === "connecting" ? (
-        <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+        <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
           <RunningAvatarLoader size={16} trackWidth={32} inline />
           Connecting…
-        </p>
+        </div>
       ) : null}
       {error ? <p className="ui-text-danger text-xs leading-snug">{error}</p> : null}
       {showApprovalHint && selectedAdapterType === "openclaw" ? (

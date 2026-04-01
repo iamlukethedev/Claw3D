@@ -4124,34 +4124,17 @@ export function OfficeScreen({
   // No longer force-close the jukebox panel when skill is disabled;
   // the panel handles the disabled state itself.
 
-  if (
-    status !== "connected" &&
+  const showGatewayLoadingOverlay =
     !agentsLoaded &&
     (!connectPromptReady ||
-      shouldPromptForConnect ||
-      didAttemptGatewayConnect ||
-      status === "connecting")
-  ) {
-    return (
-      <main className="min-h-screen bg-black px-4 py-10">
-        <GatewayConnectScreen
-          gatewayUrl={gatewayUrl}
-          token={token}
-          selectedAdapterType={selectedAdapterType}
-          activeAdapterType={activeAdapterType}
-          localGatewayDefaults={localGatewayDefaults}
-          status={status}
-          error={gatewayError}
-          showApprovalHint={didAttemptGatewayConnect}
-          onGatewayUrlChange={setGatewayUrl}
-          onTokenChange={setToken}
-          onAdapterTypeChange={setSelectedAdapterType}
-          onUseLocalDefaults={useLocalGatewayDefaults}
-          onConnect={() => void connect()}
-        />
-      </main>
-    );
-  }
+      (gatewayUrl.trim().length > 0 &&
+        !shouldPromptForConnect &&
+        (!didAttemptGatewayConnect || status === "connecting")));
+  const showGatewayConnectOverlay =
+    connectPromptReady &&
+    status === "disconnected" &&
+    !agentsLoaded &&
+    (shouldPromptForConnect || didAttemptGatewayConnect);
 
   const runningCount = state.agents.filter(
     (agent) =>
@@ -4173,7 +4156,31 @@ export function OfficeScreen({
     "Connected to the gateway, but no agents were loaded into the office.";
 
   return (
-    <main className="h-full w-full overflow-hidden bg-black">
+    <main className="relative h-full w-full overflow-hidden bg-black">
+      {showGatewayLoadingOverlay ? (
+        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-black/55 font-mono text-[#4FC3F7] backdrop-blur-[1px]">
+          CONNECTING TO GATEWAY...
+        </div>
+      ) : null}
+      {showGatewayConnectOverlay ? (
+        <div className="pointer-events-auto absolute inset-0 z-50 flex items-start justify-center bg-black/60 px-4 py-10 backdrop-blur-sm">
+          <GatewayConnectScreen
+            gatewayUrl={gatewayUrl}
+            token={token}
+            selectedAdapterType={selectedAdapterType}
+            activeAdapterType={activeAdapterType}
+            localGatewayDefaults={localGatewayDefaults}
+            status={status}
+            error={gatewayError}
+            showApprovalHint={didAttemptGatewayConnect}
+            onGatewayUrlChange={setGatewayUrl}
+            onTokenChange={setToken}
+            onAdapterTypeChange={setSelectedAdapterType}
+            onUseLocalDefaults={useLocalGatewayDefaults}
+            onConnect={() => void connect()}
+          />
+        </div>
+      ) : null}
       <section className="relative h-full min-h-0 min-w-0 overflow-hidden">
         <RetroOffice3D
           agents={allVisibleAgents}

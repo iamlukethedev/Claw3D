@@ -21,6 +21,17 @@ import type {
 import { resolveStudioProxyGatewayUrl } from "@/lib/gateway/proxy-url";
 import { ensureGatewayReloadModeHotForLocalStudio } from "@/lib/gateway/gatewayReloadMode";
 import { GatewayResponseError } from "@/lib/gateway/errors";
+
+const gatewayDebugEnabled = process.env.NODE_ENV !== "production";
+
+const gatewayDebugLog = (message: string, details?: Record<string, unknown>) => {
+  if (!gatewayDebugEnabled) return;
+  if (details) {
+    console.info("[gateway-client]", message, details);
+    return;
+  }
+  console.info("[gateway-client]", message);
+};
 import { probeCustomRuntime } from "@/lib/runtime/custom/http";
 
 export type ReqFrame = {
@@ -742,6 +753,7 @@ export const useGatewayConnection = (
 
   useEffect(() => {
     return client.onStatus((nextStatus) => {
+      gatewayDebugLog("status", { nextStatus });
       setStatus(nextStatus);
       if (nextStatus !== "connecting") {
         setError(null);
@@ -765,6 +777,11 @@ export const useGatewayConnection = (
   }, [client]);
 
   const connect = useCallback(async () => {
+    gatewayDebugLog("connect:start", {
+      selectedAdapterType,
+      gatewayUrl,
+      hasToken: Boolean(token),
+    });
     setError(null);
     setConnectErrorCode(null);
     wasManualDisconnectRef.current = false;
@@ -777,11 +794,15 @@ export const useGatewayConnection = (
         setStatus("connected");
         setConnectErrorCode(null);
         retryAttemptRef.current = 0;
+        gatewayDebugLog("connect:custom-success", { gatewayUrl });
       } catch (err) {
         setStatus("disconnected");
         setDetectedAdapterType(null);
         setConnectErrorCode("studio.custom_runtime_probe_failed");
         setError(formatGatewayError(err));
+        gatewayDebugLog("connect:custom-failed", {
+          message: err instanceof Error ? err.message : String(err),
+        });
       }
       return;
     }
@@ -808,9 +829,18 @@ export const useGatewayConnection = (
           : "openclaw";
       setDetectedAdapterType(nextDetectedAdapterType);
       retryAttemptRef.current = 0;
+      gatewayDebugLog("connect:success", {
+        selectedAdapterType,
+        detectedAdapterType: nextDetectedAdapterType,
+      });
     } catch (err) {
       setConnectErrorCode(err instanceof GatewayResponseError ? err.code : null);
       setError(formatGatewayError(err));
+      gatewayDebugLog("connect:failed", {
+        selectedAdapterType,
+        code: err instanceof GatewayResponseError ? err.code : null,
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
   }, [client, gatewayUrl, selectedAdapterType, settingsCoordinator, token]);
 
@@ -820,6 +850,10 @@ export const useGatewayConnection = (
     if (!gatewayUrl.trim()) return;
     if (!isAutoManagedAdapter(selectedAdapterType)) return;
     didAutoConnect.current = true;
+    gatewayDebugLog("auto-connect", {
+      selectedAdapterType,
+      gatewayUrl,
+    });
     void connect();
   }, [connect, gatewayUrl, selectedAdapterType, settingsLoaded]);
 
@@ -838,8 +872,19 @@ export const useGatewayConnection = (
     });
     if (!isAutoManagedAdapter(selectedAdapterType)) return;
     if (delay === null) return;
+    gatewayDebugLog("auto-retry-scheduled", {
+      selectedAdapterType,
+      attempt: attempt + 1,
+      delay,
+      gatewayUrl,
+      status,
+    });
     retryTimerRef.current = setTimeout(() => {
       retryAttemptRef.current = attempt + 1;
+      gatewayDebugLog("auto-retry-fire", {
+        selectedAdapterType,
+        attempt: retryAttemptRef.current,
+      });
       void connect();
     }, delay);
 
@@ -933,6 +978,7 @@ export const useGatewayConnection = (
   }, [localGatewayDefaults]);
 
   const disconnect = useCallback(() => {
+    gatewayDebugLog("disconnect", { selectedAdapterType });
     setError(null);
     setConnectErrorCode(null);
     wasManualDisconnectRef.current = true;
