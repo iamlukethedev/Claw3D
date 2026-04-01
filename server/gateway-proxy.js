@@ -100,6 +100,7 @@ function createGatewayProxy(options) {
     let upstreamReady = false;
     let upstreamUrl = "";
     let upstreamToken = "";
+    let upstreamAdapterType = "openclaw";
     let connectRequestId = null;
     let connectResponseSent = false;
     let pendingConnectFrame = null;
@@ -137,7 +138,8 @@ function createGatewayProxy(options) {
         hasNonEmptyDeviceToken(frame.params) ||
         hasCompleteDeviceAuth(frame.params);
 
-      if (!upstreamToken && !browserHasAuth) {
+      const requiresToken = upstreamAdapterType === "openclaw";
+      if (requiresToken && !upstreamToken && !browserHasAuth) {
         sendConnectError(
           "studio.gateway_token_missing",
           "Upstream gateway token is not configured on the Studio host."
@@ -168,6 +170,10 @@ function createGatewayProxy(options) {
         const settings = await loadUpstreamSettings();
         upstreamUrl = typeof settings?.url === "string" ? settings.url.trim() : "";
         upstreamToken = typeof settings?.token === "string" ? settings.token.trim() : "";
+        upstreamAdapterType =
+          typeof settings?.adapterType === "string" && settings.adapterType.trim()
+            ? settings.adapterType.trim().toLowerCase()
+            : "openclaw";
       } catch (err) {
         logError("Failed to load upstream gateway settings.", err);
         pendingUpstreamSetupError = {

@@ -20,7 +20,16 @@ export type RuntimeCapability =
   | "files"
   | "agent-roles";
 
-export type RuntimeProviderId = "openclaw" | "hermes" | "demo" | "vera";
+export type RuntimeProviderId = "openclaw" | "hermes" | "demo" | "custom";
+
+export type RuntimeProviderMetadata = {
+  id: RuntimeProviderId;
+  label: string;
+  runtimeName?: string | null;
+  vendor?: string | null;
+  runtimeVersion?: string | null;
+  routeProfile?: string | null;
+};
 
 export type RuntimeSummaryEvent = {
   type: "summary-refresh";
@@ -72,6 +81,7 @@ export type RuntimeStatus = GatewayStatus;
 export interface RuntimeProvider {
   readonly id: RuntimeProviderId;
   readonly label: string;
+  readonly metadata: RuntimeProviderMetadata;
   readonly capabilities: ReadonlySet<RuntimeCapability>;
   readonly client: GatewayClient;
   connect(options: GatewayConnectOptions): Promise<void>;

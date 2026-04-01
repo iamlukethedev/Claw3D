@@ -155,11 +155,22 @@ export async function hydrateAgentFleetFromGateway(params: {
     }
   }
 
-  let agentsResult = (await params.client.call("agents.list", {})) as AgentsListResult;
+  const helloSnapshotFallback = resolveAgentsListFromHelloSnapshot(
+    params.client.getLastHello?.()?.snapshot
+  );
+  let agentsResult: AgentsListResult;
+  try {
+    agentsResult = (await params.client.call("agents.list", {})) as AgentsListResult;
+  } catch (err) {
+    if (helloSnapshotFallback) {
+      agentsResult = helloSnapshotFallback;
+    } else {
+      throw err;
+    }
+  }
   if (!Array.isArray(agentsResult?.agents) || agentsResult.agents.length === 0) {
-    const fallback = resolveAgentsListFromHelloSnapshot(params.client.getLastHello?.()?.snapshot);
-    if (fallback) {
-      agentsResult = fallback;
+    if (helloSnapshotFallback) {
+      agentsResult = helloSnapshotFallback;
     }
   }
   agentsResult = {

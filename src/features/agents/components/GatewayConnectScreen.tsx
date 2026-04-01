@@ -47,6 +47,10 @@ export const GatewayConnectScreen = ({
 }: GatewayConnectScreenProps) => {
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [showToken, setShowToken] = useState(false);
+  const tokenOptional =
+    selectedAdapterType === "hermes" ||
+    selectedAdapterType === "demo" ||
+    selectedAdapterType === "custom";
   const isLocal = useMemo(() => isLocalGatewayUrl(gatewayUrl), [gatewayUrl]);
   const localPort = useMemo(() => resolveLocalGatewayPort(gatewayUrl), [gatewayUrl]);
   const localGatewayCommand = useMemo(
@@ -63,21 +67,15 @@ export const GatewayConnectScreen = ({
   );
   const useDemoPreset = () => {
     onAdapterTypeChange("demo");
-    onGatewayUrlChange("ws://localhost:18789");
-    onTokenChange("");
   };
   const useHermesPreset = () => {
     onAdapterTypeChange("hermes");
-    onGatewayUrlChange("ws://localhost:18789");
-    onTokenChange("");
   };
   const useOpenClawPreset = () => {
     onAdapterTypeChange("openclaw");
-    if (localGatewayDefaults) {
-      onUseLocalDefaults();
-      return;
-    }
-    onGatewayUrlChange("ws://localhost:18789");
+  };
+  const useCustomPreset = () => {
+    onAdapterTypeChange("custom");
   };
   const statusCopy = useMemo(() => {
     if (status === "connecting" && isLocal) {
@@ -161,14 +159,14 @@ export const GatewayConnectScreen = ({
       </div>
 
       <label className="flex flex-col gap-1 text-[11px] font-medium text-foreground/90">
-        Upstream token
+        {tokenOptional ? "Upstream token (optional)" : "Upstream token"}
         <div className="relative">
           <input
             className="ui-input h-10 w-full rounded-md px-4 pr-10 font-sans text-sm text-foreground outline-none"
             type={showToken ? "text" : "password"}
             value={token}
             onChange={(event) => onTokenChange(event.target.value)}
-            placeholder="gateway token"
+            placeholder={tokenOptional ? "optional token" : "gateway token"}
             spellCheck={false}
           />
           <button
@@ -202,7 +200,7 @@ export const GatewayConnectScreen = ({
         </p>
       ) : null}
       {error ? <p className="ui-text-danger text-xs leading-snug">{error}</p> : null}
-      {showApprovalHint ? (
+      {showApprovalHint && selectedAdapterType === "openclaw" ? (
         <div className="rounded-md border border-border bg-muted/40 px-3 py-3 text-xs text-muted-foreground">
           <p className="leading-snug">
             If the first connection attempt did not work, go to your OpenClaw computer and approve this
@@ -242,6 +240,9 @@ export const GatewayConnectScreen = ({
           <p className="mt-2 font-mono text-[11px] text-muted-foreground">
             Selected backend: {selectedAdapterType} | Active backend: {activeAdapterType}
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Each backend keeps its own saved URL and token.
+          </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -256,6 +257,13 @@ export const GatewayConnectScreen = ({
               onClick={useHermesPreset}
             >
               Hermes backend
+            </button>
+            <button
+              type="button"
+              className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+              onClick={useCustomPreset}
+            >
+              Custom backend
             </button>
             <button
               type="button"
@@ -293,6 +301,16 @@ export const GatewayConnectScreen = ({
               Run <span className="font-mono text-foreground">npm run hermes-adapter</span>, then choose
               <span className="font-mono text-foreground"> Hermes backend</span>. The default local URL is
               <span className="font-mono text-foreground"> ws://localhost:18789</span>.
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+            <p className="text-xs font-medium text-foreground">Using a custom runtime locally?</p>
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">
+              Choose <span className="font-mono text-foreground">Custom backend</span> and point the URL
+              at your orchestrator or runtime boundary, for example
+              <span className="font-mono text-foreground"> http://localhost:7770</span>. Direct custom
+              runtime chat flows are not wired into Studio yet in this slice, but the provider seam and
+              metadata scaffold are now in place.
             </p>
           </div>
           {localGatewayDefaults ? (

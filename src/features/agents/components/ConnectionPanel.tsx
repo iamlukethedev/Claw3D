@@ -38,20 +38,21 @@ export const ConnectionPanel = ({
 }: ConnectionPanelProps) => {
   const isConnected = status === "connected";
   const isConnecting = status === "connecting";
+  const tokenOptional =
+    selectedAdapterType === "hermes" ||
+    selectedAdapterType === "demo" ||
+    selectedAdapterType === "custom";
   const applyDemoPreset = () => {
     onAdapterTypeChange("demo");
-    onGatewayUrlChange("ws://localhost:18789");
-    onTokenChange("");
   };
   const applyHermesPreset = () => {
     onAdapterTypeChange("hermes");
-    onGatewayUrlChange("ws://localhost:18789");
-    onTokenChange("");
+  };
+  const applyCustomPreset = () => {
+    onAdapterTypeChange("custom");
   };
   const applyOpenClawPreset = () => {
     onAdapterTypeChange("openclaw");
-    onGatewayUrlChange(localGatewayUrl?.trim() || "ws://localhost:18789");
-    onTokenChange(localGatewayToken?.trim() || "");
   };
 
   return (
@@ -99,13 +100,13 @@ export const ConnectionPanel = ({
           />
         </label>
         <label className="flex flex-col gap-1 font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
-          Upstream token
+          {tokenOptional ? "Upstream token (optional)" : "Upstream token"}
           <input
             className="ui-input h-10 rounded-md px-4 font-sans text-sm text-foreground outline-none"
             type="password"
             value={token}
             onChange={(event) => onTokenChange(event.target.value)}
-            placeholder="gateway token"
+            placeholder={tokenOptional ? "optional token" : "gateway token"}
             spellCheck={false}
           />
         </label>
@@ -113,6 +114,7 @@ export const ConnectionPanel = ({
       <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
         <span className="font-mono">Selected backend: {selectedAdapterType}</span>
         <span className="font-mono">Active backend: {activeAdapterType}</span>
+        <span>Each backend keeps its own saved URL and token.</span>
       </div>
       <div className="flex flex-wrap gap-2">
         <button
@@ -128,6 +130,13 @@ export const ConnectionPanel = ({
           onClick={applyHermesPreset}
         >
           Hermes backend
+        </button>
+        <button
+          className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+          type="button"
+          onClick={applyCustomPreset}
+        >
+          Custom backend
         </button>
         <button
           className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"

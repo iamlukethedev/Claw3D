@@ -88,16 +88,17 @@ const loadUpstreamGatewaySettings = (env = process.env) => {
   const gateway = parsed && typeof parsed === "object" ? parsed.gateway : null;
   const url = typeof gateway?.url === "string" ? gateway.url.trim() : "";
   const token = typeof gateway?.token === "string" ? gateway.token.trim() : "";
-  if (!token) {
+  const adapterType =
+    typeof gateway?.adapterType === "string" && gateway.adapterType.trim()
+      ? gateway.adapterType.trim()
+      : "openclaw";
+  if (!token && adapterType === "openclaw") {
     const defaults = readOpenclawGatewayDefaults(env);
     if (defaults) {
       return {
         url: url || defaults.url,
         token: defaults.token,
-        adapterType:
-          typeof gateway?.adapterType === "string" && gateway.adapterType.trim()
-            ? gateway.adapterType.trim()
-            : defaults.adapterType,
+        adapterType,
         settingsPath,
       };
     }
@@ -105,10 +106,7 @@ const loadUpstreamGatewaySettings = (env = process.env) => {
   return {
     url: url || DEFAULT_GATEWAY_URL,
     token,
-    adapterType:
-      typeof gateway?.adapterType === "string" && gateway.adapterType.trim()
-        ? gateway.adapterType.trim()
-        : "openclaw",
+    adapterType,
     settingsPath,
   };
 };

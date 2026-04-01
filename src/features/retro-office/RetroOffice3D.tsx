@@ -51,6 +51,7 @@ import type { OfficeDeskMonitor } from "@/lib/office/deskMonitor";
 import type { OfficeAnimationState } from "@/lib/office/eventTriggers";
 import type { StandupMeeting } from "@/lib/office/standup/types";
 import type { SkillStatusEntry } from "@/lib/skills/types";
+import type { StudioGatewayAdapterType } from "@/lib/studio/settings";
 import type {
   TaskBoardCard,
   TaskBoardStatus,
@@ -2358,10 +2359,18 @@ export function RetroOffice3D({
   onVoiceRepliesSpeedChange,
   onVoiceRepliesPreview,
   onGatewayDisconnect,
+  onGatewayConnect,
+  onGatewayUrlChange,
+  onGatewayTokenChange,
+  onGatewayAdapterTypeChange,
   onOpenOnboarding,
   atmAnalytics = null,
   feedEvents = EMPTY_FEED_EVENTS,
   gatewayStatus = "disconnected",
+  gatewayUrl = "",
+  gatewayToken = "",
+  selectedAdapterType = "openclaw",
+  activeAdapterType = "openclaw",
   runCountByAgentId = EMPTY_NUMBER_RECORD,
   lastSeenByAgentId = EMPTY_NUMBER_RECORD,
   streamingTextByAgentId = {},
@@ -2465,10 +2474,18 @@ export function RetroOffice3D({
   onVoiceRepliesSpeedChange?: (speed: number) => void;
   onVoiceRepliesPreview?: (voiceId: string | null, voiceName: string) => void;
   onGatewayDisconnect?: () => void;
+  onGatewayConnect?: () => void;
+  onGatewayUrlChange?: (value: string) => void;
+  onGatewayTokenChange?: (value: string) => void;
+  onGatewayAdapterTypeChange?: (value: StudioGatewayAdapterType) => void;
   onOpenOnboarding?: () => void;
   atmAnalytics?: OfficeUsageAnalyticsParams | null;
   feedEvents?: FeedEvent[];
   gatewayStatus?: string;
+  gatewayUrl?: string;
+  gatewayToken?: string;
+  selectedAdapterType?: StudioGatewayAdapterType;
+  activeAdapterType?: StudioGatewayAdapterType;
   runCountByAgentId?: Record<string, number>;
   lastSeenByAgentId?: Record<string, number>;
   streamingTextByAgentId?: Record<string, string | null>;
@@ -2687,6 +2704,16 @@ export function RetroOffice3D({
   const overviewPreset = useMemo(
     () => ({ pos: CAM_POS, target: cameraTarget, zoom: cameraZoom }),
     [CAM_POS, cameraTarget, cameraZoom]
+  );
+  const canvasResetKey = useMemo(
+    () =>
+      [
+        remoteOfficeEnabled ? "remote" : "local",
+        gatewayStatus ?? "unknown",
+        String(agents.length),
+        String(officeCenterSignal),
+      ].join(":"),
+    [agents.length, gatewayStatus, officeCenterSignal, remoteOfficeEnabled],
   );
   // New Idea 7: heatmap mode.
   const [heatmapMode, setHeatmapMode] = useState(false);
@@ -5202,6 +5229,11 @@ export function RetroOffice3D({
     cameraPresetRef.current = overviewPreset;
   }, [officeCenterSignal, overviewPreset]);
 
+  useEffect(() => {
+    cameraPresetRef.current = overviewPreset;
+    orbitRef.current?.reset?.();
+  }, [overviewPreset, gatewayStatus, agents.length]);
+
   return (
     <div className="relative w-full h-full bg-[#1a1008] font-mono text-white overflow-hidden">
       {/* 3D Canvas — fills everything. */}
@@ -5227,6 +5259,7 @@ export function RetroOffice3D({
         */}
         {!immersiveOverlayActive ? (
           <Canvas
+            key={canvasResetKey}
             orthographic
             dpr={[0.85, 1.5]}
             camera={{
@@ -5947,12 +5980,14 @@ export function RetroOffice3D({
 
       {/* Title — top center overlay. */}
       {!immersiveOverlayActive ? (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-3 pointer-events-none select-none z-10">
-          <div className="h-px w-12 bg-gradient-to-r from-transparent to-amber-500/40" />
-          <span className="text-sm tracking-[0.3em] text-amber-300/80 font-bold uppercase">
-            {officeTitle}
-          </span>
-          <div className="h-px w-12 bg-gradient-to-l from-transparent to-amber-500/40" />
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none select-none z-10">
+          <div className="flex items-center gap-3">
+            <div className="h-px w-12 bg-gradient-to-r from-transparent to-amber-500/40" />
+            <span className="text-sm tracking-[0.3em] text-amber-300/80 font-bold uppercase">
+              {officeTitle}
+            </span>
+            <div className="h-px w-12 bg-gradient-to-l from-transparent to-amber-500/40" />
+          </div>
         </div>
       ) : null}
 
@@ -7021,6 +7056,18 @@ export function RetroOffice3D({
               <span>Add</span>
             </button>
           ) : null}
+          <div
+            className={`flex h-7 items-center rounded-md border px-2 text-[10px] font-mono uppercase tracking-[0.12em] ${
+              gatewayStatus === "connected"
+                ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-100"
+                : gatewayStatus === "connecting"
+                  ? "border-amber-400/25 bg-amber-500/10 text-amber-100"
+                  : "border-rose-400/25 bg-rose-500/10 text-rose-100"
+            }`}
+            title={`Runtime: ${activeAdapterType} (${gatewayStatus})`}
+          >
+            {activeAdapterType} • {gatewayStatus}
+          </div>
           {/* New Idea 7: Heatmap toggle. */}
           <button
             onClick={() => setHeatmapMode((p) => !p)}
@@ -7114,11 +7161,22 @@ export function RetroOffice3D({
             <div className="min-h-0 flex-1 overflow-y-auto">
               <SettingsPanel
                 gatewayStatus={gatewayStatus}
-                gatewayUrl={atmAnalytics?.gatewayUrl}
+                gatewayUrl={gatewayUrl}
+                gatewayToken={gatewayToken}
+                selectedAdapterType={selectedAdapterType}
+                activeAdapterType={activeAdapterType}
                 onGatewayDisconnect={() => {
                   onGatewayDisconnect?.();
                   setSettingsModalOpen(false);
                 }}
+                onGatewayConnect={() => {
+                  onGatewayConnect?.();
+                }}
+                onGatewayUrlChange={(value) => onGatewayUrlChange?.(value)}
+                onGatewayTokenChange={(value) => onGatewayTokenChange?.(value)}
+                onGatewayAdapterTypeChange={(value) =>
+                  onGatewayAdapterTypeChange?.(value)
+                }
                 onOpenOnboarding={() => {
                   onOpenOnboarding?.();
                   setSettingsModalOpen(false);

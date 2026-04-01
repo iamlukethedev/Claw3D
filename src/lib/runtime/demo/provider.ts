@@ -23,6 +23,11 @@ const DEMO_RUNTIME_CAPABILITIES: ReadonlySet<RuntimeCapability> = new Set([
 export class DemoRuntimeProvider implements RuntimeProvider {
   readonly id = "demo" as const;
   readonly label = "Demo";
+  readonly metadata = {
+    id: this.id,
+    label: this.label,
+    runtimeName: "Demo",
+  } as const;
   readonly capabilities = DEMO_RUNTIME_CAPABILITIES;
 
   constructor(readonly client: GatewayClient) {}

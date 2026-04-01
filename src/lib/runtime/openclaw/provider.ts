@@ -26,6 +26,11 @@ const OPENCLAW_RUNTIME_CAPABILITIES: ReadonlySet<RuntimeCapability> = new Set([
 export class OpenClawRuntimeProvider implements RuntimeProvider {
   readonly id = "openclaw" as const;
   readonly label = "OpenClaw";
+  readonly metadata = {
+    id: this.id,
+    label: this.label,
+    runtimeName: "OpenClaw",
+  } as const;
   readonly capabilities = OPENCLAW_RUNTIME_CAPABILITIES;
 
   constructor(readonly client: GatewayClient) {}

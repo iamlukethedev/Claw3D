@@ -25,6 +25,11 @@ const HERMES_RUNTIME_CAPABILITIES: ReadonlySet<RuntimeCapability> = new Set([
 export class HermesRuntimeProvider implements RuntimeProvider {
   readonly id = "hermes" as const;
   readonly label = "Hermes";
+  readonly metadata = {
+    id: this.id,
+    label: this.label,
+    runtimeName: "Hermes",
+  } as const;
   readonly capabilities = HERMES_RUNTIME_CAPABILITIES;
 
   constructor(readonly client: GatewayClient) {}

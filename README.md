@@ -35,6 +35,7 @@ Today it can sit on top of:
 
 - OpenClaw through the existing gateway flow
 - Hermes through the bundled WebSocket adapter
+- a direct HTTP `custom` runtime provider for orchestrator-backed stacks
 - a built-in demo gateway for office exploration without a real agent framework
 
 In practical terms, this app gives you:
@@ -99,8 +100,36 @@ npm run dev
 ```
 
 Then open `http://localhost:3000` and configure the gateway URL and token in Studio.
-Studio now also persists the selected backend mode (`OpenClaw`, `Hermes`, or `Demo`) and
+Studio now also persists the selected backend mode (`OpenClaw`, `Hermes`, `Demo`, or `Custom`) and
 shows the active backend reported by the connected gateway.
+
+### Custom runtime mode
+
+If you are integrating an orchestrator-backed runtime through the `custom`
+provider seam, start your runtime first, then start Claw3D:
+
+```bash
+npm run dev
+```
+
+Then open `http://localhost:3000`, choose `Custom backend`, and point the
+upstream URL at your runtime boundary, for example:
+
+```text
+http://127.0.0.1:7770
+```
+
+Current `custom` runtime expectations:
+
+- `GET /health`
+- `GET /state`
+- `GET /registry`
+- `POST /v1/chat/completions`
+
+The browser does not call that runtime directly. Claw3D proxies the
+`custom` provider through its own same-origin route at
+`/api/runtime/custom`, which avoids browser-side CORS problems and keeps
+the provider transport separate from the OpenClaw/Hermes gateway path.
 
 ### Demo mode
 
