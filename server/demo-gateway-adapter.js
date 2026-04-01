@@ -195,6 +195,11 @@ async function handleMethod(method, params, id, sendEvent) {
     case "cron.list":
       return resOk(id, { jobs: [] });
 
+    case "cron.add":
+    case "cron.run":
+    case "cron.remove":
+      return resErr(id, "unsupported_method", `Demo runtime does not support ${method}.`);
+
     case "sessions.list": {
       const sessions = [...agents.values()].map((agent) => {
         const sessionKey = sessionKeyFor(agent.id);
@@ -498,4 +503,11 @@ function startAdapter() {
   });
 }
 
-startAdapter();
+if (require.main === module) {
+  startAdapter();
+}
+
+module.exports = {
+  handleMethod,
+  startAdapter,
+};
