@@ -4293,7 +4293,6 @@ export function OfficeScreen({
             taskBoard.sharedTasksError ?? taskBoard.gatewayTasksError ?? taskBoard.cronError
           }
           taskBoardCaptureDebug={showOpenClawConsole ? taskBoard.taskCaptureDebug : undefined}
-          preferredKanbanAgentId={selectedChatAgentId ?? state.selectedAgentId}
           onTaskBoardCreateCard={() => {
             taskBoard.createManualCard();
           }}

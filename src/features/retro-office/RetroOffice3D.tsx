@@ -2396,7 +2396,6 @@ export function RetroOffice3D({
   taskBoardCronLoading = false,
   taskBoardCronError = null,
   taskBoardCaptureDebug,
-  preferredKanbanAgentId = null,
   onTaskBoardCreateCard,
   onTaskBoardMoveCard,
   onTaskBoardSelectCard,
@@ -2508,7 +2507,6 @@ export function RetroOffice3D({
   taskBoardCaptureDebug?: ComponentProps<
     typeof KanbanImmersiveScreen
   >["taskCaptureDebug"];
-  preferredKanbanAgentId?: string | null;
   onTaskBoardCreateCard?: () => void;
   onTaskBoardMoveCard?: (cardId: string, status: TaskBoardStatus) => void;
   onTaskBoardSelectCard?: (cardId: string | null) => void;
@@ -2666,6 +2664,30 @@ export function RetroOffice3D({
     target: [number, number, number];
     zoom?: number;
   } | null>(null);
+  const LOCAL_CAMERA_TARGET = useMemo(
+    () =>
+      toWorld(LOCAL_OFFICE_CANVAS_WIDTH / 2, LOCAL_OFFICE_CANVAS_HEIGHT / 2),
+    [],
+  );
+  const CAM_POS = useMemo<[number, number, number]>(() => {
+    if (remoteOfficeEnabled) return DISTRICT_CAMERA_POSITION;
+    return [
+      LOCAL_CAMERA_TARGET[0] +
+        (DISTRICT_CAMERA_POSITION[0] - DISTRICT_CAMERA_TARGET[0]),
+      LOCAL_CAMERA_TARGET[1] +
+        (DISTRICT_CAMERA_POSITION[1] - DISTRICT_CAMERA_TARGET[1]),
+      LOCAL_CAMERA_TARGET[2] +
+        (DISTRICT_CAMERA_POSITION[2] - DISTRICT_CAMERA_TARGET[2]),
+    ];
+  }, [LOCAL_CAMERA_TARGET, remoteOfficeEnabled]);
+  const cameraTarget = remoteOfficeEnabled
+    ? DISTRICT_CAMERA_TARGET
+    : LOCAL_CAMERA_TARGET;
+  const cameraZoom = remoteOfficeEnabled ? DISTRICT_CAMERA_ZOOM : 56;
+  const overviewPreset = useMemo(
+    () => ({ pos: CAM_POS, target: cameraTarget, zoom: cameraZoom }),
+    [CAM_POS, cameraTarget, cameraZoom]
+  );
   // New Idea 7: heatmap mode.
   const [heatmapMode, setHeatmapMode] = useState(false);
   const [trailMode, setTrailMode] = useState(false);
@@ -3319,6 +3341,7 @@ export function RetroOffice3D({
     activeQaTerminalUid,
     followAgentId,
     monitorAgentId,
+    overviewPreset,
   ]);
 
   const closeManualSmsBoothView = useCallback(() => {
@@ -3348,6 +3371,7 @@ export function RetroOffice3D({
     activeQaTerminalUid,
     followAgentId,
     monitorAgentId,
+    overviewPreset,
   ]);
 
   const getBoothAudioContext = useCallback(async () => {
@@ -3967,6 +3991,7 @@ export function RetroOffice3D({
   }, [
     activeSmsBooth,
     manualSmsBoothOpen,
+    overviewPreset,
     smsBoothAgentId,
     smsBoothCommandArrived,
   ]);
@@ -4115,6 +4140,7 @@ export function RetroOffice3D({
   }, [
     activePhoneBooth,
     manualPhoneBoothOpen,
+    overviewPreset,
     phoneBoothAgentId,
     phoneBoothCommandArrived,
   ]);
@@ -4258,7 +4284,7 @@ export function RetroOffice3D({
       zoom: 330,
     };
     prevMonitorAgentIdRef.current = monitorAgentId;
-  }, [activeMonitorComputer, monitorAgentId]);
+  }, [activeMonitorComputer, monitorAgentId, overviewPreset]);
 
   useEffect(() => {
     if (activeAtmUid && !activeAtm) {
@@ -4269,7 +4295,7 @@ export function RetroOffice3D({
         window.clearTimeout(timer);
       };
     }
-  }, [activeAtm, activeAtmUid]);
+  }, [activeAtm, activeAtmUid, overviewPreset]);
 
   useEffect(() => {
     if (activeKanbanUid && !activeKanbanBoard) {
@@ -4327,7 +4353,7 @@ export function RetroOffice3D({
       zoom: 250,
     };
     prevAtmUidRef.current = activeAtmUid;
-  }, [activeAtm, activeAtmUid]);
+  }, [activeAtm, activeAtmUid, overviewPreset]);
 
   useEffect(() => {
     prevKanbanUidRef.current = activeKanbanUid;
@@ -4366,6 +4392,7 @@ export function RetroOffice3D({
     activeGithubTerminalUid,
     githubCommandArrived,
     githubReviewAgentId,
+    overviewPreset,
   ]);
 
   useEffect(() => {
@@ -4399,6 +4426,7 @@ export function RetroOffice3D({
   }, [
     activeQaTerminal,
     activeQaTerminalUid,
+    overviewPreset,
     qaCommandArrived,
     qaTestingAgentId,
   ]);
@@ -4749,6 +4777,7 @@ export function RetroOffice3D({
     activeQaTerminalUid,
     followAgentId,
     monitorAgentId,
+    overviewPreset,
   ]);
 
   useEffect(() => {
@@ -5161,28 +5190,6 @@ export function RetroOffice3D({
     return () => clearTimeout(timer);
   }, [spotlightAgentId]);
 
-  // Camera constants.
-  const LOCAL_CAMERA_TARGET = useMemo(
-    () =>
-      toWorld(LOCAL_OFFICE_CANVAS_WIDTH / 2, LOCAL_OFFICE_CANVAS_HEIGHT / 2),
-    [],
-  );
-  const CAM_POS = useMemo<[number, number, number]>(() => {
-    if (remoteOfficeEnabled) return DISTRICT_CAMERA_POSITION;
-    return [
-      LOCAL_CAMERA_TARGET[0] + (DISTRICT_CAMERA_POSITION[0] - DISTRICT_CAMERA_TARGET[0]),
-      LOCAL_CAMERA_TARGET[1] + (DISTRICT_CAMERA_POSITION[1] - DISTRICT_CAMERA_TARGET[1]),
-      LOCAL_CAMERA_TARGET[2] + (DISTRICT_CAMERA_POSITION[2] - DISTRICT_CAMERA_TARGET[2]),
-    ];
-  }, [remoteOfficeEnabled, LOCAL_CAMERA_TARGET]);
-  const cameraTarget = remoteOfficeEnabled
-    ? DISTRICT_CAMERA_TARGET
-    : LOCAL_CAMERA_TARGET;
-  const cameraZoom = remoteOfficeEnabled ? DISTRICT_CAMERA_ZOOM : 56;
-  const overviewPreset = useMemo(
-    () => ({ pos: CAM_POS, target: cameraTarget, zoom: cameraZoom }),
-    [CAM_POS, cameraTarget, cameraZoom]
-  );
   const lastOfficeCenterSignalRef = useRef(officeCenterSignal);
 
   useEffect(() => {
