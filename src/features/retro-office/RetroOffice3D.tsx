@@ -89,6 +89,7 @@ import {
   ensureOfficeSmsBooth,
   ensureOfficeJukebox,
   ensureOfficeServerRoom,
+  isRetiredCryptoRoomCouch,
   isRetiredPingPongLamp,
   materializeDefaults,
 } from "@/features/retro-office/core/furnitureDefaults";
@@ -438,6 +439,37 @@ const NOOP_FURNITURE_UID_HANDLER = () => {};
 const NOOP_FURNITURE_HANDLER = () => {};
 const EMPTY_FURNITURE_ITEMS: FurnitureItem[] = [];
 
+const buildOfficeFurniture = (
+  items: FurnitureItem[],
+  storageNamespace: string,
+) =>
+  ensureOfficeKanbanBoard(
+    ensureOfficeJukebox(
+      ensureOfficeQaLab(
+        ensureOfficeGymRoom(
+          ensureOfficeServerRoom(
+            ensureOfficePhoneBooth(
+              ensureOfficeSmsBooth(
+                ensureOfficeAtm(
+                  ensureOfficeCryptoRoom(
+                    ensureOfficePingPongTable(
+                      items.filter(
+                        (item) =>
+                          !isRetiredPingPongLamp(item) &&
+                          !isRetiredCryptoRoomCouch(item),
+                      ),
+                    ),
+                    storageNamespace,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
 const ReadOnlyFurnitureClone = memo(function ReadOnlyFurnitureClone({
   furniture,
 }: {
@@ -533,6 +565,28 @@ const ReadOnlyFurnitureClone = memo(function ReadOnlyFurnitureClone({
           />
         ) : item.type === "atm" ? (
           <InteractiveAtmMachineModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "crypto_board" ? (
+          <InteractiveCryptoBoardModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "crypto_terminal" ? (
+          <InteractiveCryptoTerminalModel
             key={item._uid}
             item={item}
             isSelected={false}
@@ -2556,28 +2610,9 @@ export function RetroOffice3D({
   );
 
   const [furniture, setFurniture] = useState<FurnitureItem[]>(() =>
-    ensureOfficeKanbanBoard(
-      ensureOfficeJukebox(
-        ensureOfficeQaLab(
-          ensureOfficeGymRoom(
-            ensureOfficeServerRoom(
-              ensureOfficePhoneBooth(
-                ensureOfficeSmsBooth(
-                  ensureOfficeAtm(
-                    ensureOfficeCryptoRoom(
-                      ensureOfficePingPongTable(
-                        (
-                          loadFurniture(storageNamespace) ?? materializeDefaults()
-                        ).filter((item) => !isRetiredPingPongLamp(item)),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+    buildOfficeFurniture(
+      loadFurniture(storageNamespace) ?? materializeDefaults(),
+      storageNamespace,
     ),
   );
   const defaultRemoteLayoutFurniture = useMemo(
@@ -2758,8 +2793,8 @@ export function RetroOffice3D({
   }, [storageNamespace]);
 
   useEffect(() => {
-    markCryptoRoomMigrationApplied();
-  }, []);
+    markCryptoRoomMigrationApplied(storageNamespace);
+  }, [storageNamespace]);
 
   useEffect(() => {
     markPhoneBoothMigrationApplied(storageNamespace);
@@ -5080,7 +5115,7 @@ export function RetroOffice3D({
         .filter((item) => item.type === "desk_cubicle")
         .map((item) => item._uid),
     );
-    setFurniture(materializeDefaults());
+    setFurniture(buildOfficeFurniture(materializeDefaults(), storageNamespace));
     setSelectedUid(null);
     setDrag({ kind: "idle" });
     setGhostPos(null);
@@ -5599,6 +5634,30 @@ export function RetroOffice3D({
                   />
                 ) : item.type === "atm" ? (
                   <InteractiveAtmMachineModel
+                    key={item._uid}
+                    item={item}
+                    isSelected={item._uid === selectedUid}
+                    isHovered={item._uid === hoverUid}
+                    editMode={editMode}
+                    onPointerDown={handleFurniturePointerDown}
+                    onPointerOver={handleFurniturePointerOver}
+                    onPointerOut={handleFurniturePointerOut}
+                    onClick={handleDeskClick}
+                  />
+                ) : item.type === "crypto_board" ? (
+                  <InteractiveCryptoBoardModel
+                    key={item._uid}
+                    item={item}
+                    isSelected={item._uid === selectedUid}
+                    isHovered={item._uid === hoverUid}
+                    editMode={editMode}
+                    onPointerDown={handleFurniturePointerDown}
+                    onPointerOver={handleFurniturePointerOver}
+                    onPointerOut={handleFurniturePointerOut}
+                    onClick={handleDeskClick}
+                  />
+                ) : item.type === "crypto_terminal" ? (
+                  <InteractiveCryptoTerminalModel
                     key={item._uid}
                     item={item}
                     isSelected={item._uid === selectedUid}
