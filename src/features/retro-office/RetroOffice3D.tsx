@@ -2364,6 +2364,7 @@ export function RetroOffice3D({
   gatewayStatus = "disconnected",
   runCountByAgentId = EMPTY_NUMBER_RECORD,
   lastSeenByAgentId = EMPTY_NUMBER_RECORD,
+  streamingTextByAgentId = {},
   onStandupArrivalsChange,
   onStandupStartRequested,
   onMonitorSelect,
@@ -2471,6 +2472,7 @@ export function RetroOffice3D({
   gatewayStatus?: string;
   runCountByAgentId?: Record<string, number>;
   lastSeenByAgentId?: Record<string, number>;
+  streamingTextByAgentId?: Record<string, string | null>;
   onStandupArrivalsChange?: (arrivedAgentIds: string[]) => void;
   onStandupStartRequested?: () => void;
   onMonitorSelect?: (agentId: string | null) => void;
@@ -2945,9 +2947,7 @@ export function RetroOffice3D({
       const [wx, , wz] = toWorld(agent.x, agent.y);
       orbitRef.current.target.set(wx, 0, wz);
       orbitRef.current.update();
-      if (isRemoteOfficeAgentId(agentId)) {
-        onAgentChatSelect?.(agentId);
-      }
+      onAgentChatSelect?.(agentId);
     },
     [onAgentChatSelect, renderAgentLookupRef],
   );
@@ -5747,6 +5747,7 @@ export function RetroOffice3D({
                   key={agent.id}
                   agentId={agent.id}
                   name={agent.name}
+                  subtitle={"subtitle" in agent ? agent.subtitle ?? null : null}
                   status={agent.status}
                   color={agentColorMap.get(agent.id) ?? "#888"}
                   appearance={
@@ -5765,14 +5766,17 @@ export function RetroOffice3D({
                       ? false
                       : standupMeeting?.phase === "in_progress"
                         ? Boolean(standupSpeechTextByAgentId[agent.id])
-                        : speechAgentIds.has(agent.id)
+                        : speechAgentIds.has(agent.id) ||
+                          Boolean(streamingTextByAgentId[agent.id])
                   }
                   speechText={
                     isJanitor
                       ? null
                       : standupMeeting?.phase === "in_progress"
                         ? (standupSpeechTextByAgentId[agent.id] ?? null)
-                        : (speechTextByAgentId[agent.id] ?? null)
+                        : (speechTextByAgentId[agent.id] ??
+                            streamingTextByAgentId[agent.id] ??
+                            null)
                   }
                   suppressSpeechBubble={
                     suppressSceneSpeechBubbles &&

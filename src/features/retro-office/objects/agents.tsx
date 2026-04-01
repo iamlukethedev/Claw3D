@@ -27,6 +27,7 @@ const formatAgentNameplateText = (value: string): string => {
 export const AgentModel = memo(function AgentModel({
   agentId,
   name,
+  subtitle,
   status,
   color,
   appearance,
@@ -640,6 +641,7 @@ export const AgentModel = memo(function AgentModel({
     : "transparent";
   const speechBubbleBorderInset = activeSpeechBubble ? 0.03 : 0;
   const nameplateText = name ? formatAgentNameplateText(name) : "";
+  const subtitleText = typeof subtitle === "string" ? subtitle.trim() : "";
   const nameplateFontSize =
     nameplateText.length > 9 ? 0.118 : nameplateText.length > 7 ? 0.13 : 0.144;
 
@@ -1070,19 +1072,19 @@ export const AgentModel = memo(function AgentModel({
       {!activeSpeechBubble && nameplateText ? (
         <Billboard position={[0, 1.05, 0]}>
           <mesh position={[0, 0, -0.001]}>
-            <planeGeometry args={[0.82, 0.24]} />
+            <planeGeometry args={[0.82, subtitleText ? 0.34 : 0.24]} />
             <meshBasicMaterial color="#080c14" transparent opacity={0.9} />
           </mesh>
           <mesh position={[-0.392, 0, 0]}>
-            <planeGeometry args={[0.028, 0.24]} />
+            <planeGeometry args={[0.028, subtitleText ? 0.34 : 0.24]} />
             <meshBasicMaterial color={color} />
           </mesh>
-          <mesh position={[0.355, 0, 0]}>
+          <mesh position={[0.355, subtitleText ? 0.05 : 0, 0]}>
             <circleGeometry args={[0.052, 14]} />
             <meshBasicMaterial ref={statusDotMatRef} color="#ef4444" />
           </mesh>
           <Text
-            position={[-0.02, 0, 0.001]}
+            position={[-0.02, subtitleText ? 0.05 : 0, 0.001]}
             fontSize={nameplateFontSize}
             color="#e8dfc0"
             anchorX="center"
@@ -1092,6 +1094,19 @@ export const AgentModel = memo(function AgentModel({
           >
             {nameplateText}
           </Text>
+          {subtitleText ? (
+            <Text
+              position={[-0.02, -0.085, 0.001]}
+              fontSize={0.082}
+              color="#8ab4ff"
+              anchorX="center"
+              anchorY="middle"
+              maxWidth={0.68}
+              font={undefined}
+            >
+              {subtitleText}
+            </Text>
+          ) : null}
         </Billboard>
       ) : null}
       <group ref={awayBubbleRef} visible={false}>

@@ -510,6 +510,7 @@ const mapAgentToOffice = (agent: AgentState): OfficeAgent => {
     return {
       id: agent.agentId,
       name: agent.name || "Unknown",
+      subtitle: agent.role ?? null,
       status: "error",
       color: stringToColor(agent.agentId),
       item: getDeterministicItem(agent.agentId),
@@ -520,6 +521,7 @@ const mapAgentToOffice = (agent: AgentState): OfficeAgent => {
   return {
     id: agent.agentId,
     name: agent.name || "Unknown",
+    subtitle: agent.role ?? null,
     status: isWorking ? "working" : "idle",
     color: stringToColor(agent.agentId),
     item: getDeterministicItem(agent.agentId),
@@ -3765,6 +3767,15 @@ export function OfficeScreen({
     state.agents,
     workingUntilByAgentId,
   ]);
+  const streamingTextByAgentId = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    for (const agent of state.agents) {
+      if (agent.streamText?.trim()) {
+        map[agent.agentId] = agent.streamText.trim();
+      }
+    }
+    return map;
+  }, [state.agents]);
   const openClawLiveStateText = useMemo(() => {
     const lines = ["== LIVE OPENCLAW STATE =="];
     if (state.agents.length === 0) {
@@ -4221,6 +4232,7 @@ export function OfficeScreen({
           gatewayStatus={status}
           runCountByAgentId={runCountByAgentId}
           lastSeenByAgentId={lastSeenByAgentId}
+          streamingTextByAgentId={streamingTextByAgentId}
           standupMeeting={standupController.meeting}
           standupAutoOpenBoard={standupController.openBoardByDefault}
           onStandupArrivalsChange={(arrivedAgentIds) => {
@@ -4848,6 +4860,9 @@ export function OfficeScreen({
                     chatController.stopBusyAgentId === focusedChatAgent.agentId
                   }
                   onLoadMoreHistory={() => {}}
+                  onOpenSettings={() =>
+                    openAgentEditor(focusedChatAgent.agentId, "IDENTITY.md")
+                  }
                   onNewSession={() =>
                     chatController.handleNewSession(focusedChatAgent.agentId)
                   }
