@@ -1,3 +1,6 @@
+const crypto = require("node:crypto");
+
+
 const parseCookies = (header) => {
   const raw = typeof header === "string" ? header : "";
   if (!raw.trim()) return {};
@@ -13,17 +16,68 @@ const parseCookies = (header) => {
   return out;
 };
 
+/** Constant-time string comparison to prevent timing attacks. */
+const safeCompare = (a, b) => {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const bufA = Buffer.from(a, "utf8");
+  const bufB = Buffer.from(b, "utf8");
+  if (bufA.length !== bufB.length) {
+    // Compare against self to burn constant time, then return false
+    crypto.timingSafeEqual(bufA, bufA);
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+};
+
+/** Simple in-memory rate limiter for auth attempts. */
+const createRateLimiter = (maxAttempts = 10, windowMs = 60_000) => {
+  const attempts = new Map();
+  const cleanup = setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of attempts) {
+      if (now - entry.start > windowMs) attempts.delete(key);
+    }
+  }, windowMs);
+  cleanup.unref();
+
+  return {
+    recordFailure(ip) {
+      const now = Date.now();
+      const entry = attempts.get(ip);
+      if (!entry || now - entry.start > windowMs) {
+        attempts.set(ip, { count: 1, start: now });
+        return;
+      }
+      entry.count++;
+      if (entry.count > maxAttempts) {
+        return;
+      }
+    },
+    reset(ip) {
+      attempts.delete(ip);
+    },
+  };
+};
+
 function createAccessGate(options) {
   const token = String(options?.token ?? "").trim();
   const cookieName = String(options?.cookieName ?? "studio_access").trim() || "studio_access";
 
   const enabled = Boolean(token);
+  const rateLimiter = createRateLimiter(10, 60_000);
 
   const isAuthorized = (req) => {
     if (!enabled) return true;
+    const ip = req.socket?.remoteAddress || "unknown";
     const cookieHeader = req.headers?.cookie;
     const cookies = parseCookies(cookieHeader);
-    return cookies[cookieName] === token;
+    const authorized = safeCompare(cookies[cookieName] || "", token);
+    if (authorized) {
+      rateLimiter.reset(ip);
+      return true;
+    }
+    rateLimiter.recordFailure(ip);
+    return false;
   };
 
   const handleHttp = (req, res) => {
@@ -56,4 +110,3 @@ function createAccessGate(options) {
 }
 
 module.exports = { createAccessGate };
-

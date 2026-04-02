@@ -69,7 +69,7 @@ describe("studio settings route", () => {
     process.env.OPENCLAW_STATE_DIR = tempDir;
 
     const response = await PUT({
-      json: async () => "nope",
+      text: async () => JSON.stringify("nope"),
     } as unknown as Request);
     const body = (await response.json()) as { error?: string };
 
@@ -92,7 +92,7 @@ describe("studio settings route", () => {
     };
 
     const putResponse = await PUT({
-      json: async () => patch,
+      text: async () => JSON.stringify(patch),
     } as unknown as Request);
     expect(putResponse.status).toBe(200);
 
