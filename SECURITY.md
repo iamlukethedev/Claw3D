@@ -25,6 +25,7 @@ We aim to acknowledge reports promptly, investigate them, and coordinate a fix a
 
 - Studio gateway settings are stored on disk in plaintext under the local OpenClaw state directory.
 - The current UI loads the configured upstream gateway URL/token into browser memory at runtime, even though those values are not stored in browser persistent storage.
+- There is currently no built-in cookie issuance/login flow for `STUDIO_ACCESS_TOKEN`; deployments that enable the access gate must provision the `studio_access` cookie outside the app.
 
 ## Scope
 
@@ -35,3 +36,10 @@ Please report issues related to:
 - Remote code execution or privilege escalation paths.
 - Unsafe filesystem, proxy, or network behavior.
 - Dependency vulnerabilities that materially affect this project.
+
+## Deployment Notes
+
+- In production, set `UPSTREAM_ALLOWLIST` for the Studio gateway proxy.
+- In production, set `CUSTOM_RUNTIME_ALLOWLIST` if you use `/api/runtime/custom`. If unset, it falls back to `UPSTREAM_ALLOWLIST`.
+- Empty allowlists are intended for local development only.
+- If you enable `STUDIO_ACCESS_TOKEN`, you must also provision the `studio_access` cookie through your deployment/auth layer.

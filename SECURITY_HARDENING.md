@@ -1,7 +1,6 @@
-# Security Hardening — from Percival Labs Fork
+# Security Hardening
 
-Changes applied to the upstream Claw3D codebase for production use
-with the Percival Labs agent infrastructure.
+Changes applied to the upstream Claw3D codebase for production use.
 
 ## Critical Fixes
 
@@ -30,22 +29,17 @@ with the Percival Labs agent infrastructure.
 - Prevents DNS hijacking or SSRF through the proxy
 - Required in production; empty allowlist is permitted in dev only
 
-### 6. Telemetry Fully Disabled
-- `@vercel/otel` dependency removed from package.json
-- `src/instrumentation.ts` is now a true no-op
-- No opt-in code path remains for external telemetry providers
-
-### 7. Custom Runtime Proxy Allowlist
+### 6. Custom Runtime Proxy Allowlist
 - `/api/runtime/custom` now enforces `CUSTOM_RUNTIME_ALLOWLIST`
 - Falls back to `UPSTREAM_ALLOWLIST` if no custom-specific allowlist is set
 - Required in production; empty allowlist is permitted in dev only
 
-### 8. Security Headers
+### 7. Security Headers
 - Baseline response headers now set from `next.config.ts`
 - Includes CSP, `X-Content-Type-Options`, `Referrer-Policy`,
   `Permissions-Policy`, and cross-origin isolation headers
 
-### 9. Media Route Symlink Rejection
+### 8. Media Route Symlink Rejection
 - `/api/gateway/media` now rejects symlinked local files
 - Realpath is verified inside the allowed root before reading bytes
 
