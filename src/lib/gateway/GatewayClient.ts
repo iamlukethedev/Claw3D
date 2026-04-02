@@ -731,9 +731,6 @@ export const useGatewayConnection = (
         // over the build-time NEXT_PUBLIC_GATEWAY_URL which may be stale
         // or empty if the operator forgot to rebuild after .env changes.
         const hasSavedUrl = Boolean(gateway?.url?.trim());
-        const resolvedUrl = lastKnownGood?.url || (hasSavedUrl
-          ? gateway!.url
-          : normalizedDefaults?.url || DEFAULT_UPSTREAM_GATEWAY_URL);
         const savedAdapterType =
           hasSavedUrl && gateway && "adapterType" in gateway && typeof gateway.adapterType === "string"
             ? ((gateway.adapterType === "demo" ||
@@ -744,10 +741,17 @@ export const useGatewayConnection = (
                 : "openclaw") as StudioGatewayAdapterType)
             : null;
         const nextAdapterType =
-          lastKnownGood?.adapterType ??
           savedAdapterType ??
+          lastKnownGood?.adapterType ??
           normalizedDefaults?.adapterType ??
           "openclaw";
+        const lastKnownGoodForSelectedAdapter =
+          lastKnownGood?.adapterType === nextAdapterType ? lastKnownGood : null;
+        const resolvedUrl = hasSavedUrl
+          ? gateway!.url
+          : lastKnownGoodForSelectedAdapter?.url ||
+            normalizedDefaults?.url ||
+            DEFAULT_UPSTREAM_GATEWAY_URL;
         const baseProfiles = {
           ...(gateway?.profiles
             ? normalizeGatewayProfilesPublic(gateway.profiles)
@@ -768,8 +772,9 @@ export const useGatewayConnection = (
               }
             : {}),
         };
-        const selectedProfile = lastKnownGood ?? (
+        const selectedProfile = (
           mergedProfiles[nextAdapterType] ??
+          lastKnownGoodForSelectedAdapter ??
           resolveDefaultGatewayProfile(nextAdapterType, normalizedDefaults)
         );
         const nextGatewayUrl = selectedProfile.url;
@@ -779,13 +784,13 @@ export const useGatewayConnection = (
           token: nextToken,
           adapterType: nextAdapterType,
           profiles: mergedProfiles,
-          hasLastKnownGood: Boolean(lastKnownGood?.url),
+          hasLastKnownGood: Boolean(lastKnownGoodForSelectedAdapter?.url),
         };
         setGatewayUrl(nextGatewayUrl);
         setToken(nextToken);
         setSelectedAdapterTypeState(nextAdapterType);
         setAdapterProfiles(mergedProfiles);
-        setHasLastKnownGoodState(Boolean(lastKnownGood?.url));
+        setHasLastKnownGoodState(Boolean(lastKnownGoodForSelectedAdapter?.url));
       } catch (err) {
         if (!cancelled) {
           const message = err instanceof Error ? err.message : "Failed to load gateway settings.";
@@ -932,13 +937,13 @@ export const useGatewayConnection = (
           : "openclaw";
       setDetectedAdapterType(nextDetectedAdapterType);
       retryAttemptRef.current = 0;
-      setHasLastKnownGoodState(true);
+      setHasLastKnownGoodState(nextDetectedAdapterType === selectedAdapterType);
       settingsCoordinator.schedulePatch({
         gateway: {
           lastKnownGood: {
             url: gatewayUrl.trim(),
             token,
-            adapterType: selectedAdapterType,
+            adapterType: nextDetectedAdapterType,
           },
         },
       });
@@ -1127,11 +1132,12 @@ export const useGatewayConnection = (
   const shouldPromptForConnect =
     settingsLoaded &&
     status !== "connected" &&
-    (!hasLastKnownGoodState ||
+    (selectedAdapterType === "custom" ||
+      !hasLastKnownGoodState ||
       !gatewayUrl.trim() ||
-        (selectedAdapterType === "openclaw" && !token.trim()) ||
-        wasManualDisconnectRef.current ||
-        Boolean(error));
+      (selectedAdapterType === "openclaw" && !token.trim()) ||
+      wasManualDisconnectRef.current ||
+      Boolean(error));
 
   return {
     client,
