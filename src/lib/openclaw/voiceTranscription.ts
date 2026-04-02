@@ -8,6 +8,12 @@ import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
 const CONFIGURED_OPENCLAW_PACKAGE_ROOT = process.env.OPENCLAW_PACKAGE_ROOT?.trim() ?? "";
+const OPENCLAW_PACKAGE_NAME = ["open", "claw"].join("");
+const resolvePackageWithNodeRequire = new Function(
+  "nodeRequire",
+  "specifier",
+  "return nodeRequire.resolve(specifier);",
+) as (nodeRequire: NodeJS.Require, specifier: string) => string;
 
 const OPENCLAW_DIST_INDEX_RELATIVE_PATH = path.join("dist", "index.js");
 const OPENCLAW_DIST_DIRECTORY_RELATIVE_PATH = "dist";
@@ -103,7 +109,7 @@ const nativeImport = new Function(
 
 const resolveInstalledOpenClawPackageRoot = (): string | null => {
   try {
-    const resolvedEntry = require.resolve("openclaw");
+    const resolvedEntry = resolvePackageWithNodeRequire(require, OPENCLAW_PACKAGE_NAME);
     return path.dirname(path.dirname(resolvedEntry));
   } catch {
     return null;

@@ -19,8 +19,10 @@
   },
   "dependencies": {
     "@noble/ed25519": "^3.0.0",
+    "@pump-fun/pump-sdk": "^1.32.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "@solana/web3.js": "^1.98.4",
     "@vercel/otel": "^2.1.0",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
@@ -35,7 +37,8 @@
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.4.0",
     "three": "^0.183.2",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.0",

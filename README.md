@@ -162,8 +162,17 @@ Common environment variables:
 - `OPENCLAW_STATE_DIR` and `OPENCLAW_CONFIG_PATH` override the default OpenClaw paths.
 - `OPENCLAW_GATEWAY_SSH_TARGET`, `OPENCLAW_GATEWAY_SSH_USER`, `OPENCLAW_GATEWAY_SSH_PORT`, and `OPENCLAW_GATEWAY_SSH_STRICT_HOST_KEY_CHECKING` support advanced gateway-host operations over SSH when needed.
 - `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, and `ELEVENLABS_MODEL_ID` enable voice reply integration.
+- `NEXT_PUBLIC_CRYPTO_LAUNCH_SERVER_MODE_ENABLED` controls whether the frontend exposes the protected server-side Pump.fun launch flow.
+- `CRYPTO_LAUNCH_SERVER_MODE_ENABLED`, `PUMPFUN_SERVER_SECRET_KEY`, `CRYPTO_LAUNCH_OPERATOR_PASSWORD`, and `CRYPTO_LAUNCH_SESSION_SECRET` are required before server-side Pump.fun launches are allowed.
 
 See [`.env.example`](.env.example) for the full local development template.
+
+Pump.fun launch persistence and audit data are stored under the OpenClaw state directory:
+
+- `~/.openclaw/claw3d/crypto-launch/prepared-launches.json`
+- `~/.openclaw/claw3d/crypto-launch/launch-audit.jsonl`
+
+For production guidance on the token-launch flow, see [`docs/crypto-launch-production.md`](docs/crypto-launch-production.md).
 
 ## Scripts
 
@@ -189,6 +198,7 @@ See [`.env.example`](.env.example) for the full local development template.
 - [`ROADMAP.md`](ROADMAP.md): near-term priorities and contributor-friendly work areas.
 - [`docs/pi-chat-streaming.md`](docs/pi-chat-streaming.md): gateway runtime streaming and transcript rendering.
 - [`docs/permissions-sandboxing.md`](docs/permissions-sandboxing.md): Studio permissions and OpenClaw behavior.
+- [`docs/crypto-launch-production.md`](docs/crypto-launch-production.md): Pump.fun launch security, persistence, and deployment guidance.
 
 ## Current Limitations
 

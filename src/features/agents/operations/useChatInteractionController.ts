@@ -7,6 +7,7 @@ import {
   planNewSessionIntent,
   planStopRunIntent,
 } from "@/features/agents/operations/chatInteractionWorkflow";
+import { maybeHandleCryptoLaunchChat } from "@/features/agents/operations/cryptoLaunchChat";
 import { sendChatMessageViaStudio } from "@/features/agents/operations/chatSendOperation";
 import { mergePendingLivePatch } from "@/features/agents/state/livePatchQueue";
 import { buildNewSessionAgentPatch, type AgentState } from "@/features/agents/state/store";
@@ -204,6 +205,20 @@ export function useChatInteractionController(
           type: "appendOutput",
           agentId,
           line: "Error: Agent not found.",
+        });
+        return;
+      }
+      if (
+        await maybeHandleCryptoLaunchChat({
+          agentId,
+          message: trimmed,
+          dispatch: params.dispatch,
+        })
+      ) {
+        params.dispatch({
+          type: "updateAgent",
+          agentId,
+          patch: { draft: "", lastActivityAt: Date.now() },
         });
         return;
       }

@@ -127,6 +127,7 @@ type AgentChatPanelProps = {
   onLoadMoreHistory: () => void;
   onRename?: (name: string) => Promise<boolean>;
   onNewSession?: () => Promise<void> | void;
+  onOpenSettings?: () => void;
   onModelChange: (value: string | null) => void;
   onThinkingChange: (value: string | null) => void;
   onToolCallingToggle?: (enabled: boolean) => void;

@@ -1,5 +1,6 @@
 import { Text } from "@react-three/drei";
-import { useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { SCALE } from "@/features/retro-office/core/constants";
 import {
@@ -8,6 +9,163 @@ import {
   toWorld,
 } from "@/features/retro-office/core/geometry";
 import { InteractiveFurnitureModelProps } from "@/features/retro-office/objects/types";
+
+type ChartVariant = "line" | "candle" | "bars";
+
+function useAnimatedChartTexture(
+  w: number,
+  h: number,
+  variant: ChartVariant = "line",
+  seed = 0,
+) {
+  const stateRef = useRef({
+    data: [] as number[],
+    elapsed: 0,
+    tick: 0,
+  });
+  const { canvas, texture } = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    const t = new THREE.CanvasTexture(c);
+    t.minFilter = THREE.LinearFilter;
+    t.magFilter = THREE.LinearFilter;
+    t.colorSpace = THREE.SRGBColorSpace;
+    return { canvas: c, texture: t };
+  }, [w, h]);
+
+  useEffect(() => {
+    const s = stateRef.current;
+    if (s.data.length > 0) return;
+    let v = 0.45 + ((seed * 17) % 37) * 0.008;
+    for (let i = 0; i < 64; i++) {
+      v = Math.max(0.08, Math.min(0.92, v + (Math.random() - 0.48) * 0.04));
+      s.data.push(v);
+    }
+  }, [seed]);
+
+  useFrame((_, delta) => {
+    const s = stateRef.current;
+    s.elapsed += delta;
+    if (s.elapsed < 0.25) return;
+    s.elapsed = 0;
+    s.tick++;
+
+    const last = s.data[s.data.length - 1] ?? 0.5;
+    const drift = variant === "candle" ? 0.06 : 0.035;
+    const next = Math.max(
+      0.08,
+      Math.min(0.92, last + (Math.random() - 0.48) * drift),
+    );
+    s.data.push(next);
+    if (s.data.length > 64) s.data.shift();
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    drawChart(ctx, w, h, s.data, variant, s.tick);
+    texture.needsUpdate = true;
+  });
+
+  return texture;
+}
+
+const CHART_COLORS: Record<ChartVariant, { line: string; fill: string }> = {
+  line: { line: "#22d3ee", fill: "rgba(34,211,238,0.18)" },
+  candle: { line: "#34d399", fill: "rgba(52,211,153,0.18)" },
+  bars: { line: "#a78bfa", fill: "rgba(167,139,250,0.15)" },
+};
+
+function drawChart(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  data: number[],
+  variant: ChartVariant,
+  _tick: number,
+) {
+  ctx.fillStyle = "#06101a";
+  ctx.fillRect(0, 0, w, h);
+
+  const pad = 4;
+  const cw = w - pad * 2;
+  const ch = h - pad * 2;
+
+  ctx.strokeStyle = "rgba(56,189,248,0.08)";
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 5; i++) {
+    const gy = pad + (ch * i) / 5;
+    ctx.beginPath();
+    ctx.moveTo(pad, gy);
+    ctx.lineTo(pad + cw, gy);
+    ctx.stroke();
+  }
+  for (let i = 1; i < 8; i++) {
+    const gx = pad + (cw * i) / 8;
+    ctx.beginPath();
+    ctx.moveTo(gx, pad);
+    ctx.lineTo(gx, pad + ch);
+    ctx.stroke();
+  }
+
+  const len = data.length;
+  if (len < 2) return;
+  const dx = cw / (len - 1);
+  const colors = CHART_COLORS[variant];
+
+  if (variant === "candle") {
+    const barW = Math.max(2, dx * 0.55);
+    for (let i = 0; i < len; i++) {
+      const prev = data[Math.max(0, i - 1)];
+      const cur = data[i];
+      const x = pad + i * dx;
+      const open = pad + ch - prev * ch;
+      const close = pad + ch - cur * ch;
+      const up = cur >= prev;
+      ctx.fillStyle = up ? "#34d399" : "#f87171";
+      ctx.fillRect(x - barW / 2, Math.min(open, close), barW, Math.max(2, Math.abs(close - open)));
+      ctx.fillRect(x - 0.5, Math.min(open, close) - 3, 1, Math.abs(close - open) + 6);
+    }
+    return;
+  }
+
+  if (variant === "bars") {
+    const barW = Math.max(2, dx * 0.6);
+    for (let i = 0; i < len; i++) {
+      const val = data[i];
+      const x = pad + i * dx;
+      const barH = val * ch;
+      const up = i === 0 || data[i] >= data[i - 1];
+      ctx.fillStyle = up ? "rgba(167,139,250,0.7)" : "rgba(248,113,113,0.6)";
+      ctx.fillRect(x - barW / 2, pad + ch - barH, barW, barH);
+    }
+    return;
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(pad, pad + ch - data[0] * ch);
+  for (let i = 1; i < len; i++) {
+    ctx.lineTo(pad + i * dx, pad + ch - data[i] * ch);
+  }
+  ctx.strokeStyle = colors.line;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.lineTo(pad + (len - 1) * dx, pad + ch);
+  ctx.lineTo(pad, pad + ch);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, pad, 0, pad + ch);
+  grad.addColorStop(0, colors.fill);
+  grad.addColorStop(1, "rgba(6,16,26,0)");
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  const lastVal = data[len - 1];
+  const ly = pad + ch - lastVal * ch;
+  ctx.beginPath();
+  ctx.arc(pad + (len - 1) * dx, ly, 3, 0, Math.PI * 2);
+  ctx.fillStyle = colors.line;
+  ctx.fill();
+}
 
 export function AtmMachineModel({
   item,
@@ -185,6 +343,230 @@ export function AtmMachineModel({
             <meshStandardMaterial color="#000000" />
           </mesh>
         </group>
+      </group>
+    </group>
+  );
+}
+
+export function CryptoBoardModel({
+  item,
+  isSelected,
+  isHovered,
+  onPointerDown,
+  onPointerOver,
+  onPointerOut,
+  onClick,
+}: InteractiveFurnitureModelProps) {
+  const [wx, , wz] = toWorld(item.x, item.y);
+  const { width, height } = getItemBaseSize(item);
+  const widthWorld = width * SCALE;
+  const depthWorld = height * SCALE;
+  const rotY = getItemRotationRadians(item);
+  const glowColor = isSelected ? "#fbbf24" : isHovered ? "#22d3ee" : "#0f172a";
+  const glowIntensity = isSelected ? 0.35 : isHovered ? 0.22 : 0.04;
+  const uidSeed = useMemo(
+    () =>
+      item._uid
+        .split("")
+        .reduce((acc, c) => acc + c.charCodeAt(0), 0),
+    [item._uid],
+  );
+  const variant: ChartVariant = uidSeed % 2 === 0 ? "candle" : "line";
+  const screenTex = useAnimatedChartTexture(256, 192, variant, uidSeed);
+
+  return (
+    <group
+      position={[wx, 0, wz]}
+      onPointerDown={(event) => {
+        event.stopPropagation();
+        onPointerDown(item._uid);
+      }}
+      onPointerOver={(event) => {
+        event.stopPropagation();
+        onPointerOver(item._uid);
+      }}
+      onPointerOut={(event) => {
+        event.stopPropagation();
+        onPointerOut();
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick?.(item._uid);
+      }}
+    >
+      <group position={[widthWorld / 2, 0, depthWorld / 2]} rotation={[0, rotY, 0]}>
+        <mesh position={[0, 1.36, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.08, 1.6, depthWorld]} />
+          <meshStandardMaterial color="#111827" roughness={0.5} metalness={0.22} />
+        </mesh>
+        <mesh position={[0, 1.36, -0.03]}>
+          <boxGeometry args={[0.03, 1.46, depthWorld * 0.86]} />
+          <meshStandardMaterial color="#020617" />
+        </mesh>
+        <mesh position={[0.03, 1.36, -0.03]}>
+          <planeGeometry args={[depthWorld * 0.78, 1.32]} />
+          <meshStandardMaterial
+            color="#051018"
+            emissive={glowColor}
+            emissiveIntensity={glowIntensity}
+          />
+        </mesh>
+        <mesh position={[0.032, 1.36, -0.03]}>
+          <planeGeometry args={[depthWorld * 0.72, 1.2]} />
+          <meshStandardMaterial
+            map={screenTex}
+            emissive="#38bdf8"
+            emissiveIntensity={0.6}
+            emissiveMap={screenTex}
+            toneMapped={false}
+          />
+        </mesh>
+        <Text
+          position={[0.035, 1.88, -0.03]}
+          rotation={[0, Math.PI / 2, 0]}
+          fontSize={0.06}
+          color="#e0f2fe"
+          anchorX="center"
+          anchorY="middle"
+        >
+          CRYPTO
+        </Text>
+        <Text
+          position={[0.035, 0.88, -0.03]}
+          rotation={[0, Math.PI / 2, 0]}
+          fontSize={0.045}
+          color="#bbf7d0"
+          anchorX="center"
+          anchorY="middle"
+        >
+          SOL ROOM
+        </Text>
+      </group>
+    </group>
+  );
+}
+
+const TERMINAL_SCREEN_VARIANTS: ChartVariant[] = ["candle", "line", "bars"];
+
+export function CryptoTerminalModel({
+  item,
+  isSelected,
+  isHovered,
+  onPointerDown,
+  onPointerOver,
+  onPointerOut,
+  onClick,
+}: InteractiveFurnitureModelProps) {
+  const [wx, , wz] = toWorld(item.x, item.y);
+  const { width, height } = getItemBaseSize(item);
+  const widthWorld = width * SCALE;
+  const depthWorld = height * SCALE;
+  const rotY = getItemRotationRadians(item);
+  const glowColor = isSelected ? "#fbbf24" : isHovered ? "#34d399" : "#000000";
+  const glowIntensity = isSelected ? 0.28 : isHovered ? 0.18 : 0;
+  const screenTex0 = useAnimatedChartTexture(128, 96, "candle", 10);
+  const screenTex1 = useAnimatedChartTexture(128, 96, "line", 20);
+  const screenTex2 = useAnimatedChartTexture(128, 96, "bars", 30);
+  const mainScreenTex = useAnimatedChartTexture(256, 128, "line", 50);
+  const screenTextures = useMemo(
+    () => [screenTex0, screenTex1, screenTex2],
+    [screenTex0, screenTex1, screenTex2],
+  );
+
+  return (
+    <group
+      position={[wx, 0, wz]}
+      onPointerDown={(event) => {
+        event.stopPropagation();
+        onPointerDown(item._uid);
+      }}
+      onPointerOver={(event) => {
+        event.stopPropagation();
+        onPointerOver(item._uid);
+      }}
+      onPointerOut={(event) => {
+        event.stopPropagation();
+        onPointerOut();
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick?.(item._uid);
+      }}
+    >
+      <group position={[widthWorld / 2, 0, depthWorld / 2]} rotation={[0, rotY, 0]}>
+        <mesh position={[0, 0.44, 0]} castShadow receiveShadow>
+          <boxGeometry args={[widthWorld * 0.92, 0.12, depthWorld * 0.92]} />
+          <meshStandardMaterial color="#111827" roughness={0.55} metalness={0.12} />
+        </mesh>
+        <mesh position={[0, 0.82, 0]} castShadow receiveShadow>
+          <boxGeometry args={[widthWorld * 0.8, 0.6, depthWorld * 0.72]} />
+          <meshStandardMaterial
+            color="#1f2937"
+            roughness={0.42}
+            metalness={0.16}
+            emissive={glowColor}
+            emissiveIntensity={glowIntensity}
+          />
+        </mesh>
+        {/* Flat monitor on top of the terminal. */}
+        <mesh position={[0, 1.52, -depthWorld * 0.08]}>
+          <boxGeometry args={[widthWorld * 0.68, 0.5, 0.03]} />
+          <meshStandardMaterial color="#0a0a0a" roughness={0.3} metalness={0.5} />
+        </mesh>
+        <mesh position={[0, 1.52, -depthWorld * 0.08 + 0.017]}>
+          <planeGeometry args={[widthWorld * 0.62, 0.42]} />
+          <meshStandardMaterial
+            map={mainScreenTex}
+            emissive="#22d3ee"
+            emissiveIntensity={0.35}
+            emissiveMap={mainScreenTex}
+            toneMapped={false}
+          />
+        </mesh>
+        {/* Monitor stand. */}
+        <mesh position={[0, 1.2, -depthWorld * 0.08]}>
+          <boxGeometry args={[0.04, 0.16, 0.04]} />
+          <meshStandardMaterial color="#111827" metalness={0.4} roughness={0.5} />
+        </mesh>
+        <mesh position={[0, 1.18, -depthWorld * 0.18]}>
+          <boxGeometry args={[widthWorld * 0.72, 0.05, 0.16]} />
+          <meshStandardMaterial color="#0f172a" />
+        </mesh>
+        {[-0.28, 0, 0.28].map((offset, index) => (
+          <group key={index} position={[offset, 1.14, -depthWorld * 0.12]}>
+            <mesh>
+              <boxGeometry args={[0.28, 0.18, 0.04]} />
+              <meshStandardMaterial color="#020617" />
+            </mesh>
+            <mesh position={[0, 0, 0.022]}>
+              <planeGeometry args={[0.24, 0.14]} />
+              <meshStandardMaterial
+                map={screenTextures[index]}
+                emissive={
+                  TERMINAL_SCREEN_VARIANTS[index] === "line"
+                    ? "#22d3ee"
+                    : "#34d399"
+                }
+                emissiveIntensity={0.35}
+                emissiveMap={screenTextures[index]}
+                toneMapped={false}
+              />
+            </mesh>
+          </group>
+        ))}
+        <mesh position={[0, 0.89, depthWorld * 0.22]} rotation={[-0.22, 0, 0]}>
+          <boxGeometry args={[widthWorld * 0.7, 0.03, 0.14]} />
+          <meshStandardMaterial color="#0f172a" />
+        </mesh>
+        <Text
+          position={[0, 1.82, -depthWorld * 0.06]}
+          fontSize={0.045}
+          color="#dbeafe"
+          anchorX="center"
+          anchorY="middle"
+        >
+          SOL TRADING CONSOLE
+        </Text>
       </group>
     </group>
   );

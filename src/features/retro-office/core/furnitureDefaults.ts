@@ -13,6 +13,7 @@ import {
 import { nextUid } from "@/features/retro-office/core/geometry";
 import {
   hasAtmMigrationApplied,
+  hasCryptoRoomMigrationApplied,
   hasGymRoomMigrationApplied,
   hasPhoneBoothMigrationApplied,
   hasQaLabMigrationApplied,
@@ -34,7 +35,7 @@ const DEFAULT_PINGPONG_TABLE: FurnitureSeed = {
 
 const DEFAULT_ATM_MACHINE: FurnitureSeed = {
   type: "atm",
-  x: 430,
+  x: 440,
   y: 210,
   facing: 90,
 };
@@ -405,7 +406,7 @@ const DEFAULT_QA_LAB_ITEMS: FurnitureSeed[] = [
   { type: "plant", x: 1496, y: 622 },
 ];
 
-const DEFAULT_ART_ROOM_ITEMS: FurnitureSeed[] = [
+const PREVIOUS_ART_ROOM_ITEMS: FurnitureSeed[] = [
   { type: "wall", x: 260, y: 40, w: 8, h: 230 },
   { type: "wall", x: 260, y: 40, w: 178, h: 8 },
   { type: "wall", x: 260, y: 262, w: 178, h: 8 },
@@ -418,6 +419,79 @@ const DEFAULT_ART_ROOM_ITEMS: FurnitureSeed[] = [
   { type: "plant", x: 280, y: 240 },
 ];
 
+const DEFAULT_CRYPTO_ROOM_ITEMS: FurnitureSeed[] = [
+  { type: "wall", x: 260, y: 40, w: 8, h: 230 },
+  { type: "wall", x: 260, y: 40, w: 178, h: 8 },
+  { type: "wall", x: 260, y: 262, w: 178, h: 8 },
+  { type: "wall", x: 430, y: 40, w: 8, h: 90 },
+  { type: "door", x: 420, y: 150, w: 40, h: 8, facing: 90 },
+  { type: "wall", x: 430, y: 170, w: 8, h: 100 },
+  { type: "crypto_board", x: 300, y: 40, facing: 90 },
+  { type: "crypto_board", x: 380, y: 190, facing: 90 },
+  { type: "crypto_board", x: 380, y: 40, facing: 90 },
+  { type: "crypto_board", x: 300, y: 190, facing: 90 },
+  { type: "crypto_terminal", x: 270, y: 140, facing: 90 },
+  { type: "chair", x: 337, y: 228, facing: 180 },
+  { type: "couch", x: 270, y: 130, w: 100, h: 40, facing: 90 },
+];
+
+const PREVIOUS_CRYPTO_ROOM_ITEMS_V2: FurnitureSeed[] = [
+  { type: "wall", x: 260, y: 40, w: 8, h: 230 },
+  { type: "wall", x: 260, y: 40, w: 178, h: 8 },
+  { type: "wall", x: 260, y: 262, w: 178, h: 8 },
+  { type: "wall", x: 430, y: 40, w: 8, h: 90 },
+  { type: "door", x: 420, y: 150, w: 40, h: 8, facing: 90 },
+  { type: "wall", x: 430, y: 170, w: 8, h: 100 },
+  { type: "crypto_board", x: 276, y: 56, facing: 90 },
+  { type: "crypto_board", x: 304, y: 56, facing: 90 },
+  { type: "crypto_board", x: 332, y: 56, facing: 90 },
+  { type: "crypto_board", x: 360, y: 56, facing: 90 },
+  { type: "crypto_terminal", x: 313, y: 186, facing: 0 },
+  { type: "chair", x: 337, y: 228, facing: 180 },
+  { type: "plant", x: 284, y: 242 },
+  { type: "plant", x: 392, y: 242 },
+];
+
+const LEGACY_CRYPTO_ROOM_ITEMS: FurnitureSeed[] = [
+  { type: "wall", x: 260, y: 40, w: 8, h: 230 },
+  { type: "wall", x: 260, y: 40, w: 178, h: 8 },
+  { type: "wall", x: 260, y: 262, w: 178, h: 8 },
+  { type: "wall", x: 430, y: 40, w: 8, h: 90 },
+  { type: "door", x: 420, y: 150, w: 40, h: 8, facing: 90 },
+  { type: "wall", x: 430, y: 170, w: 8, h: 100 },
+  { type: "crypto_board", x: 282, y: 66, facing: 90 },
+  { type: "crypto_board", x: 314, y: 66, facing: 90 },
+  { type: "crypto_board", x: 346, y: 66, facing: 90 },
+  { type: "server_rack", x: 278, y: 162, facing: 90 },
+  { type: "server_rack", x: 338, y: 162, facing: 90 },
+  { type: "crypto_terminal", x: 288, y: 220, facing: 0 },
+  { type: "plant", x: 284, y: 242 },
+  { type: "plant", x: 392, y: 242 },
+];
+
+const PREVIOUS_CRYPTO_ROOM_ITEMS: FurnitureSeed[] = [
+  { type: "wall", x: 260, y: 40, w: 8, h: 230 },
+  { type: "wall", x: 260, y: 40, w: 178, h: 8 },
+  { type: "wall", x: 260, y: 262, w: 178, h: 8 },
+  { type: "wall", x: 430, y: 40, w: 8, h: 90 },
+  { type: "door", x: 420, y: 150, w: 40, h: 8, facing: 90 },
+  { type: "wall", x: 430, y: 170, w: 8, h: 100 },
+  { type: "crypto_board", x: 282, y: 66, facing: 90 },
+  { type: "crypto_board", x: 314, y: 66, facing: 90 },
+  { type: "crypto_board", x: 346, y: 66, facing: 90 },
+  { type: "crypto_terminal", x: 278, y: 152, facing: 90 },
+  { type: "crypto_terminal", x: 344, y: 152, facing: 90 },
+  { type: "crypto_terminal", x: 288, y: 220, facing: 0 },
+  { type: "plant", x: 284, y: 242 },
+  { type: "plant", x: 392, y: 242 },
+];
+
+const CRYPTO_ROOM_ITEM_TYPES = new Set([
+  "crypto_board",
+  "crypto_terminal",
+  "server_rack",
+]);
+
 const DEFAULT_FURNITURE: FurnitureSeed[] = [
   { type: "round_table", x: 50, y: 50, r: 90 },
   { type: "chair", x: 130, y: 50, facing: 0 },
@@ -428,7 +502,6 @@ const DEFAULT_FURNITURE: FurnitureSeed[] = [
   { type: "chair", x: 60, y: 80, facing: 60 },
   { type: "chair", x: 550, y: 50, facing: 0 },
   { type: "bookshelf", x: 600, y: 30, w: 80, h: 120 },
-  { type: "couch", x: 270, y: 90, w: 40, h: 80, vertical: true, facing: 180 },
   { type: "fridge", x: 1050, y: 20, w: 40, h: 80 },
   { type: "stove", x: 920, y: 20 },
   { type: "cabinet", x: 980, y: 30, w: 40, h: 40 },
@@ -504,7 +577,7 @@ const DEFAULT_FURNITURE: FurnitureSeed[] = [
   DEFAULT_KANBAN_BOARD,
   { type: "whiteboard", x: 40, y: 200, w: 10, h: 60 },
   { type: "clock", x: 550, y: 5 },
-  { type: "lamp", x: 430, y: 100 },
+  { type: "lamp", x: 420, y: 290 },
   { type: "lamp", x: 980, y: 390 },
   { type: "trash", x: 830, y: 20 },
   { type: "plant", x: 40, y: 40 },
@@ -517,9 +590,10 @@ const DEFAULT_FURNITURE: FurnitureSeed[] = [
   ...DEFAULT_SERVER_ROOM_ITEMS,
   ...DEFAULT_GYM_ITEMS,
   ...DEFAULT_QA_LAB_ITEMS,
-  ...DEFAULT_ART_ROOM_ITEMS,
+  ...DEFAULT_CRYPTO_ROOM_ITEMS,
   DEFAULT_SMS_BOOTH,
   { type: "chair", x: 100, y: 200, facing: 180 },
+  DEFAULT_JUKEBOX,
 ];
 
 export const materializeDefaults = (): FurnitureItem[] =>
@@ -531,6 +605,12 @@ export const materializeDefaults = (): FurnitureItem[] =>
 export const isRetiredPingPongLamp = (item: FurnitureItem) =>
   item.type === "lamp" &&
   ((item.x === 870 && item.y === 470) || (item.x === 900 && item.y === 580));
+
+export const isRetiredCryptoRoomCouch = (item: FurnitureItem) =>
+  item.type === "couch" &&
+  item.vertical === true &&
+  item.x === 270 &&
+  item.y === 90;
 
 const createFurnitureSignature = (item: FurnitureSeed | FurnitureItem) =>
   [
@@ -573,6 +653,21 @@ const PREVIOUS_QA_LAB_SIGNATURES = new Set(
 );
 const QA_LAB_SIGNATURES = new Set(
   DEFAULT_QA_LAB_ITEMS.map(createFurnitureSignature),
+);
+const PREVIOUS_ART_ROOM_SIGNATURES = new Set(
+  PREVIOUS_ART_ROOM_ITEMS.map(createFurnitureSignature),
+);
+const LEGACY_CRYPTO_ROOM_SIGNATURES = new Set(
+  LEGACY_CRYPTO_ROOM_ITEMS.map(createFurnitureSignature),
+);
+const PREVIOUS_CRYPTO_ROOM_SIGNATURES = new Set(
+  PREVIOUS_CRYPTO_ROOM_ITEMS.map(createFurnitureSignature),
+);
+const PREVIOUS_CRYPTO_ROOM_V2_SIGNATURES = new Set(
+  PREVIOUS_CRYPTO_ROOM_ITEMS_V2.map(createFurnitureSignature),
+);
+const CRYPTO_ROOM_SIGNATURES = new Set(
+  DEFAULT_CRYPTO_ROOM_ITEMS.map(createFurnitureSignature),
 );
 
 const hasSignature = (items: FurnitureItem[], signatures: Set<string>) =>
@@ -759,5 +854,62 @@ export const ensureOfficeQaLab = (items: FurnitureItem[]): FurnitureItem[] => {
   return [
     ...items,
     ...DEFAULT_QA_LAB_ITEMS.map((item) => ({ ...item, _uid: nextUid() })),
+  ];
+};
+
+export const ensureOfficeCryptoRoom = (
+  items: FurnitureItem[],
+  namespace = "default",
+): FurnitureItem[] => {
+  const hasCurrentCryptoRoom = hasAllSignatures(items, CRYPTO_ROOM_SIGNATURES);
+  if (hasCurrentCryptoRoom) return items;
+
+  const hasPreviousCryptoRoomV2 = hasAllSignatures(items, PREVIOUS_CRYPTO_ROOM_V2_SIGNATURES);
+  if (hasPreviousCryptoRoomV2) {
+    return [
+      ...replaceBySignatureSet(items, PREVIOUS_CRYPTO_ROOM_V2_SIGNATURES),
+      ...DEFAULT_CRYPTO_ROOM_ITEMS.map((item) => ({ ...item, _uid: nextUid() })),
+    ];
+  }
+
+  const hasPreviousCryptoRoom = hasAllSignatures(items, PREVIOUS_CRYPTO_ROOM_SIGNATURES);
+  if (hasPreviousCryptoRoom) {
+    return [
+      ...replaceBySignatureSet(items, PREVIOUS_CRYPTO_ROOM_SIGNATURES),
+      ...DEFAULT_CRYPTO_ROOM_ITEMS.map((item) => ({ ...item, _uid: nextUid() })),
+    ];
+  }
+
+  const hasLegacyCryptoRoom = hasAllSignatures(items, LEGACY_CRYPTO_ROOM_SIGNATURES);
+  if (hasLegacyCryptoRoom) {
+    return [
+      ...replaceBySignatureSet(items, LEGACY_CRYPTO_ROOM_SIGNATURES),
+      ...DEFAULT_CRYPTO_ROOM_ITEMS.map((item) => ({ ...item, _uid: nextUid() })),
+    ];
+  }
+
+  const hasPreviousArtRoom = hasAllSignatures(items, PREVIOUS_ART_ROOM_SIGNATURES);
+  if (hasPreviousArtRoom) {
+    return [
+      ...replaceBySignatureSet(items, PREVIOUS_ART_ROOM_SIGNATURES),
+      ...DEFAULT_CRYPTO_ROOM_ITEMS.map((item) => ({ ...item, _uid: nextUid() })),
+    ];
+  }
+
+  const hasLegacyArtProps = items.some((item) => item.type === "easel");
+  if (hasLegacyArtProps) {
+    return [
+      ...items.filter((item) => item.type !== "easel"),
+      ...DEFAULT_CRYPTO_ROOM_ITEMS.map((item) => ({ ...item, _uid: nextUid() })),
+    ];
+  }
+
+  const hasAnyCryptoFurniture = items.some((item) =>
+    CRYPTO_ROOM_ITEM_TYPES.has(item.type),
+  );
+  if (hasCryptoRoomMigrationApplied(namespace) && hasAnyCryptoFurniture) return items;
+  return [
+    ...items,
+    ...DEFAULT_CRYPTO_ROOM_ITEMS.map((item) => ({ ...item, _uid: nextUid() })),
   ];
 };
