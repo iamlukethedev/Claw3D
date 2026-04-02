@@ -215,6 +215,8 @@ const MAIN_AGENT_ID = "main";
 const MAX_OPENCLAW_LOG_ENTRIES = 200;
 const MAX_OPENCLAW_AGENT_OUTPUT_LINES = 12;
 const OFFICE_DANCE_MS = 60_000;
+const GATEWAY_LOADING_OVERLAY_DELAY_MS = 1_200;
+const GATEWAY_CONNECT_OVERLAY_DELAY_MS = 1_500;
 
 const getLatestUserRequestForAgent = (
   agent: AgentState,
@@ -866,6 +868,10 @@ export function OfficeScreen({
     useAgentStore();
   const [agentsLoaded, setAgentsLoaded] = useState(false);
   const [didAttemptGatewayConnect, setDidAttemptGatewayConnect] = useState(false);
+  const [showDelayedGatewayLoadingOverlay, setShowDelayedGatewayLoadingOverlay] =
+    useState(false);
+  const [showDelayedGatewayConnectOverlay, setShowDelayedGatewayConnectOverlay] =
+    useState(false);
   const [clockTick, setClockTick] = useState(0);
   const [debugRows, setDebugRows] = useState<OfficeDebugRow[]>([]);
   const [feedEvents, setFeedEvents] = useState<OfficeFeedEvent[]>([]);
@@ -4125,17 +4131,52 @@ export function OfficeScreen({
   // No longer force-close the jukebox panel when skill is disabled;
   // the panel handles the disabled state itself.
 
+  useEffect(() => {
+    if (
+      status === "connecting" &&
+      !agentsLoaded &&
+      gatewayUrl.trim().length > 0 &&
+      !shouldPromptForConnect
+    ) {
+      const timeoutId = window.setTimeout(() => {
+        setShowDelayedGatewayLoadingOverlay(true);
+      }, GATEWAY_LOADING_OVERLAY_DELAY_MS);
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
+    }
+    setShowDelayedGatewayLoadingOverlay(false);
+  }, [agentsLoaded, gatewayUrl, shouldPromptForConnect, status]);
+
+  useEffect(() => {
+    if (
+      status === "disconnected" &&
+      !agentsLoaded &&
+      didAttemptGatewayConnect &&
+      !shouldPromptForConnect
+    ) {
+      const timeoutId = window.setTimeout(() => {
+        setShowDelayedGatewayConnectOverlay(true);
+      }, GATEWAY_CONNECT_OVERLAY_DELAY_MS);
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
+    }
+    setShowDelayedGatewayConnectOverlay(false);
+  }, [agentsLoaded, didAttemptGatewayConnect, shouldPromptForConnect, status]);
+
   const showGatewayLoadingOverlay =
     !agentsLoaded &&
     (!connectPromptReady ||
       (gatewayUrl.trim().length > 0 &&
         !shouldPromptForConnect &&
-        (!didAttemptGatewayConnect || status === "connecting")));
+        ((!didAttemptGatewayConnect && showDelayedGatewayLoadingOverlay) ||
+          (status === "connecting" && showDelayedGatewayLoadingOverlay))));
   const showGatewayConnectOverlay =
     connectPromptReady &&
     status === "disconnected" &&
     !agentsLoaded &&
-    (shouldPromptForConnect || didAttemptGatewayConnect);
+    (shouldPromptForConnect || showDelayedGatewayConnectOverlay);
 
   const runningCount = state.agents.filter(
     (agent) =>
