@@ -1,6 +1,32 @@
+const fs = require("node:fs");
+const path = require("node:path");
 const http = require("node:http");
 const https = require("node:https");
 const next = require("next");
+
+// Load .env so production `node server/index.js` picks up the same
+// variables that Next.js dev-mode reads automatically.
+const loadDotenv = () => {
+  const envPath = path.resolve(__dirname, "..", ".env");
+  try {
+    const contents = fs.readFileSync(envPath, "utf8");
+    for (const line of contents.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eqIdx = trimmed.indexOf("=");
+      if (eqIdx === -1) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      const value = trimmed.slice(eqIdx + 1).trim();
+      // Don't override values already set in the real environment.
+      if (process.env[key] === undefined) {
+        process.env[key] = value;
+      }
+    }
+  } catch {
+    // .env is optional — no file is fine.
+  }
+};
+loadDotenv();
 
 const { createAccessGate } = require("./access-gate");
 const { createGatewayProxy } = require("./gateway-proxy");
@@ -20,9 +46,9 @@ const resolvePathname = (url) => {
   return (idx === -1 ? raw : raw.slice(0, idx)) || "/";
 };
 
-const CERT_DIR = require("node:path").join(__dirname, "..", ".certs");
-const CERT_PATH = require("node:path").join(CERT_DIR, "localhost.crt");
-const KEY_PATH = require("node:path").join(CERT_DIR, "localhost.key");
+const CERT_DIR = path.join(__dirname, "..", ".certs");
+const CERT_PATH = path.join(CERT_DIR, "localhost.crt");
+const KEY_PATH = path.join(CERT_DIR, "localhost.key");
 
 const generateHttpsCert = async () => {
   const fs = require("node:fs");
