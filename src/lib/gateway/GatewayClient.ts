@@ -137,12 +137,12 @@ export const resolveInitialGatewayConnectAttemptCount = (
   adapterType: StudioGatewayAdapterType,
   hasConnectedOnce: boolean
 ): number => {
-  if (hasConnectedOnce) return 1;
   switch (adapterType) {
     case "hermes":
     case "demo":
       return 2;
     default:
+      if (hasConnectedOnce) return 1;
       return 1;
   }
 };

@@ -251,7 +251,9 @@ describe("useGatewayConnection", () => {
     expect(mod.resolveInitialGatewayConnectAttemptCount("custom", false)).toBe(1);
     expect(mod.resolveInitialGatewayConnectAttemptCount("hermes", false)).toBe(2);
     expect(mod.resolveInitialGatewayConnectAttemptCount("demo", false)).toBe(2);
-    expect(mod.resolveInitialGatewayConnectAttemptCount("hermes", true)).toBe(1);
+    expect(mod.resolveInitialGatewayConnectAttemptCount("hermes", true)).toBe(2);
+    expect(mod.resolveInitialGatewayConnectAttemptCount("demo", true)).toBe(2);
+    expect(mod.resolveInitialGatewayConnectAttemptCount("openclaw", true)).toBe(1);
   });
 
   it("auto_applies_runtime_local_defaults_when_no_saved_gateway_and_build_time_empty", async () => {
