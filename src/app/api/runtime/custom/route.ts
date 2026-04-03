@@ -9,6 +9,27 @@ type CustomRuntimeRequestBody = {
   body?: unknown;
 };
 
+const isRuntimeUrlAllowed = (runtimeUrl: string): boolean => {
+  const rawAllowlist = (
+    process.env.CUSTOM_RUNTIME_ALLOWLIST ||
+    process.env.UPSTREAM_ALLOWLIST ||
+    ""
+  ).trim();
+  if (!rawAllowlist) {
+    return process.env.NODE_ENV !== "production";
+  }
+  try {
+    const parsed = new URL(runtimeUrl);
+    const allowed = rawAllowlist
+      .split(",")
+      .map((entry) => entry.trim().toLowerCase())
+      .filter(Boolean);
+    return allowed.includes(parsed.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+};
+
 const normalizeRuntimeUrl = (value: string): string => {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -25,7 +46,11 @@ const normalizeRuntimeUrl = (value: string): string => {
   }
   parsed.username = "";
   parsed.password = "";
-  return parsed.toString().replace(/\/$/, "");
+  const normalized = parsed.toString().replace(/\/$/, "");
+  if (!isRuntimeUrlAllowed(normalized)) {
+    throw new Error("runtimeUrl is not in the allowed hosts list.");
+  }
+  return normalized;
 };
 
 const normalizePathname = (value: unknown): string => {
@@ -44,8 +69,18 @@ const normalizeMethod = (value: unknown): "GET" | "POST" => {
 };
 
 export async function POST(request: Request) {
+  let payload;
   try {
-    const payload = (await request.json()) as CustomRuntimeRequestBody;
+    payload = (await request.json()) as CustomRuntimeRequestBody;
+  } catch (error) {
+    console.error("[runtime/custom] Invalid JSON request body.", error);
+    return NextResponse.json(
+      { error: "Invalid JSON request body." },
+      { status: 400 }
+    );
+  }
+
+  try {
     const runtimeUrl = normalizeRuntimeUrl(payload.runtimeUrl ?? "");
     const pathname = normalizePathname(payload.pathname);
     const method = normalizeMethod(payload.method);
@@ -67,8 +102,23 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Custom runtime proxy failed.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    const message = error instanceof Error ? error.message : "Custom runtime proxy failed.";
+    const status =
+      message === "runtimeUrl is required." ||
+      message === "pathname is required." ||
+      message === "runtimeUrl must use http, https, ws, or wss." ||
+      message === "runtimeUrl is not in the allowed hosts list."
+        ? 400
+        : 502;
+    console.error("[runtime/custom] Proxy request failed.", error);
+    return NextResponse.json(
+      {
+        error:
+          status === 400
+            ? message
+            : "Custom runtime proxy failed.",
+      },
+      { status }
+    );
   }
 }

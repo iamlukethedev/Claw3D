@@ -1,6 +1,13 @@
+const { Buffer } = require("node:buffer");
 const { WebSocket, WebSocketServer } = require("ws");
 
 const DEFAULT_UPSTREAM_HANDSHAKE_TIMEOUT_MS = 10_000;
+
+/** Maximum frame payload size (256 KB). */
+const MAX_FRAME_SIZE = 256 * 1024;
+
+/** Maximum frames per connection per second. */
+const MAX_FRAMES_PER_SECOND = 30;
 
 const buildErrorResponse = (id, code, message) => {
   return {
@@ -18,6 +25,45 @@ const safeJsonParse = (raw) => {
     return JSON.parse(raw);
   } catch {
     return null;
+  }
+};
+
+/** Per-connection frame rate limiter. */
+const createFrameRateLimiter = (maxPerSecond = MAX_FRAMES_PER_SECOND) => {
+  let count = 0;
+  const interval = setInterval(() => {
+    count = 0;
+  }, 1000);
+  interval.unref();
+  return {
+    check() {
+      return ++count <= maxPerSecond;
+    },
+    destroy() {
+      clearInterval(interval);
+    },
+  };
+};
+
+/**
+ * Validate upstream URL against an allowlist.
+ * If UPSTREAM_ALLOWLIST env var is set, only those hosts are permitted.
+ * Format: comma-separated hostnames, e.g. "gateway.percival-labs.ai,localhost"
+ */
+const isUpstreamAllowed = (url) => {
+  const allowlist = (process.env.UPSTREAM_ALLOWLIST || "").trim();
+  if (!allowlist) {
+    return process.env.NODE_ENV !== "production";
+  }
+  try {
+    const parsed = new URL(url);
+    const allowed = allowlist
+      .split(",")
+      .map((h) => h.trim().toLowerCase())
+      .filter(Boolean);
+    return allowed.includes(parsed.hostname.toLowerCase());
+  } catch {
+    return false;
   }
 };
 
@@ -109,11 +155,13 @@ function createGatewayProxy(options) {
     let pendingConnectFrame = null;
     let pendingUpstreamSetupError = null;
     let closed = false;
+    const frameRateLimiter = createFrameRateLimiter();
     let upstreamHandshakeTimeoutId = null;
 
     const closeBoth = (code, reason) => {
       if (closed) return;
       closed = true;
+      frameRateLimiter.destroy();
       if (upstreamHandshakeTimeoutId !== null) {
         clearTimeout(upstreamHandshakeTimeoutId);
         upstreamHandshakeTimeoutId = null;
@@ -195,6 +243,14 @@ function createGatewayProxy(options) {
         pendingUpstreamSetupError = {
           code: "studio.gateway_url_missing",
           message: "Upstream gateway URL is not configured on the Studio host.",
+        };
+        return;
+      }
+
+      if (!isUpstreamAllowed(upstreamUrl)) {
+        pendingUpstreamSetupError = {
+          code: "studio.gateway_url_blocked",
+          message: "Upstream gateway URL is not in the allowed hosts list.",
         };
         return;
       }
@@ -305,7 +361,10 @@ function createGatewayProxy(options) {
           sendConnectError(pendingUpstreamSetupError.code, pendingUpstreamSetupError.message);
           return;
         }
-        sendConnectError("studio.upstream_error", "Failed to connect to upstream gateway WebSocket.");
+        sendConnectError(
+          "studio.upstream_error",
+          "Failed to connect to upstream gateway WebSocket."
+        );
       });
 
       log("proxy connected");
@@ -314,7 +373,22 @@ function createGatewayProxy(options) {
     void startUpstream();
 
     browserWs.on("message", async (raw) => {
-      const parsed = safeJsonParse(String(raw ?? ""));
+      const rawStr = String(raw ?? "");
+      const rawByteLength = Buffer.byteLength(rawStr, "utf8");
+
+      // Frame size limit
+      if (rawByteLength > MAX_FRAME_SIZE) {
+        closeBoth(1009, "frame too large");
+        return;
+      }
+
+      // Rate limiting
+      if (!frameRateLimiter.check()) {
+        closeBoth(1008, "rate limit exceeded");
+        return;
+      }
+
+      const parsed = safeJsonParse(rawStr);
       if (!parsed || !isObject(parsed)) {
         closeBoth(1003, "invalid json");
         return;
