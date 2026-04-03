@@ -69,8 +69,18 @@ const normalizeMethod = (value: unknown): "GET" | "POST" => {
 };
 
 export async function POST(request: Request) {
+  let payload;
   try {
-    const payload = (await request.json()) as CustomRuntimeRequestBody;
+    payload = (await request.json()) as CustomRuntimeRequestBody;
+  } catch (error) {
+    console.error("[runtime/custom] Invalid JSON request body.", error);
+    return NextResponse.json(
+      { error: "Invalid JSON request body." },
+      { status: 400 }
+    );
+  }
+
+  try {
     const runtimeUrl = normalizeRuntimeUrl(payload.runtimeUrl ?? "");
     const pathname = normalizePathname(payload.pathname);
     const method = normalizeMethod(payload.method);

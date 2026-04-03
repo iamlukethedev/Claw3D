@@ -45,4 +45,47 @@ describe("createAccessGate", () => {
       gate.allowUpgrade({ headers: { cookie: "studio_access=abc" } })
     ).toBe(true);
   });
+
+  it("returns 429 after repeated failed attempts", async () => {
+    const { createAccessGate } = await import("../../server/access-gate");
+    const gate = createAccessGate({ token: "abc" });
+
+    const createResponse = () => {
+      let statusCode = 0;
+      let body = "";
+      return {
+        setHeader: () => {},
+        end: (value?: string) => {
+          body = value ?? "";
+        },
+        get statusCode() {
+          return statusCode;
+        },
+        set statusCode(value: number) {
+          statusCode = value;
+        },
+        get body() {
+          return body;
+        },
+      };
+    };
+
+    for (let index = 0; index < 9; index++) {
+      const res = createResponse();
+      gate.handleHttp(
+        { url: "/api/studio", headers: {}, socket: { remoteAddress: "127.0.0.1" } },
+        res
+      );
+      expect(res.statusCode).toBe(401);
+    }
+
+    const limited = createResponse();
+    gate.handleHttp(
+      { url: "/api/studio", headers: {}, socket: { remoteAddress: "127.0.0.1" } },
+      limited
+    );
+
+    expect(limited.statusCode).toBe(429);
+    expect(limited.body).toContain("Too many failed studio access attempts");
+  });
 });

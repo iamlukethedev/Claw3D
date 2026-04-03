@@ -41,6 +41,11 @@ const createRateLimiter = (maxAttempts = 10, windowMs = 60_000) => {
   cleanup.unref();
 
   return {
+    isLimited(ip) {
+      const entry = attempts.get(ip);
+      if (!entry) return false;
+      return entry.count >= maxAttempts;
+    },
     recordFailure(ip) {
       const now = Date.now();
       const entry = attempts.get(ip);
@@ -49,9 +54,6 @@ const createRateLimiter = (maxAttempts = 10, windowMs = 60_000) => {
         return;
       }
       entry.count++;
-      if (entry.count > maxAttempts) {
-        return;
-      }
     },
     reset(ip) {
       attempts.delete(ip);
@@ -66,35 +68,46 @@ function createAccessGate(options) {
   const enabled = Boolean(token);
   const rateLimiter = createRateLimiter(10, 60_000);
 
-  const isAuthorized = (req) => {
-    if (!enabled) return true;
+  const getAuthState = (req) => {
+    if (!enabled) return { authorized: true, limited: false };
     const ip = req.socket?.remoteAddress || "unknown";
+    if (rateLimiter.isLimited(ip)) {
+      return { authorized: false, limited: true };
+    }
     const cookieHeader = req.headers?.cookie;
     const cookies = parseCookies(cookieHeader);
     const authorized = safeCompare(cookies[cookieName] || "", token);
     if (authorized) {
       rateLimiter.reset(ip);
-      return true;
+      return { authorized: true, limited: false };
     }
     rateLimiter.recordFailure(ip);
-    return false;
+    return { authorized: false, limited: rateLimiter.isLimited(ip) };
   };
 
   const handleHttp = (req, res) => {
     if (!enabled) return false;
-    if (!isAuthorized(req)) {
+    const auth = getAuthState(req);
+    if (!auth.authorized) {
+      const statusCode = auth.limited ? 429 : 401;
       if (String(req.url || "/").startsWith("/api/")) {
-        res.statusCode = 401;
+        res.statusCode = statusCode;
         res.setHeader("Content-Type", "application/json");
         res.end(
           JSON.stringify({
-            error: "Studio access token required. Send the configured Studio access cookie and retry.",
+            error: auth.limited
+              ? "Too many failed studio access attempts. Wait a minute and retry."
+              : "Studio access token required. Send the configured Studio access cookie and retry.",
           })
         );
       } else {
-        res.statusCode = 401;
+        res.statusCode = statusCode;
         res.setHeader("Content-Type", "text/plain");
-        res.end("Studio access token required. Set the studio_access cookie to access this page.");
+        res.end(
+          auth.limited
+            ? "Too many failed studio access attempts. Wait a minute and retry."
+            : "Studio access token required. Set the studio_access cookie to access this page."
+        );
       }
       return true;
     }
@@ -103,7 +116,7 @@ function createAccessGate(options) {
 
   const allowUpgrade = (req) => {
     if (!enabled) return true;
-    return isAuthorized(req);
+    return getAuthState(req).authorized;
   };
 
   return { enabled, handleHttp, allowUpgrade };

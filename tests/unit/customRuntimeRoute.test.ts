@@ -65,4 +65,22 @@ describe("/api/runtime/custom route", () => {
       expect.objectContaining({ method: "GET" })
     );
   });
+
+  it("returns 400 for malformed JSON request bodies", async () => {
+    Object.assign(process.env, { NODE_ENV: "production" });
+
+    const { POST } = await import("@/app/api/runtime/custom/route");
+    const response = await POST(
+      new Request("http://localhost/api/runtime/custom", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{bad json",
+      })
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "Invalid JSON request body.",
+    });
+  });
 });
