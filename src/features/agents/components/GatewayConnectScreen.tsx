@@ -313,6 +313,16 @@ export const GatewayConnectScreen = ({
               metadata scaffold are now in place.
             </p>
           </div>
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+            <p className="text-xs font-medium text-foreground">Opening Claw3D from another machine?</p>
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">
+              Start Studio with <span className="font-mono text-foreground">HOST=0.0.0.0</span> (or a
+              specific LAN/Tailscale host) and set
+              <span className="font-mono text-foreground"> STUDIO_ACCESS_TOKEN</span> before exposing it
+              beyond localhost. Gateway settings are stored on the Studio host, but OpenClaw device approval
+              remains per browser/device.
+            </p>
+          </div>
           {localGatewayDefaults ? (
             <div className="ui-input rounded-md px-3 py-3">
               <div className="space-y-2">

@@ -7,7 +7,6 @@ import type { GatewayClient } from "@/lib/gateway/GatewayClient";
 import { AgentIdentityFields } from "@/features/agents/components/AgentIdentityFields";
 import {
   AGENT_FILE_META,
-  AGENT_FILE_PLACEHOLDERS,
   type AgentFileName,
 } from "@/lib/agents/agentFiles";
 import { parsePersonalityFiles, serializePersonalityFiles } from "@/lib/agents/personalityBuilder";
@@ -112,21 +111,35 @@ export const AgentBrainPanel = ({
   }, [onUnsavedChangesChange]);
 
   const renderMarkdownEditor = useCallback(
-    (name: Exclude<AgentFileName, "IDENTITY.md">) => (
-      <AgentBrainPanelSection title={AGENT_FILE_META[name].title}>
-        <div className="text-xs text-muted-foreground">{AGENT_FILE_META[name].hint}</div>
-        <textarea
-          aria-label={AGENT_FILE_META[name].title}
-          className="h-[min(56vh,480px)] w-full resize-y rounded-md border border-border/80 bg-background px-4 py-3 font-mono text-sm leading-6 text-foreground outline-none"
-          value={agentFiles[name].content}
-          placeholder={AGENT_FILE_PLACEHOLDERS[name]}
-          disabled={agentFilesLoading || agentFilesSaving}
-          onChange={(event) => {
-            setAgentFileContent(name, event.target.value);
-          }}
-        />
-      </AgentBrainPanelSection>
-    ),
+    (name: Exclude<AgentFileName, "IDENTITY.md">) => {
+      const file = agentFiles[name];
+      const trimmedContent = file.content.trim();
+      const statusCopy = !file.exists
+        ? `This agent does not have a custom ${name} yet. Saving here will create the real workspace file.`
+        : !trimmedContent
+          ? `This agent's ${name} exists, but it is currently empty.`
+          : null;
+      return (
+        <AgentBrainPanelSection title={AGENT_FILE_META[name].title}>
+          <div className="text-xs text-muted-foreground">{AGENT_FILE_META[name].hint}</div>
+          {statusCopy ? (
+            <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              {statusCopy}
+            </div>
+          ) : null}
+          <textarea
+            aria-label={AGENT_FILE_META[name].title}
+            className="h-[min(56vh,480px)] w-full resize-y rounded-md border border-border/80 bg-background px-4 py-3 font-mono text-sm leading-6 text-foreground outline-none"
+            value={file.content}
+            placeholder={!file.exists ? `No ${name} yet.` : ""}
+            disabled={agentFilesLoading || agentFilesSaving}
+            onChange={(event) => {
+              setAgentFileContent(name, event.target.value);
+            }}
+          />
+        </AgentBrainPanelSection>
+      );
+    },
     [agentFiles, agentFilesLoading, agentFilesSaving, setAgentFileContent],
   );
 

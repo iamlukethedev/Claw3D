@@ -251,27 +251,36 @@ function createGatewayProxy(options) {
         }
       });
 
-      upstreamWs.on("close", (ev) => {
+      upstreamWs.on("close", (code, reasonBuffer) => {
         if (upstreamHandshakeTimeoutId !== null) {
           clearTimeout(upstreamHandshakeTimeoutId);
           upstreamHandshakeTimeoutId = null;
         }
-        const reason = typeof ev?.reason === "string" ? ev.reason : "";
+        const reason =
+          typeof reasonBuffer === "string"
+            ? reasonBuffer
+            : Buffer.isBuffer(reasonBuffer)
+              ? reasonBuffer.toString()
+              : "";
         if (!connectRequestId) {
           pendingUpstreamSetupError ||= {
             code: "studio.upstream_closed",
-            message: `Upstream gateway closed (${ev.code}): ${reason}`,
+            message: `Upstream gateway closed (${code}): ${reason}`,
           };
           return;
         }
         if (!connectResponseSent && connectRequestId) {
+          connectResponseSent = true;
           sendToBrowser(
             buildErrorResponse(
               connectRequestId,
-              "studio.upstream_closed",
-              `Upstream gateway closed (${ev.code}): ${reason}`
+              code === 1008 ? "studio.upstream_rejected" : "studio.upstream_closed",
+              code === 1008
+                ? `Upstream gateway rejected connect (${code}): ${reason || "no reason provided"}`
+                : `Upstream gateway closed (${code}): ${reason}`
             )
           );
+          return;
         }
         closeBoth(1012, "upstream closed");
       });

@@ -217,4 +217,25 @@ describe("AgentBrainPanel", () => {
     expect(screen.queryByLabelText("Agent name")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Update Name" })).not.toBeInTheDocument();
   });
+
+  it("shows_missing_file_state_instead_of_generic_placeholder_content", async () => {
+    const { client } = createMockClient();
+    const agents = [createAgent("agent-2", "Beta", "session-2")];
+
+    render(
+      createElement(AgentBrainPanel, {
+        client,
+        agents,
+        selectedAgentId: "agent-2",
+        activeSection: "SOUL.md",
+      })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("This agent does not have a custom SOUL.md yet. Saving here will create the real workspace file.")).toBeInTheDocument();
+    });
+
+    expect(screen.getByLabelText("SOUL.md")).toHaveValue("");
+    expect(screen.getByLabelText("SOUL.md")).toHaveAttribute("placeholder", "No SOUL.md yet.");
+  });
 });

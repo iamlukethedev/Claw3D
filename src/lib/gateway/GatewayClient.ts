@@ -544,6 +544,12 @@ const protocolMismatchHint =
 const tailscaleGatewayHint =
   "If this is a remote OpenClaw/Tailscale gateway, confirm the Studio host can reach the `wss://...` address and approve the first device pairing on the gateway host with `openclaw devices approve --latest`.";
 
+const pairingRequiredHint =
+  "This gateway is asking for first-time device approval. Run `openclaw devices approve --latest` on the gateway host, then restart Claw3D and reconnect from this browser.";
+
+const requiresDeviceIdentityHint =
+  "This gateway rejected the client as a control UI without device identity. For remote OpenClaw/Tailscale connections, update to the latest Claw3D build and approve the device pairing on the gateway host.";
+
 const isGatewayProtocolMismatchError = (error: GatewayResponseError) => {
   if (error.code.trim().toUpperCase() !== "INVALID_REQUEST") return false;
   const message = error.message.trim();
@@ -561,6 +567,15 @@ const formatGatewayError = (error: unknown) => {
     }
     if (error.code === "studio.upstream_timeout") {
       return `Gateway error (${error.code}): ${error.message} ${tailscaleGatewayHint}`;
+    }
+    if (error.code === "studio.upstream_rejected") {
+      const lower = error.message.toLowerCase();
+      if (lower.includes("pairing required")) {
+        return `Gateway error (${error.code}): ${error.message}. ${pairingRequiredHint}`;
+      }
+      if (lower.includes("device identity")) {
+        return `Gateway error (${error.code}): ${error.message}. ${requiresDeviceIdentityHint}`;
+      }
     }
     return `Gateway error (${error.code}): ${error.message}`;
   }
@@ -630,6 +645,7 @@ const NON_RETRYABLE_CONNECT_ERROR_CODES = new Set([
   "studio.settings_load_failed",
   "studio.upstream_error",
   "studio.upstream_timeout",
+  "studio.upstream_rejected",
 ]);
 
 const isNonRetryableConnectErrorCode = (code: string | null): boolean => {

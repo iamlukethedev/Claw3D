@@ -208,6 +208,17 @@ Alternative with SSH:
 3. Set `STUDIO_ACCESS_TOKEN` if Studio binds to a public host.
 4. Configure the gateway URL and token inside Studio.
 
+### Studio on LAN or Tailscale for other devices
+
+1. Start Studio with `HOST=0.0.0.0` (or a specific LAN/Tailscale host).
+2. Set `STUDIO_ACCESS_TOKEN` before exposing Studio beyond localhost.
+3. Open Claw3D from the LAN/Tailscale address instead of `localhost`.
+4. If you are connecting to a remote OpenClaw gateway, remember device approval is per browser/device. A new browser may still require:
+
+```bash
+openclaw devices approve --latest
+```
+
 ## Tech Stack
 
 - Next.js App Router, React, and TypeScript for the main web application.

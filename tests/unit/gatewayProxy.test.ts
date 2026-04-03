@@ -644,4 +644,72 @@ describe("createGatewayProxy", () => {
     }
   });
 
+  it("surfaces upstream pairing rejection before browser close", async () => {
+    const upstream = new WebSocketServer({ port: 0 });
+    const address = upstream.address();
+    if (!address || typeof address === "string") {
+      throw new Error("expected upstream server to have a port");
+    }
+    const upstreamUrl = `ws://127.0.0.1:${address.port}`;
+
+    upstream.on("connection", (ws) => {
+      ws.on("message", (raw) => {
+        const parsed = JSON.parse(String(raw));
+        if (parsed?.method === "connect") {
+          ws.close(1008, "pairing required");
+        }
+      });
+    });
+
+    const { createGatewayProxy } = await import("../../server/gateway-proxy");
+
+    const proxyHttp = await import("node:http").then((m) => m.createServer());
+    const proxy = createGatewayProxy({
+      loadUpstreamSettings: async () => ({ url: upstreamUrl, token: "host-token-456" }),
+      allowWs: (req: { url?: string }) => req.url === "/api/gateway/ws",
+      logError: () => {},
+    });
+    proxyHttp.on("upgrade", (req, socket, head) => proxy.handleUpgrade(req, socket, head));
+
+    await new Promise<void>((resolve) => proxyHttp.listen(0, "127.0.0.1", resolve));
+    const proxyAddr = proxyHttp.address();
+    if (!proxyAddr || typeof proxyAddr === "string") {
+      throw new Error("expected proxy server to have a port");
+    }
+
+    const browser = new WebSocket(`ws://127.0.0.1:${proxyAddr.port}/api/gateway/ws`);
+    try {
+      await waitForEvent(browser, "open");
+      browser.send(
+        JSON.stringify({
+          type: "req",
+          id: "connect-pairing-required",
+          method: "connect",
+          params: { auth: {} },
+        })
+      );
+
+      const [rawMessage] = await waitForEvent<[WebSocket.RawData]>(browser, "message");
+      const response = JSON.parse(String(rawMessage ?? ""));
+      expect(response).toMatchObject({
+        type: "res",
+        id: "connect-pairing-required",
+        ok: false,
+        error: {
+          code: "studio.upstream_rejected",
+          message: "Upstream gateway rejected connect (1008): pairing required",
+        },
+      });
+    } finally {
+      for (const client of upstream.clients) {
+        client.close();
+      }
+      await Promise.all([
+        closeWebSocket(browser),
+        closeWebSocketServer(upstream),
+        closeHttpServer(proxyHttp),
+      ]);
+    }
+  });
+
 });
