@@ -1110,11 +1110,35 @@ describe("AgentSettingsPanel", () => {
         cronDeleteBusyJobId: null,
         onRunCronJob: vi.fn(),
         onDeleteCronJob: vi.fn(),
+        adapterType: "openclaw",
       })
     );
 
     expect(screen.getByTestId("agent-settings-heartbeat-coming-soon")).toBeInTheDocument();
     expect(screen.getByText("Heartbeat automation controls are coming soon.")).toBeInTheDocument();
+  });
+
+  it("hides_heartbeat_coming_soon_for_hermes", () => {
+    render(
+      createElement(AgentSettingsPanel, {
+        agent: createAgent(),
+        mode: "automations",
+        onClose: vi.fn(),
+        onDelete: vi.fn(),
+        onToolCallingToggle: vi.fn(),
+        onThinkingTracesToggle: vi.fn(),
+        cronJobs: [createCronJob("job-1")],
+        cronLoading: false,
+        cronError: null,
+        cronRunBusyJobId: null,
+        cronDeleteBusyJobId: null,
+        onRunCronJob: vi.fn(),
+        onDeleteCronJob: vi.fn(),
+        adapterType: "hermes",
+      })
+    );
+
+    expect(screen.queryByTestId("agent-settings-heartbeat-coming-soon")).not.toBeInTheDocument();
   });
 
   it("shows_control_ui_section_in_advanced_mode", () => {
@@ -1133,11 +1157,36 @@ describe("AgentSettingsPanel", () => {
         cronDeleteBusyJobId: null,
         onRunCronJob: vi.fn(),
         onDeleteCronJob: vi.fn(),
+        adapterType: "openclaw",
       })
     );
 
     expect(screen.getByTestId("agent-settings-control-ui")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Full Control UI" })).toBeDisabled();
+  });
+
+  it("hides_control_ui_section_for_hermes", () => {
+    render(
+      createElement(AgentSettingsPanel, {
+        agent: createAgent(),
+        mode: "advanced",
+        onClose: vi.fn(),
+        onDelete: vi.fn(),
+        onToolCallingToggle: vi.fn(),
+        onThinkingTracesToggle: vi.fn(),
+        cronJobs: [],
+        cronLoading: false,
+        cronError: null,
+        cronRunBusyJobId: null,
+        cronDeleteBusyJobId: null,
+        onRunCronJob: vi.fn(),
+        onDeleteCronJob: vi.fn(),
+        adapterType: "hermes",
+      })
+    );
+
+    expect(screen.queryByTestId("agent-settings-control-ui")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open Full Control UI" })).not.toBeInTheDocument();
   });
 
   it("renders_enabled_control_ui_link_when_available", () => {

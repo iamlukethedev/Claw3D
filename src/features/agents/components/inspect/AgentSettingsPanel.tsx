@@ -25,6 +25,7 @@ import type { AgentState } from "@/features/agents/state/store";
 import type { CronCreateDraft, CronCreateTemplateId } from "@/lib/cron/createPayloadBuilder";
 import { formatCronPayload, formatCronSchedule, type CronJobSummary } from "@/lib/cron/types";
 import type { SkillStatusReport } from "@/lib/skills/types";
+import type { StudioGatewayAdapterType } from "@/lib/studio/settings";
 
 export type AgentSettingsPanelProps = {
   agent: AgentState;
@@ -47,6 +48,7 @@ export type AgentSettingsPanelProps = {
   cronCreateBusy?: boolean;
   onCreateCronJob?: (draft: CronCreateDraft) => Promise<void> | void;
   controlUiUrl?: string | null;
+  adapterType?: StudioGatewayAdapterType | null;
   skillsReport?: SkillStatusReport | null;
   skillsLoading?: boolean;
   skillsError?: string | null;
@@ -248,6 +250,7 @@ export const AgentSettingsPanel = ({
   cronCreateBusy = false,
   onCreateCronJob = () => {},
   controlUiUrl = null,
+  adapterType = "openclaw",
   skillsReport = null,
   skillsLoading = false,
   skillsError = null,
@@ -267,6 +270,7 @@ export const AgentSettingsPanel = ({
   onSkillApiKeyChange = () => {},
   onSaveSkillApiKey = () => {},
 }: AgentSettingsPanelProps) => {
+  const isOpenClawRuntime = adapterType === "openclaw";
   const initialPermissionsDraft =
     permissionsDraft ?? resolvePresetDefaultsForRole(resolveExecutionRoleFromAgent(agent));
   const [permissionsBaselineValue, setPermissionsBaselineValue] =
@@ -785,16 +789,18 @@ export const AgentSettingsPanel = ({
                 })}
               </div>
             ) : null}
-            <section className="sidebar-section" data-testid="agent-settings-heartbeat-coming-soon">
-              <h3 className="sidebar-section-title">Heartbeats</h3>
-              <div className="mt-3 text-[11px] text-muted-foreground">
-                Heartbeat automation controls are coming soon.
-              </div>
-            </section>
+            {isOpenClawRuntime ? (
+              <section className="sidebar-section" data-testid="agent-settings-heartbeat-coming-soon">
+                <h3 className="sidebar-section-title">Heartbeats</h3>
+                <div className="mt-3 text-[11px] text-muted-foreground">
+                  Heartbeat automation controls are coming soon.
+                </div>
+              </section>
+            ) : null}
           </section>
         ) : null}
 
-        {mode === "advanced" ? (
+        {mode === "advanced" && isOpenClawRuntime ? (
           <>
             <section className="sidebar-section mt-8" data-testid="agent-settings-control-ui">
               <h3 className="sidebar-section-title ui-text-danger">Danger Zone</h3>

@@ -765,7 +765,8 @@ export const useGatewayConnection = (
               }
             : null;
         // When the user has no saved gateway URL, prefer the runtime
-        // localGatewayDefaults (from openclaw.json / CLAW3D_GATEWAY_URL)
+        // localGatewayDefaults (from openclaw.json, CLAW3D_GATEWAY_URL,
+        // or detected local Hermes/demo adapter ports)
         // over the build-time NEXT_PUBLIC_GATEWAY_URL which may be stale
         // or empty if the operator forgot to rebuild after .env changes.
         const hasSavedUrl = Boolean(gateway?.url?.trim());
