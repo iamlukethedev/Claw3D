@@ -511,6 +511,9 @@ export class GatewayBrowserClient {
     let deviceIdentity: Awaited<ReturnType<typeof loadOrCreateDeviceIdentity>> | null = null;
     let canFallbackToShared = false;
     let authToken = this.opts.token;
+    const explicitSharedToken =
+      typeof this.opts.token === "string" && this.opts.token.trim().length > 0;
+    let shouldSendDeviceAuth = isSecureContext;
 
     if (isSecureContext) {
       deviceIdentity = await loadOrCreateDeviceIdentity();
@@ -519,8 +522,16 @@ export class GatewayBrowserClient {
         role,
         scope: authScopeKey,
       })?.token;
-      authToken = storedToken ?? this.opts.token;
-      canFallbackToShared = Boolean(storedToken && this.opts.token);
+      if (storedToken) {
+        authToken = storedToken;
+        canFallbackToShared = explicitSharedToken;
+      } else {
+        authToken = this.opts.token;
+        if (explicitSharedToken) {
+          // Prefer explicit shared-token auth for first-time remote/token flows.
+          shouldSendDeviceAuth = false;
+        }
+      }
     }
     const auth =
       authToken || this.opts.password
@@ -540,7 +551,7 @@ export class GatewayBrowserClient {
         }
       | undefined;
 
-    if (isSecureContext && deviceIdentity) {
+    if (shouldSendDeviceAuth && deviceIdentity) {
       const signedAtMs = Date.now();
       const nonce = this.connectNonce ?? undefined;
       const payload = buildDeviceAuthPayload({
