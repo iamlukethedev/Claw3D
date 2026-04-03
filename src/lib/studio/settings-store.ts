@@ -129,12 +129,20 @@ const mergeGatewayProfiles = (
   if (!extra?.profiles) {
     return base;
   }
+  const mergedProfiles: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> = {
+    ...(base.profiles ?? {}),
+  };
+  for (const [adapterType, profile] of Object.entries(extra.profiles) as Array<
+    [StudioGatewayAdapterType, StudioGatewayProfile | undefined]
+  >) {
+    if (!profile || mergedProfiles[adapterType]) {
+      continue;
+    }
+    mergedProfiles[adapterType] = profile;
+  }
   return {
     ...base,
-    profiles: {
-      ...(base.profiles ?? {}),
-      ...extra.profiles,
-    },
+    profiles: mergedProfiles,
   };
 };
 
