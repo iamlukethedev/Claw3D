@@ -7,9 +7,14 @@ import type { GatewayClient } from "@/lib/gateway/GatewayClient";
 import { AgentIdentityFields } from "@/features/agents/components/AgentIdentityFields";
 import {
   AGENT_FILE_META,
+  PERSONALITY_FILE_NAMES,
   type AgentFileName,
 } from "@/lib/agents/agentFiles";
-import { parsePersonalityFiles, serializePersonalityFiles } from "@/lib/agents/personalityBuilder";
+import {
+  createEmptyPersonalityDraft,
+  parsePersonalityFiles,
+  serializePersonalityFiles,
+} from "@/lib/agents/personalityBuilder";
 import { useAgentFilesEditor } from "@/features/agents/hooks/useAgentFilesEditor";
 
 export type AgentBrainPanelProps = {
@@ -60,9 +65,14 @@ export const AgentBrainPanel = ({
     agentFilesError,
     setAgentFileContent,
     saveAgentFiles,
+    initializeAgentFiles,
   } = useAgentFilesEditor({ client, agentId: selectedAgent?.agentId ?? null });
   const draft = useMemo(() => parsePersonalityFiles(agentFiles), [agentFiles]);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const missingPersonalityFiles = useMemo(
+    () => PERSONALITY_FILE_NAMES.filter((name) => !agentFiles[name].exists),
+    [agentFiles]
+  );
 
   const setIdentityField = useCallback(
     (field: "name" | "creature" | "vibe" | "emoji" | "avatar", value: string) => {
@@ -99,6 +109,19 @@ export const AgentBrainPanel = ({
     saveAgentFiles,
     selectedAgent,
   ]);
+
+  const handleInitializeMissingFiles = useCallback(async () => {
+    if (!selectedAgent) return;
+    setSaveError(null);
+    const nextDraft = createEmptyPersonalityDraft();
+    nextDraft.identity.name = selectedAgent.name.trim();
+    nextDraft.identity.creature = selectedAgent.role?.trim() ?? "";
+    const serialized = serializePersonalityFiles(nextDraft);
+    const missingEntries = Object.fromEntries(
+      missingPersonalityFiles.map((name) => [name, serialized[name]])
+    ) as Partial<Record<AgentFileName, string>>;
+    await initializeAgentFiles(missingEntries);
+  }, [initializeAgentFiles, missingPersonalityFiles, selectedAgent]);
 
   useEffect(() => {
     onUnsavedChangesChange?.(agentFilesDirty);
@@ -204,6 +227,18 @@ export const AgentBrainPanel = ({
           ) : null}
 
           <div className="mb-6 flex items-center justify-end gap-2 border-b border-border/40 pb-4">
+            {missingPersonalityFiles.length > 0 ? (
+              <button
+                type="button"
+                className="ui-btn-secondary px-3 py-2 text-xs"
+                disabled={agentFilesLoading || agentFilesSaving}
+                onClick={() => {
+                  void handleInitializeMissingFiles();
+                }}
+              >
+                Initialize missing files
+              </button>
+            ) : null}
             <button
               type="button"
               className="ui-btn-ghost px-3 py-2 text-xs"

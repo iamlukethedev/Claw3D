@@ -238,4 +238,30 @@ describe("AgentBrainPanel", () => {
     expect(screen.getByLabelText("SOUL.md")).toHaveValue("");
     expect(screen.getByLabelText("SOUL.md")).toHaveAttribute("placeholder", "No SOUL.md yet.");
   });
+
+  it("can_initialize_missing_personality_files_for_an_agent", async () => {
+    const { client, filesByAgent } = createMockClient();
+    const agents = [createAgent("agent-2", "Beta", "session-2")];
+
+    render(
+      createElement(AgentBrainPanel, {
+        client,
+        agents,
+        selectedAgentId: "agent-2",
+      })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Initialize missing files" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Initialize missing files" }));
+
+    await waitFor(() => {
+      expect(filesByAgent["agent-2"]["SOUL.md"]).toContain("# SOUL.md - Who You Are");
+    });
+
+    expect(filesByAgent["agent-2"]["IDENTITY.md"]).toContain("- Name: Beta");
+    expect(filesByAgent["agent-2"]["USER.md"]).toContain("# USER.md - About Your Human");
+  });
 });
