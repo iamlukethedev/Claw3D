@@ -256,7 +256,7 @@ function loadHistoryFromDisk() {
       }
     }
   } catch (err) {
-    console.warn("[hermes-adapter] Could not load history:", err.message);
+    console.warn("[hermes-adapter] Could not load history:", sanitizeErrorMessage(err));
   }
 }
 
@@ -271,7 +271,7 @@ function saveHistoryToDisk() {
       fs.mkdirSync(path.dirname(HISTORY_FILE), { recursive: true });
       fs.writeFileSync(HISTORY_FILE, JSON.stringify(data, null, 2), "utf8");
     } catch (err) {
-      console.warn("[hermes-adapter] Could not save history:", err.message);
+      console.warn("[hermes-adapter] Could not save history:", sanitizeErrorMessage(err));
     }
   }, 500);
 }
@@ -288,6 +288,17 @@ function clearHistory(sessionKey) {
 
 function randomId() {
   return require("crypto").randomBytes(8).toString("hex");
+}
+
+function redactSecrets(value) {
+  if (typeof value !== "string" || !value) return value;
+  let redacted = value;
+  if (HERMES_API_KEY) {
+    redacted = redacted.split(HERMES_API_KEY).join("[REDACTED]");
+  }
+  redacted = redacted.replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED]");
+  redacted = redacted.replace(/\b\d{8,12}:[A-Za-z0-9_-]{20,}\b/g, "[REDACTED]");
+  return redacted;
 }
 
 // ---------------------------------------------------------------------------
@@ -338,6 +349,12 @@ async function readJsonBody(res) {
   const raw = Buffer.concat(chunks).toString("utf8");
   if (!raw.trim()) return {};
   return JSON.parse(raw);
+}
+
+function sanitizeErrorMessage(error) {
+  if (!error) return "Unknown error";
+  if (typeof error === "string") return redactSecrets(error);
+  return redactSecrets(error.message || String(error));
 }
 
 function extractOpenAiStyleError(payload, fallbackMessage) {
@@ -636,8 +653,9 @@ async function execDelegateTask(args) {
         byAgent: [{ agentId: targetId, recent: [{ key: sessionKey, updatedAt: Date.now() }] }] } },
     });
   } catch (err) {
-    emitSub("error", { errorMessage: err.message });
-    return JSON.stringify({ ok: false, error: err.message });
+    const message = sanitizeErrorMessage(err);
+    emitSub("error", { errorMessage: message });
+    return JSON.stringify({ ok: false, error: message });
   }
 
   return JSON.stringify({ ok: true, agent_id: targetId, response: responseText });
@@ -991,7 +1009,7 @@ async function handleMethod(method, params, id, sendEvent) {
                 byAgent: [{ agentId: sessionAgentId, recent: [{ key: sessionKey, updatedAt: Date.now() }] }] } } });
           }
         } catch (err) {
-          if (!aborted) emitChat("error", { errorMessage: err.message || "Hermes API error" });
+          if (!aborted) emitChat("error", { errorMessage: sanitizeErrorMessage(err) || "Hermes API error" });
           else emitChat("aborted", {});
         } finally {
           activeRuns.delete(runId);
@@ -1163,7 +1181,7 @@ function startAdapter() {
 
   const wss = new WebSocketServer({ server: httpServer });
   wss.on("error", (err) => {
-    if (err.code !== "EADDRINUSE") console.error("[hermes-adapter] Server error:", err.message);
+    if (err.code !== "EADDRINUSE") console.error("[hermes-adapter] Server error:", sanitizeErrorMessage(err));
   });
 
   wss.on("connection", (ws) => {
@@ -1173,7 +1191,7 @@ function startAdapter() {
     const send = (frame) => {
       if (ws.readyState === ws.OPEN) {
         try { ws.send(JSON.stringify(frame)); }
-        catch (e) { console.error("[hermes-adapter] send error:", e.message); }
+        catch (e) { console.error("[hermes-adapter] send error:", sanitizeErrorMessage(e)); }
       }
     };
 
@@ -1226,14 +1244,15 @@ function startAdapter() {
         const response = await handleMethod(method, params, id, sendEventFn);
         send(response);
       } catch (err) {
-        console.error(`[hermes-adapter] Error handling ${method}:`, err.message);
-        send(resErr(id, "internal_error", err.message || "Internal error"));
+        const message = sanitizeErrorMessage(err);
+        console.error(`[hermes-adapter] Error handling ${method}:`, message);
+        send(resErr(id, "internal_error", message || "Internal error"));
       }
     });
 
     ws.on("close", () => activeSendEventFns.delete(sendEventFn));
     ws.on("error", (err) => {
-      console.error("[hermes-adapter] WebSocket error:", err.message);
+      console.error("[hermes-adapter] WebSocket error:", sanitizeErrorMessage(err));
       activeSendEventFns.delete(sendEventFn);
     });
   });
@@ -1250,7 +1269,7 @@ function startAdapter() {
     if (err.code === "EADDRINUSE") {
       console.error(`[hermes-adapter] Port ${ADAPTER_PORT} in use. Set HERMES_ADAPTER_PORT to change it.`);
     } else {
-      console.error("[hermes-adapter] Server error:", err.message);
+      console.error("[hermes-adapter] Server error:", sanitizeErrorMessage(err));
     }
     process.exit(1);
   });
