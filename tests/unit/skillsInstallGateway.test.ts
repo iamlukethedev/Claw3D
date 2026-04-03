@@ -124,4 +124,24 @@ describe("skills install gateway", () => {
       })
     );
   });
+
+  it("rejects installs when the gateway reports the global root workspace", async () => {
+    const call = vi.fn();
+
+    await expect(
+      installPackagedSkillViaGatewayAgent({
+        client: { call } as unknown as GatewayClient,
+        request: {
+          packageId: "todo-board",
+          source: "openclaw-workspace",
+          workspaceDir: "/home/pi/.openclaw/workspace",
+          managedSkillsDir: "/home/pi/.openclaw/skills",
+          agentId: "soundclaw",
+          agentName: "soundclaw",
+        },
+      })
+    ).rejects.toThrow(/gateway root workspace/i);
+
+    expect(call).not.toHaveBeenCalled();
+  });
 });

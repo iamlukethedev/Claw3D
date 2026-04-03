@@ -95,6 +95,8 @@ export type PackagedSkillInstallRequest = {
   source: RemovableSkillSource;
   workspaceDir: string;
   managedSkillsDir: string;
+  agentId?: string;
+  agentName?: string;
 };
 
 export type PackagedSkillInstallResult = {

@@ -15,6 +15,31 @@ const normalizeRequired = (value: string, field: string): string => {
   return trimmed;
 };
 
+const normalizeOptional = (value: string | undefined | null): string => value?.trim() ?? "";
+
+const getPathLeaf = (value: string): string => {
+  const normalized = value.replace(/[\\/]+$/, "");
+  const segments = normalized.split(/[\\/]/).filter(Boolean);
+  return segments[segments.length - 1] ?? "";
+};
+
+const validateWorkspaceInstallTarget = (params: {
+  workspaceDir: string;
+  agentId?: string;
+  agentName?: string;
+}) => {
+  const leaf = getPathLeaf(params.workspaceDir).toLowerCase();
+  if (leaf === "workspace") {
+    const targetLabel =
+      normalizeOptional(params.agentName) ||
+      normalizeOptional(params.agentId) ||
+      "the selected agent";
+    throw new Error(
+      `Cannot install a packaged skill because the workspace reported for ${targetLabel} resolves to the gateway root workspace (${params.workspaceDir}). Re-select the agent and refresh the marketplace before installing.`
+    );
+  }
+};
+
 const escapeForJsonString = (value: string) => JSON.stringify(value);
 
 const buildInstallerMessage = (params: {
@@ -71,6 +96,11 @@ export const installPackagedSkillViaGatewayAgent = async (params: {
   }
 
   const workspaceDir = normalizeRequired(params.request.workspaceDir, "workspaceDir");
+  validateWorkspaceInstallTarget({
+    workspaceDir,
+    agentId: params.request.agentId,
+    agentName: params.request.agentName,
+  });
   const files = readPackagedSkillFiles(packagedSkill.packageId);
   const installerName = `Skill Installer ${Date.now()}`;
 

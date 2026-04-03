@@ -286,12 +286,14 @@ export const useOfficeSkillsMarketplace = ({
               source: packagedSkill.installSource,
               workspaceDir: report.workspaceDir,
               managedSkillsDir: report.managedSkillsDir,
+              agentId: selectedAgent?.agentId ?? undefined,
+              agentName: selectedAgent?.name ?? undefined,
             },
           });
         },
       });
     },
-    [client, runSkillMutation]
+    [client, runSkillMutation, selectedAgent]
   );
 
   const handleInstallPackagedSkillAndEnable = useCallback(
@@ -340,6 +342,9 @@ export const useOfficeSkillsMarketplace = ({
             source: packagedSkill.installSource,
             workspaceDir: initialReport.workspaceDir,
             managedSkillsDir: initialReport.managedSkillsDir,
+            agentId: targetAgentId,
+            agentName:
+              agents.find((agent) => agent.agentId === targetAgentId)?.name ?? undefined,
           },
         });
         params.onProgress?.({
