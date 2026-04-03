@@ -245,6 +245,82 @@ Important rule:
 
 - floor-local runtime state should not be overwritten by switching to another floor
 
+## PR Breakdown
+
+Office Systems should ship as a sequence of narrow PRs, not one long-running mega branch.
+
+Recommended slices:
+
+1. `office: add floor registry and canonical floor definitions`
+   - floor ids
+   - provider/kind definitions
+   - registry helpers
+
+2. `office: persist per-floor runtime state`
+   - floor-local runtime profile binding
+   - connection status
+   - recent error
+   - last-known-good metadata
+
+3. `office: add per-floor roster hydration`
+   - one roster cache per floor
+   - runtime-neutral hydration entry points
+
+4. `office: add building shell floor switcher`
+   - active floor selection
+   - shell navigation
+   - floor-local presentation handoff
+
+5. `office: add cross-floor messaging primitives`
+   - explicit inter-floor message model
+   - supervisor handoff
+   - shared commons channels
+
+6. `office: add higher-level Office Systems features`
+   - training
+   - trader's floor
+   - war room
+   - bulletin/meeting systems
+
+7. `office: integrate campus and specialized environments`
+   - stadium / outside campus
+   - specialized booths and labs
+
+## Current Implementation Status
+
+Implemented in the current Office Systems foundation slice:
+
+- `1. floor registry and canonical floor definitions`
+  - canonical floor ids
+  - provider/kind definitions
+  - enabled-floor helpers
+- `2. persistent per-floor runtime state`
+  - persisted floor-local runtime profile binding
+  - connection status
+  - recent error state
+  - last-known-good metadata
+- `3. per-floor roster hydration`
+  - one roster cache per floor
+  - runtime-neutral hydration/state builders
+  - preserved runtime/identity/session display-name provenance
+- `4. building shell floor switcher`
+  - persisted `activeFloorId`
+  - enabled-floor switching helpers
+  - shell-level floor picker in OfficeScreen
+  - floor-local roster status surfaced in the shell
+
+Explicitly deferred from this slice:
+
+- cross-floor messaging
+- supervisor handoff chains
+- shared commons/watercooler traffic
+- specialized floor systems like Training, Trader's Floor, and Campus gameplay
+
+Reason for deferral:
+
+- cross-agent messaging primitives should be tightened first
+- then cross-floor messaging can build on a cleaner interaction model
+
 ## Multi-Provider Roster Loading
 
 Today Claw3D mostly thinks in one active roster.
@@ -387,6 +463,148 @@ Possible unlock outputs:
 7. Build Office Systems on top
 
 This keeps floors foundational, and avoids building bulletin boards / meetings / QA on top of a single-runtime assumption that will just need to be broken later.
+
+## Concrete Delivery Plan
+
+### Phase 1: Floor Registry
+
+Deliverables:
+
+- define canonical `FloorId` and `FloorProvider` types
+- add a floor definition registry in Studio-owned state
+- mark which floors are enabled, core, support, simulation, or outside
+- add runtime profile linkage per floor
+
+Acceptance criteria:
+
+- Claw3D can enumerate all known floors without connecting to any runtime
+- floor definitions are runtime-neutral and local-state only
+- the building shell can reference floor labels and kinds without depending on roster data
+
+### Phase 2: Persistent Per-Floor Runtime State
+
+Deliverables:
+
+- store connection/runtime profile state per floor
+- persist `lastKnownGood` per floor
+- persist per-floor gateway URL/token profile linkage
+- preserve connection errors per floor instead of one global connection slot
+
+Acceptance criteria:
+
+- switching floors does not wipe another floor’s runtime state
+- reconnecting one floor does not reset another floor
+- Claw3D can show disconnected/configured/connected/errored state per floor
+
+### Phase 3: Per-Floor Roster Hydration
+
+Deliverables:
+
+- hydrate one roster per floor
+- preserve `runtimeName`, `identityName`, and `sessionDisplayName` in roster entries
+- cache roster load metadata per floor
+- add floor-local selected agent state
+
+Acceptance criteria:
+
+- multiple floors can have rosters loaded in the same session
+- roster entries remain associated with their owning floor
+- the UI can distinguish local-floor vs other-floor agent origin cleanly
+
+### Phase 4: Building Shell + Floor Switcher
+
+Deliverables:
+
+- add building map / floor switcher UI
+- keep shell mounted while changing floors
+- render active floor scene without remounting global app state
+- make lobby and campus valid destinations even before all rooms are implemented
+
+Acceptance criteria:
+
+- floor switching is UI-stateful, not route-destructive
+- the shell remains stable while floor scenes swap
+- disconnected floors remain visible as places, not absent data
+
+### Phase 5: Cross-Floor Coordination Primitives
+
+Deliverables:
+
+- define handoff board / floor inbox / supervisor dispatch primitives
+- add message/event records with source floor and target floor
+- support explicit cross-floor meeting invites or requests
+
+Acceptance criteria:
+
+- cross-floor actions are visible building events
+- routing is explicit, not inferred from hidden runtime config
+- Hermes supervising OpenClaw can be modeled as a building behavior
+
+### Phase 6: Office Systems on Top
+
+Deliverables:
+
+- lobby onboarding
+- training rooms
+- trader floor / specialized rooms
+- QA / meetings / bulletin systems
+- outside campus and stadium integration
+
+Acceptance criteria:
+
+- Office Systems are built against the building/floor model
+- room features do not assume single-runtime global state
+- specialized rooms remain optional extensions, not core architecture blockers
+
+## Immediate Implementation Checklist
+
+### Floor Registry Slice
+
+- add `FloorId`, `FloorProvider`, and `FloorDefinition` types
+- create a canonical floor registry module
+- include at least:
+  - `lobby`
+  - `openclaw-ground`
+  - `hermes-first`
+  - `custom-second`
+  - `training`
+  - `traders-floor`
+  - `campus`
+- decide where floor registry state lives inside Studio settings/local state
+
+### Per-Floor Runtime State Slice
+
+- define `FloorRuntimeState`
+- store runtime profile key per floor
+- store connection status per floor
+- store last-known-good timestamp per floor
+- store last error code/message per floor
+
+### Roster Slice
+
+- define `FloorRosterEntry`
+- define `FloorRosterState`
+- preserve runtime/identity/session naming metadata
+- keep floor-local selected agent state
+
+### UI Shell Slice
+
+- add a floor switcher stub in the building shell
+- keep current office scene as one floor implementation first
+- do not attempt full cross-floor scene rendering in the first pass
+
+## Reference Branches
+
+Use these as references, not merge targets for the foundational slice:
+
+- `upstream/soccer-stadium-outside-office`
+  - reference for `Outside / Campus`
+  - useful for environment/scene ideas
+- `upstream/feature/crypto-booth`
+  - reference for specialized room/department patterns
+  - useful later for `Trader's Floor` or a market/crypto room
+
+The foundational multi-floor work should still be built from current `upstream/main`, not from either feature branch.
 
 ## Immediate Non-Goals
 

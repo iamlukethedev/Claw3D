@@ -4,6 +4,14 @@ import type {
   StandupManualEntry,
   StandupScheduleConfig,
 } from "@/lib/office/standup/types";
+import {
+  DEFAULT_ACTIVE_FLOOR_ID,
+  getOfficeFloor,
+  OFFICE_FLOORS,
+  type FloorId,
+  type FloorProvider,
+  resolveActiveOfficeFloorId,
+} from "@/lib/office/floors";
 import type { AgentAvatarProfile } from "@/lib/avatars/profile";
 import { normalizeAgentAvatarProfile } from "@/lib/avatars/profile";
 import {
@@ -189,9 +197,37 @@ export type StudioTaskBoardPreference = TaskBoardPreference;
 export type StudioTaskBoardPreferencePublic = TaskBoardPreference;
 export type StudioTaskBoardPreferencePatch = TaskBoardPreferencePatch;
 
+export type FloorRuntimeConnectionStatus =
+  | "disconnected"
+  | "connecting"
+  | "connected"
+  | "error";
+
+export type StudioFloorRuntimeState = {
+  floorId: FloorId;
+  provider: FloorProvider;
+  runtimeProfileId: string | null;
+  gatewayUrl: string | null;
+  status: FloorRuntimeConnectionStatus;
+  lastKnownGoodAt: number | null;
+  lastErrorCode: string | null;
+  lastErrorMessage: string | null;
+};
+
+export type StudioFloorRuntimeStatePatch = {
+  runtimeProfileId?: string | null;
+  gatewayUrl?: string | null;
+  status?: FloorRuntimeConnectionStatus;
+  lastKnownGoodAt?: number | null;
+  lastErrorCode?: string | null;
+  lastErrorMessage?: string | null;
+};
+
 export type StudioSettings = {
   version: 1;
   gateway: StudioGatewaySettings | null;
+  activeFloorId: FloorId;
+  officeFloors: Record<FloorId, StudioFloorRuntimeState>;
   focused: Record<string, StudioFocusedPreference>;
   avatars: Record<string, StudioAgentAvatars>;
   deskAssignments: Record<string, StudioDeskAssignments>;
@@ -211,6 +247,8 @@ export type StudioSettingsPublic = Omit<StudioSettings, "gateway" | "office" | "
 
 export type StudioSettingsPatch = {
   gateway?: StudioGatewaySettingsPatch | null;
+  activeFloorId?: FloorId | null;
+  officeFloors?: Partial<Record<FloorId, StudioFloorRuntimeStatePatch | null>>;
   focused?: Record<string, Partial<StudioFocusedPreference> | null>;
   avatars?: Record<string, Record<string, AgentAvatarProfile | null> | null>;
   deskAssignments?: Record<string, Record<string, string | null> | null>;
@@ -254,6 +292,28 @@ const normalizeGatewayUrl = (value: unknown) => {
 const normalizeGatewayKey = (value: unknown) => {
   const key = normalizeGatewayUrl(value);
   return key ? key : null;
+};
+
+const normalizeFloorRuntimeConnectionStatus = (
+  value: unknown,
+  fallback: FloorRuntimeConnectionStatus = "disconnected"
+): FloorRuntimeConnectionStatus => {
+  if (
+    value === "disconnected" ||
+    value === "connecting" ||
+    value === "connected" ||
+    value === "error"
+  ) {
+    return value;
+  }
+  return fallback;
+};
+
+const normalizeOptionalTimestamp = (value: unknown, fallback: number | null = null): number | null => {
+  if (value === null || value === undefined || value === "") {
+    return fallback;
+  }
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 };
 
 const normalizeFocusFilter = (
@@ -360,6 +420,22 @@ export const defaultStudioStandupPreference = (): StudioStandupPreference => ({
 
 export const defaultStudioTaskBoardPreference =
   (): StudioTaskBoardPreference => defaultTaskBoardPreference();
+
+export const defaultStudioFloorRuntimeState = (
+  floorId: FloorId
+): StudioFloorRuntimeState => {
+  const floor = getOfficeFloor(floorId);
+  return {
+    floorId,
+    provider: floor.provider,
+    runtimeProfileId: floor.runtimeProfileId,
+    gatewayUrl: null,
+    status: "disconnected",
+    lastKnownGoodAt: null,
+    lastErrorCode: null,
+    lastErrorMessage: null,
+  };
+};
 
 const normalizeVoiceReplySpeed = (value: unknown, fallback: number = 1): number => {
   if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
@@ -1017,9 +1093,57 @@ const normalizeOffice = (value: unknown): Record<string, StudioOfficePreference>
   return office;
 };
 
+const normalizeFloorRuntimeState = (
+  floorId: FloorId,
+  value: unknown,
+  fallback: StudioFloorRuntimeState = defaultStudioFloorRuntimeState(floorId)
+): StudioFloorRuntimeState => {
+  if (!isRecord(value)) return fallback;
+  const floor = getOfficeFloor(floorId);
+  const runtimeProfileIdRaw =
+    value.runtimeProfileId === null || value.runtimeProfileId === undefined
+      ? fallback.runtimeProfileId
+      : coerceString(value.runtimeProfileId);
+  const gatewayUrlRaw =
+    value.gatewayUrl === null || value.gatewayUrl === undefined
+      ? fallback.gatewayUrl
+      : normalizeGatewayUrl(value.gatewayUrl);
+  const lastErrorCodeRaw =
+    value.lastErrorCode === null || value.lastErrorCode === undefined
+      ? fallback.lastErrorCode
+      : coerceString(value.lastErrorCode);
+  const lastErrorMessageRaw =
+    value.lastErrorMessage === null || value.lastErrorMessage === undefined
+      ? fallback.lastErrorMessage
+      : coerceString(value.lastErrorMessage);
+  return {
+    floorId,
+    provider: floor.provider,
+    runtimeProfileId: runtimeProfileIdRaw || null,
+    gatewayUrl: gatewayUrlRaw || null,
+    status: normalizeFloorRuntimeConnectionStatus(value.status, fallback.status),
+    lastKnownGoodAt: normalizeOptionalTimestamp(value.lastKnownGoodAt, fallback.lastKnownGoodAt),
+    lastErrorCode: lastErrorCodeRaw || null,
+    lastErrorMessage: lastErrorMessageRaw || null,
+  };
+};
+
+const normalizeOfficeFloors = (
+  value: unknown
+): Record<FloorId, StudioFloorRuntimeState> => {
+  const floors = {} as Record<FloorId, StudioFloorRuntimeState>;
+  for (const floor of OFFICE_FLOORS) {
+    const raw = isRecord(value) ? value[floor.id] : undefined;
+    floors[floor.id] = normalizeFloorRuntimeState(floor.id, raw);
+  }
+  return floors;
+};
+
 export const defaultStudioSettings = (): StudioSettings => ({
   version: SETTINGS_VERSION,
   gateway: null,
+  activeFloorId: DEFAULT_ACTIVE_FLOOR_ID,
+  officeFloors: normalizeOfficeFloors(null),
   focused: {},
   avatars: {},
   deskAssignments: {},
@@ -1109,6 +1233,8 @@ export const sanitizeStudioSettings = (
 export const normalizeStudioSettings = (raw: unknown): StudioSettings => {
   if (!isRecord(raw)) return defaultStudioSettings();
   const gateway = normalizeGatewaySettings(raw.gateway);
+  const activeFloorId = resolveActiveOfficeFloorId(coerceString(raw.activeFloorId) as FloorId);
+  const officeFloors = normalizeOfficeFloors(raw.officeFloors);
   const focused = normalizeFocused(raw.focused);
   const avatars = normalizeAvatars(raw.avatars);
   const deskAssignments = normalizeDeskAssignments(raw.deskAssignments);
@@ -1120,6 +1246,8 @@ export const normalizeStudioSettings = (raw: unknown): StudioSettings => {
   return {
     version: SETTINGS_VERSION,
     gateway,
+    activeFloorId,
+    officeFloors,
     focused,
     avatars,
     deskAssignments,
@@ -1137,6 +1265,11 @@ export const mergeStudioSettings = (
 ): StudioSettings => {
   const nextGateway =
     patch.gateway === undefined ? current.gateway : mergeGatewaySettings(current.gateway, patch.gateway);
+  const nextActiveFloorId =
+    patch.activeFloorId === undefined
+      ? current.activeFloorId
+      : resolveActiveOfficeFloorId((patch.activeFloorId ?? DEFAULT_ACTIVE_FLOOR_ID) as FloorId);
+  const nextOfficeFloors = { ...current.officeFloors };
   const nextFocused = { ...current.focused };
   const nextAvatars = { ...current.avatars };
   const nextDeskAssignments = { ...current.deskAssignments };
@@ -1145,6 +1278,25 @@ export const mergeStudioSettings = (
   const nextOffice = { ...current.office };
   const nextStandup = { ...(current.standup ?? {}) };
   const nextTaskBoard = { ...(current.taskBoard ?? {}) };
+  if (patch.officeFloors) {
+    for (const floor of OFFICE_FLOORS) {
+      const floorPatch = patch.officeFloors[floor.id];
+      if (floorPatch === undefined) continue;
+      const fallback = nextOfficeFloors[floor.id] ?? defaultStudioFloorRuntimeState(floor.id);
+      if (floorPatch === null) {
+        nextOfficeFloors[floor.id] = defaultStudioFloorRuntimeState(floor.id);
+        continue;
+      }
+      nextOfficeFloors[floor.id] = normalizeFloorRuntimeState(
+        floor.id,
+        {
+          ...fallback,
+          ...floorPatch,
+        },
+        fallback
+      );
+    }
+  }
   if (patch.focused) {
     for (const [keyRaw, value] of Object.entries(patch.focused)) {
       const key = normalizeGatewayKey(keyRaw);
@@ -1340,6 +1492,8 @@ export const mergeStudioSettings = (
   return {
     version: SETTINGS_VERSION,
     gateway: nextGateway ?? null,
+    activeFloorId: nextActiveFloorId,
+    officeFloors: nextOfficeFloors,
     focused: nextFocused,
     avatars: nextAvatars,
     deskAssignments: nextDeskAssignments,
@@ -1359,6 +1513,15 @@ export const resolveFocusedPreference = (
   if (!key) return null;
   return settings.focused[key] ?? null;
 };
+
+export const resolveStudioFloorRuntimeState = (
+  settings: StudioSettings | StudioSettingsPublic,
+  floorId: FloorId
+): StudioFloorRuntimeState => settings.officeFloors[floorId] ?? defaultStudioFloorRuntimeState(floorId);
+
+export const resolveStudioActiveFloorId = (
+  settings: StudioSettings | StudioSettingsPublic
+): FloorId => resolveActiveOfficeFloorId(settings.activeFloorId);
 
 export const resolveAgentAvatarSeed = (
   settings: StudioSettings | StudioSettingsPublic,

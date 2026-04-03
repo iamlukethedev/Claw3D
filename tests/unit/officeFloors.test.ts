@@ -1,0 +1,65 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  DEFAULT_ACTIVE_FLOOR_ID,
+  getOfficeFloor,
+  getAdjacentEnabledOfficeFloorId,
+  listEnabledOfficeFloors,
+  listOfficeFloorsForProvider,
+  OFFICE_FLOORS,
+  resolveActiveOfficeFloorId,
+} from "@/lib/office/floors";
+
+describe("office floor registry", () => {
+  it("defines the canonical floor order", () => {
+    expect(OFFICE_FLOORS.map((floor) => floor.id)).toEqual([
+      "lobby",
+      "openclaw-ground",
+      "hermes-first",
+      "custom-second",
+      "training",
+      "traders-floor",
+      "campus",
+    ]);
+  });
+
+  it("looks up floors by id", () => {
+    expect(getOfficeFloor("hermes-first")).toMatchObject({
+      label: "Hermes Floor",
+      provider: "hermes",
+      kind: "runtime",
+      enabled: true,
+      runtimeProfileId: "hermes-default",
+    });
+  });
+
+  it("lists only enabled floors by default", () => {
+    expect(listEnabledOfficeFloors().map((floor) => floor.id)).toEqual([
+      "lobby",
+      "openclaw-ground",
+      "hermes-first",
+      "custom-second",
+    ]);
+  });
+
+  it("lists floors for a provider", () => {
+    expect(listOfficeFloorsForProvider("demo").map((floor) => floor.id)).toEqual([
+      "lobby",
+      "training",
+      "traders-floor",
+      "campus",
+    ]);
+  });
+
+  it("resolves active floor ids against enabled floors", () => {
+    expect(DEFAULT_ACTIVE_FLOOR_ID).toBe("lobby");
+    expect(resolveActiveOfficeFloorId("hermes-first")).toBe("hermes-first");
+    expect(resolveActiveOfficeFloorId("training")).toBe("lobby");
+    expect(resolveActiveOfficeFloorId(null)).toBe("lobby");
+  });
+
+  it("cycles across enabled floors only", () => {
+    expect(getAdjacentEnabledOfficeFloorId("lobby", 1)).toBe("openclaw-ground");
+    expect(getAdjacentEnabledOfficeFloorId("lobby", -1)).toBe("custom-second");
+  });
+});
