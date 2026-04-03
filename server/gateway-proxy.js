@@ -322,6 +322,15 @@ function createGatewayProxy(options) {
           return;
         }
         connectRequestId = id;
+        const params = isObject(parsed.params) ? parsed.params : null;
+        const client = params && isObject(params.client) ? params.client : null;
+        log(
+          `[gateway-proxy] connect frame client.id=${
+            typeof client?.id === "string" ? client.id : "n/a"
+          } client.mode=${
+            typeof client?.mode === "string" ? client.mode : "n/a"
+          } hasToken=${hasNonEmptyToken(params)} hasDevice=${hasCompleteDeviceAuth(params)}`
+        );
         if (pendingUpstreamSetupError) {
           sendConnectError(pendingUpstreamSetupError.code, pendingUpstreamSetupError.message);
           return;
