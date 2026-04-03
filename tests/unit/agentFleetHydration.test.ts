@@ -45,7 +45,7 @@ describe("hydrateAgentFleetFromGateway", () => {
             {
               id: "agent-1",
               name: "One",
-              identity: { avatarUrl: "https://example.com/one.png" },
+              identity: { name: "Main Persona", avatarUrl: "https://example.com/one.png" },
             },
             {
               id: "agent-2",
@@ -126,10 +126,11 @@ describe("hydrateAgentFleetFromGateway", () => {
     expect(result.seeds[0]).toEqual(
       expect.objectContaining({
         agentId: "agent-1",
-        name: "One",
+        name: "Main Persona",
+        runtimeName: "One",
+        identityName: "Main Persona",
+        sessionDisplayName: "Main",
         sessionKey: "agent:agent-1:main",
-        avatarSeed: "persisted-seed",
-        avatarProfile: expect.objectContaining({ seed: "persisted-seed" }),
         avatarUrl: "https://example.com/one.png",
         model: "openai/gpt-4.1",
         thinkingLevel: "medium",
