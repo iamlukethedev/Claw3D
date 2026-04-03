@@ -62,6 +62,12 @@ const resolveAndValidateLocalMediaPath = (raw: string): { resolved: string; mime
   return { resolved, mime };
 };
 
+const isWithinAllowedRoot = (targetPath: string, allowedRoot: string): boolean => {
+  const relative = path.relative(allowedRoot, targetPath);
+  if (!relative) return true;
+  return !relative.startsWith("..") && !path.isAbsolute(relative);
+};
+
 const validateRemoteMediaPath = (raw: string): { remotePath: string; mime: string } => {
   const { trimmed, mime } = validateRawMediaPath(raw);
 
@@ -83,15 +89,32 @@ const validateRemoteMediaPath = (raw: string): { remotePath: string; mime: strin
   return { remotePath: trimmed, mime };
 };
 
-const readLocalMedia = async (resolvedPath: string): Promise<{ bytes: Buffer; size: number }> => {
-  const stat = await fs.stat(resolvedPath);
+const readLocalMedia = async (
+  resolvedPath: string,
+  allowedRoot: string
+): Promise<{ bytes: Buffer; size: number }> => {
+  const entry = await fs.lstat(resolvedPath);
+  if (entry.isSymbolicLink()) {
+    throw new Error("symlinked media paths are not allowed");
+  }
+
+  const [realResolvedPath, realAllowedRoot] = await Promise.all([
+    fs.realpath(resolvedPath),
+    fs.realpath(allowedRoot).catch(() => path.resolve(allowedRoot)),
+  ]);
+
+  if (!isWithinAllowedRoot(realResolvedPath, realAllowedRoot)) {
+    throw new Error(`Refusing to read media outside ${realAllowedRoot}`);
+  }
+
+  const stat = await fs.stat(realResolvedPath);
   if (!stat.isFile()) {
     throw new Error("path is not a file");
   }
   if (stat.size > MAX_MEDIA_BYTES) {
     throw new Error(`media file too large (${stat.size} bytes)`);
   }
-  const buf = await fs.readFile(resolvedPath);
+  const buf = await fs.readFile(realResolvedPath);
   return { bytes: buf, size: stat.size };
 };
 
@@ -166,7 +189,8 @@ export async function GET(request: Request) {
 
     if (!sshTarget) {
       const { resolved, mime } = resolveAndValidateLocalMediaPath(rawPath);
-      const { bytes, size } = await readLocalMedia(resolved);
+      const allowedRoot = path.join(os.homedir(), ".openclaw");
+      const { bytes, size } = await readLocalMedia(resolved, allowedRoot);
       const body = new Blob([Uint8Array.from(bytes)], { type: mime });
       return new Response(body, {
         headers: {

@@ -1,6 +1,6 @@
 {
   "name": "claw3d",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "license": "MIT",
   "scripts": {
@@ -23,7 +23,6 @@
     "@noble/ed25519": "^3.0.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
-    "@vercel/otel": "^2.1.0",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
