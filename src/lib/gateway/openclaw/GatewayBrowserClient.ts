@@ -581,6 +581,15 @@ export class GatewayBrowserClient {
       locale: navigator.language,
     };
 
+    gatewayBrowserDebugLog("connect-params", {
+      clientId: params.client.id,
+      clientMode: params.client.mode,
+      disableDeviceAuth: this.opts.disableDeviceAuth,
+      isSecureContext,
+      hasToken: Boolean(authToken),
+      hasDeviceIdentity: Boolean(deviceIdentity),
+    });
+
     void this.request<GatewayHelloOk>("connect", params)
       .then((hello) => {
         gatewayBrowserDebugLog("hello-ok", {
