@@ -71,15 +71,15 @@ function createAccessGate(options) {
   const getAuthState = (req) => {
     if (!enabled) return { authorized: true, limited: false };
     const ip = req.socket?.remoteAddress || "unknown";
-    if (rateLimiter.isLimited(ip)) {
-      return { authorized: false, limited: true };
-    }
     const cookieHeader = req.headers?.cookie;
     const cookies = parseCookies(cookieHeader);
     const authorized = safeCompare(cookies[cookieName] || "", token);
     if (authorized) {
       rateLimiter.reset(ip);
       return { authorized: true, limited: false };
+    }
+    if (rateLimiter.isLimited(ip)) {
+      return { authorized: false, limited: true };
     }
     rateLimiter.recordFailure(ip);
     return { authorized: false, limited: rateLimiter.isLimited(ip) };
