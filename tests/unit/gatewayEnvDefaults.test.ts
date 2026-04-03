@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
   const originalEnv = { ...process.env };
@@ -105,6 +108,41 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
       token: "",
       adapterType: "hermes",
       profiles: {
+        hermes: { url: "ws://localhost:19444", token: "" },
+      },
+    });
+  });
+
+  it("merges Hermes adapter defaults into file-backed OpenClaw defaults", async () => {
+    delete process.env.CLAW3D_GATEWAY_URL;
+    delete process.env.CLAW3D_GATEWAY_TOKEN;
+    delete process.env.CLAW3D_GATEWAY_ADAPTER_TYPE;
+    process.env.HERMES_ADAPTER_PORT = "19444";
+
+    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw3d-gateway-defaults-"));
+    process.env.OPENCLAW_STATE_DIR = stateDir;
+    fs.writeFileSync(
+      path.join(stateDir, "openclaw.json"),
+      JSON.stringify({
+        gateway: {
+          port: 18789,
+          auth: { token: "file-token" },
+        },
+      }),
+      "utf8"
+    );
+
+    const { loadLocalGatewayDefaults } = await import(
+      "../../src/lib/studio/settings-store"
+    );
+    const result = loadLocalGatewayDefaults();
+
+    expect(result).toEqual({
+      url: "ws://localhost:18789",
+      token: "file-token",
+      adapterType: "openclaw",
+      profiles: {
+        openclaw: { url: "ws://localhost:18789", token: "file-token" },
         hermes: { url: "ws://localhost:19444", token: "" },
       },
     });

@@ -122,13 +122,32 @@ const buildEnvGatewayDefaults = (): StudioGatewaySettings | null => {
   });
 };
 
+const mergeGatewayProfiles = (
+  base: StudioGatewaySettings,
+  extra: StudioGatewaySettings | null
+): StudioGatewaySettings => {
+  if (!extra?.profiles) {
+    return base;
+  }
+  return {
+    ...base,
+    profiles: {
+      ...(base.profiles ?? {}),
+      ...extra.profiles,
+    },
+  };
+};
+
 export const loadLocalGatewayDefaults = (): StudioGatewaySettings | null => {
   const fromFile = readOpenclawGatewayDefaults();
-  if (fromFile) return fromFile;
+  const fromEnv = buildEnvGatewayDefaults();
+  if (fromFile) {
+    return mergeGatewayProfiles(fromFile, fromEnv);
+  }
   // Fall back to env vars so operators can configure the gateway URL at
   // runtime without openclaw.json and without a rebuild. If no explicit
   // URL is provided, also expose local Hermes/Demo adapter ports when set.
-  return buildEnvGatewayDefaults();
+  return fromEnv;
 };
 
 export const loadStudioSettings = (): StudioSettings => {
