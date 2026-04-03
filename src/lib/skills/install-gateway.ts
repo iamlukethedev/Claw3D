@@ -5,7 +5,11 @@ import {
 } from "@/lib/gateway/agentConfig";
 import { getPackagedSkillById } from "@/lib/skills/catalog";
 import { readPackagedSkillFiles } from "@/lib/skills/packaged";
-import type { PackagedSkillInstallRequest, PackagedSkillInstallResult } from "@/lib/skills/types";
+import {
+  resolveWorkspaceFromAgentFiles,
+  type PackagedSkillInstallRequest,
+  type PackagedSkillInstallResult,
+} from "@/lib/skills/types";
 
 const normalizeRequired = (value: string, field: string): string => {
   const trimmed = value.trim();
@@ -23,13 +27,17 @@ const getPathLeaf = (value: string): string => {
   return segments[segments.length - 1] ?? "";
 };
 
+const isRootWorkspace = (workspaceDir: string) => {
+  const leaf = getPathLeaf(workspaceDir).toLowerCase();
+  return leaf === "workspace";
+};
+
 const validateWorkspaceInstallTarget = (params: {
   workspaceDir: string;
   agentId?: string;
   agentName?: string;
 }) => {
-  const leaf = getPathLeaf(params.workspaceDir).toLowerCase();
-  if (leaf === "workspace") {
+  if (isRootWorkspace(params.workspaceDir)) {
     const targetLabel =
       normalizeOptional(params.agentName) ||
       normalizeOptional(params.agentId) ||
@@ -95,7 +103,16 @@ export const installPackagedSkillViaGatewayAgent = async (params: {
     throw new Error("Gateway-native packaged install currently supports workspace skills only.");
   }
 
-  const workspaceDir = normalizeRequired(params.request.workspaceDir, "workspaceDir");
+  let workspaceDir = normalizeRequired(params.request.workspaceDir, "workspaceDir");
+  if (isRootWorkspace(workspaceDir) && normalizeOptional(params.request.agentId)) {
+    const recoveredWorkspace = await resolveWorkspaceFromAgentFiles(
+      params.client,
+      normalizeOptional(params.request.agentId)
+    );
+    if (recoveredWorkspace) {
+      workspaceDir = recoveredWorkspace;
+    }
+  }
   validateWorkspaceInstallTarget({
     workspaceDir,
     agentId: params.request.agentId,

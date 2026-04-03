@@ -58,6 +58,35 @@ describe("skills gateway client", () => {
     });
   });
 
+  it("derives workspace from file path when agents.files.get reports the root workspace", async () => {
+    const client = {
+      call: vi.fn(async (method: string) => {
+        if (method === "skills.status") {
+          return {
+            workspaceDir: "/home/pi/.openclaw/workspace",
+            managedSkillsDir: "/home/pi/.openclaw/skills",
+            skills: [],
+          };
+        }
+        if (method === "agents.files.get") {
+          return {
+            workspace: "/home/pi/.openclaw/workspace",
+            file: {
+              missing: false,
+              content: "# IDENTITY",
+              path: "/home/pi/.openclaw/workspace-main/IDENTITY.md",
+            },
+          };
+        }
+        throw new Error(`Unexpected method: ${method}`);
+      }),
+    } as unknown as GatewayClient;
+
+    const result = await loadAgentSkillStatus(client, "main");
+
+    expect(result.workspaceDir).toBe("/home/pi/.openclaw/workspace-main");
+  });
+
   it("fails fast when agent id is empty", async () => {
     const client = {
       call: vi.fn(),

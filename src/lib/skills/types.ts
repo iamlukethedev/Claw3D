@@ -129,7 +129,19 @@ const isLikelyRootWorkspace = (workspaceDir: string): boolean => {
   return /[\\/]workspace$/i.test(normalized);
 };
 
-const resolveWorkspaceFromAgentFiles = async (
+const resolveWorkspaceDirFromPath = (filePath: string | null | undefined): string | null => {
+  const normalized = filePath?.trim().replace(/[\\/]+$/, "") ?? "";
+  if (!normalized) return null;
+  const index = Math.max(normalized.lastIndexOf("/"), normalized.lastIndexOf("\\"));
+  if (index <= 0) return null;
+  const candidate = normalized.slice(0, index).trim();
+  if (!candidate || isLikelyRootWorkspace(candidate)) {
+    return null;
+  }
+  return candidate;
+};
+
+export const resolveWorkspaceFromAgentFiles = async (
   client: GatewayClient,
   agentId: string
 ): Promise<string | null> => {
@@ -139,6 +151,10 @@ const resolveWorkspaceFromAgentFiles = async (
       const workspace = file.workspace?.trim() ?? "";
       if (workspace && !isLikelyRootWorkspace(workspace)) {
         return workspace;
+      }
+      const derivedFromPath = resolveWorkspaceDirFromPath(file.path);
+      if (derivedFromPath) {
+        return derivedFromPath;
       }
     } catch {
       // Best-effort provenance recovery only.
