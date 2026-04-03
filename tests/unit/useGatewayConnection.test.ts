@@ -15,10 +15,16 @@ const setupAndImportHook = async (gatewayUrl: string | null) => {
   vi.resetModules();
   vi.spyOn(console, "info").mockImplementation(() => {});
 
-  const captured: { url: string | null; token: unknown; authScopeKey: unknown } = {
+  const captured: {
+    url: string | null;
+    token: unknown;
+    authScopeKey: unknown;
+    clientName: unknown;
+  } = {
     url: null,
     token: null,
     authScopeKey: null,
+    clientName: null,
   };
 
   vi.doMock("../../src/lib/gateway/openclaw/GatewayBrowserClient", () => {
@@ -35,6 +41,7 @@ const setupAndImportHook = async (gatewayUrl: string | null) => {
         captured.url = typeof opts.url === "string" ? opts.url : null;
         captured.token = "token" in opts ? opts.token : null;
         captured.authScopeKey = "authScopeKey" in opts ? opts.authScopeKey : null;
+        captured.clientName = "clientName" in opts ? opts.clientName : null;
         this.opts = {
           onHello: typeof opts.onHello === "function" ? (opts.onHello as (hello: unknown) => void) : undefined,
           onEvent: typeof opts.onEvent === "function" ? (opts.onEvent as (event: unknown) => void) : undefined,
@@ -186,6 +193,99 @@ describe("useGatewayConnection", () => {
     });
     expect(captured.token).toBe("");
     expect(captured.authScopeKey).toBe("wss://remote.example");
+    expect(captured.clientName).toBe("openclaw-control-ui");
+  });
+
+  it("uses_webchat_identity_for_remote_openclaw_connections", async () => {
+    const { useGatewayConnection, captured } = await setupAndImportHook(null);
+    const coordinator = {
+      loadSettings: async () => null,
+      loadSettingsEnvelope: async () => ({
+        settings: {
+          version: 1,
+          gateway: {
+            url: "wss://pi5.myth-coho.ts.net",
+            token: "shared-token",
+            adapterType: "openclaw",
+            lastKnownGood: {
+              url: "wss://pi5.myth-coho.ts.net",
+              token: "shared-token",
+              adapterType: "openclaw",
+            },
+          },
+          focused: {},
+          avatars: {},
+          analytics: {},
+          voiceReplies: {},
+          office: {},
+          deskAssignments: {},
+          standup: {},
+          taskBoard: {},
+        },
+        localGatewayDefaults: null,
+      }),
+      schedulePatch: () => {},
+      flushPending: async () => {},
+    };
+
+    const Probe = () => {
+      useGatewayConnection(coordinator);
+      return createElement("div", null, "ok");
+    };
+
+    render(createElement(Probe));
+
+    await waitFor(() => {
+      expect(captured.url).toBe("ws://localhost:3000/api/gateway/ws");
+    });
+    expect(captured.authScopeKey).toBe("wss://pi5.myth-coho.ts.net");
+    expect(captured.clientName).toBe("webchat-ui");
+  });
+
+  it("keeps_control_ui_identity_for_local_openclaw_connections", async () => {
+    const { useGatewayConnection, captured } = await setupAndImportHook(null);
+    const coordinator = {
+      loadSettings: async () => null,
+      loadSettingsEnvelope: async () => ({
+        settings: {
+          version: 1,
+          gateway: {
+            url: "ws://localhost:18789",
+            token: "shared-token",
+            adapterType: "openclaw",
+            lastKnownGood: {
+              url: "ws://localhost:18789",
+              token: "shared-token",
+              adapterType: "openclaw",
+            },
+          },
+          focused: {},
+          avatars: {},
+          analytics: {},
+          voiceReplies: {},
+          office: {},
+          deskAssignments: {},
+          standup: {},
+          taskBoard: {},
+        },
+        localGatewayDefaults: null,
+      }),
+      schedulePatch: () => {},
+      flushPending: async () => {},
+    };
+
+    const Probe = () => {
+      useGatewayConnection(coordinator);
+      return createElement("div", null, "ok");
+    };
+
+    render(createElement(Probe));
+
+    await waitFor(() => {
+      expect(captured.url).toBe("ws://localhost:3000/api/gateway/ws");
+    });
+    expect(captured.authScopeKey).toBe("ws://localhost:18789");
+    expect(captured.clientName).toBe("openclaw-control-ui");
   });
 
   it("does_not_auto_connect_without_a_last_known_good_state", async () => {
@@ -255,6 +355,19 @@ describe("useGatewayConnection", () => {
     expect(mod.resolveInitialGatewayConnectAttemptCount("hermes", true)).toBe(2);
     expect(mod.resolveInitialGatewayConnectAttemptCount("demo", true)).toBe(2);
     expect(mod.resolveInitialGatewayConnectAttemptCount("openclaw", true)).toBe(1);
+  });
+
+  it("uses_webchat_client_id_only_for_remote_openclaw", async () => {
+    const mod = await import("@/lib/gateway/GatewayClient");
+    expect(mod.resolveGatewayClientName("openclaw", "wss://pi5.myth-coho.ts.net")).toBe(
+      "webchat-ui"
+    );
+    expect(mod.resolveGatewayClientName("openclaw", "ws://localhost:18789")).toBe(
+      "openclaw-control-ui"
+    );
+    expect(mod.resolveGatewayClientName("hermes", "ws://localhost:18789")).toBe(
+      "openclaw-control-ui"
+    );
   });
 
   it("auto_applies_runtime_local_defaults_when_no_saved_gateway_and_build_time_empty", async () => {
