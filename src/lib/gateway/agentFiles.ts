@@ -2,7 +2,8 @@ import type { AgentFileName } from "@/lib/agents/agentFiles";
 import type { GatewayClient } from "@/lib/gateway/GatewayClient";
 
 type AgentsFilesGetResponse = {
-  file?: { missing?: unknown; content?: unknown };
+  workspace?: unknown;
+  file?: { missing?: unknown; content?: unknown; path?: unknown };
 };
 
 const resolveAgentId = (value: string) => {
@@ -17,7 +18,7 @@ export const readGatewayAgentFile = async (params: {
   client: GatewayClient;
   agentId: string;
   name: AgentFileName;
-}): Promise<{ exists: boolean; content: string }> => {
+}): Promise<{ exists: boolean; content: string; path: string | null; workspace: string | null }> => {
   const agentId = resolveAgentId(params.agentId);
   const response = await params.client.call<AgentsFilesGetResponse>("agents.files.get", {
     agentId,
@@ -28,7 +29,11 @@ export const readGatewayAgentFile = async (params: {
   const missing = fileRecord?.missing === true;
   const content =
     fileRecord && typeof fileRecord.content === "string" ? fileRecord.content : "";
-  return { exists: !missing, content };
+  const path =
+    fileRecord && typeof fileRecord.path === "string" ? fileRecord.path : null;
+  const workspace =
+    typeof response?.workspace === "string" ? response.workspace : null;
+  return { exists: !missing, content, path, workspace };
 };
 
 export const writeGatewayAgentFile = async (params: {

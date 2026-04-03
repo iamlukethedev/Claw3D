@@ -40,6 +40,30 @@ const AgentBrainPanelSection = ({
   </section>
 );
 
+const AgentFileProvenance = ({
+  path,
+  workspace,
+}: {
+  path: string | null;
+  workspace: string | null;
+}) => {
+  if (!path && !workspace) return null;
+  return (
+    <div className="rounded-md border border-border/50 bg-black/20 px-3 py-2 text-[11px] text-muted-foreground">
+      {workspace ? (
+        <div>
+          Workspace: <span className="font-mono text-foreground">{workspace}</span>
+        </div>
+      ) : null}
+      {path ? (
+        <div>
+          File: <span className="font-mono text-foreground">{path}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
 export const AgentBrainPanel = ({
   client,
   agents,
@@ -150,6 +174,7 @@ export const AgentBrainPanel = ({
               {statusCopy}
             </div>
           ) : null}
+          <AgentFileProvenance path={file.path} workspace={file.workspace} />
           <textarea
             aria-label={AGENT_FILE_META[name].title}
             className="h-[min(56vh,480px)] w-full resize-y rounded-md border border-border/80 bg-background px-4 py-3 font-mono text-sm leading-6 text-foreground outline-none"
@@ -177,6 +202,10 @@ export const AgentBrainPanel = ({
           Changing <span className="font-medium text-foreground">Name</span> here also renames the live agent
           when you save.
         </div>
+        <AgentFileProvenance
+          path={agentFiles["IDENTITY.md"].path}
+          workspace={agentFiles["IDENTITY.md"].workspace}
+        />
         <AgentIdentityFields
           values={draft.identity}
           disabled={agentFilesLoading || agentFilesSaving}

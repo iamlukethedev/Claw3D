@@ -72,7 +72,13 @@ export const useAgentFilesEditor = (params: {
       const results = await Promise.all(
         AGENT_FILE_NAMES.map(async (name) => {
           const file = await readGatewayAgentFile({ client, agentId: trimmedAgentId, name });
-          return { name, content: file.content, exists: file.exists };
+          return {
+            name,
+            content: file.content,
+            exists: file.exists,
+            path: file.path,
+            workspace: file.workspace,
+          };
         })
       );
 
@@ -82,6 +88,8 @@ export const useAgentFilesEditor = (params: {
         nextState[file.name] = {
           content: file.content ?? "",
           exists: Boolean(file.exists),
+          path: file.path ?? null,
+          workspace: file.workspace ?? null,
         };
       }
 
@@ -128,6 +136,8 @@ export const useAgentFilesEditor = (params: {
         nextState[name] = {
           content: agentFiles[name].content,
           exists: true,
+          path: agentFiles[name].path,
+          workspace: agentFiles[name].workspace,
         };
       }
 
@@ -173,6 +183,8 @@ export const useAgentFilesEditor = (params: {
           nextState[name] = {
             content,
             exists: true,
+            path: nextState[name].path,
+            workspace: nextState[name].workspace,
           };
         }
 
