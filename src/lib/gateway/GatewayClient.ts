@@ -526,6 +526,9 @@ const doctorFixHint =
 const protocolMismatchHint =
   "This gateway looks too old for Claw3D's protocol v3. Upgrade OpenClaw, use the Hermes adapter, or run `npm run demo-gateway` for a no-framework office demo.";
 
+const tailscaleGatewayHint =
+  "If this is a remote OpenClaw/Tailscale gateway, confirm the Studio host can reach the `wss://...` address and approve the first device pairing on the gateway host with `openclaw devices approve --latest`.";
+
 const isGatewayProtocolMismatchError = (error: GatewayResponseError) => {
   if (error.code.trim().toUpperCase() !== "INVALID_REQUEST") return false;
   const message = error.message.trim();
@@ -540,6 +543,9 @@ const formatGatewayError = (error: unknown) => {
     }
     if (error.code === "INVALID_REQUEST" && /invalid config/i.test(error.message)) {
       return `Gateway error (${error.code}): ${error.message}. ${doctorFixHint}`;
+    }
+    if (error.code === "studio.upstream_timeout") {
+      return `Gateway error (${error.code}): ${error.message} ${tailscaleGatewayHint}`;
     }
     return `Gateway error (${error.code}): ${error.message}`;
   }
@@ -608,6 +614,7 @@ const NON_RETRYABLE_CONNECT_ERROR_CODES = new Set([
   "studio.gateway_url_invalid",
   "studio.settings_load_failed",
   "studio.upstream_error",
+  "studio.upstream_timeout",
 ]);
 
 const isNonRetryableConnectErrorCode = (code: string | null): boolean => {

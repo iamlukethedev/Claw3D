@@ -33,5 +33,21 @@ describe("resolveGatewayAutoRetryDelayMs", () => {
 
     expect(delay).toBeNull();
   });
+
+  it("does not retry when the upstream websocket handshake times out", () => {
+    const delay = resolveGatewayAutoRetryDelayMs({
+      status: "disconnected",
+      didAutoConnect: true,
+      hasConnectedOnce: true,
+      wasManualDisconnect: false,
+      gatewayUrl: "wss://remote.example",
+      errorMessage:
+        "Gateway error (studio.upstream_timeout): Timed out connecting Studio to the upstream gateway WebSocket.",
+      connectErrorCode: "studio.upstream_timeout",
+      attempt: 0,
+    });
+
+    expect(delay).toBeNull();
+  });
 });
 
