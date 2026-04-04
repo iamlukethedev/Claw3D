@@ -6,8 +6,11 @@ const DEFAULT_UPSTREAM_HANDSHAKE_TIMEOUT_MS = 10_000;
 /** Maximum frame payload size (256 KB). */
 const MAX_FRAME_SIZE = 256 * 1024;
 
-/** Maximum frames per connection per second. */
-const MAX_FRAMES_PER_SECOND = 30;
+/** Sustained frame rate per connection. */
+const MAX_FRAMES_PER_SECOND = 60;
+
+/** Allow short startup bursts before rate limiting. */
+const MAX_FRAME_BURST = 120;
 
 const buildErrorResponse = (id, code, message) => {
   return {
@@ -28,19 +31,34 @@ const safeJsonParse = (raw) => {
   }
 };
 
-/** Per-connection frame rate limiter. */
-const createFrameRateLimiter = (maxPerSecond = MAX_FRAMES_PER_SECOND) => {
-  let count = 0;
-  const interval = setInterval(() => {
-    count = 0;
-  }, 1000);
-  interval.unref();
+/** Per-connection token bucket rate limiter. */
+const createFrameRateLimiter = (
+  maxPerSecond = MAX_FRAMES_PER_SECOND,
+  maxBurst = MAX_FRAME_BURST
+) => {
+  let tokens = maxBurst;
+  let lastRefillAt = Date.now();
+
+  const refill = () => {
+    const now = Date.now();
+    const elapsedMs = Math.max(0, now - lastRefillAt);
+    if (elapsedMs <= 0) return;
+    const replenished = (elapsedMs / 1000) * maxPerSecond;
+    tokens = Math.min(maxBurst, tokens + replenished);
+    lastRefillAt = now;
+  };
+
   return {
     check() {
-      return ++count <= maxPerSecond;
+      refill();
+      if (tokens < 1) {
+        return false;
+      }
+      tokens -= 1;
+      return true;
     },
     destroy() {
-      clearInterval(interval);
+      // No-op: token bucket has no timers to clean up.
     },
   };
 };
@@ -318,6 +336,9 @@ function createGatewayProxy(options) {
             : Buffer.isBuffer(reasonBuffer)
               ? reasonBuffer.toString()
               : "";
+        log(
+          `[gateway-proxy] upstream closed code=${code} reason=${reason || "(none)"} hadConnect=${Boolean(connectRequestId)} responseSent=${connectResponseSent}`
+        );
         if (!connectRequestId) {
           pendingUpstreamSetupError ||= {
             code: "studio.upstream_closed",
@@ -384,6 +405,13 @@ function createGatewayProxy(options) {
 
       // Rate limiting
       if (!frameRateLimiter.check()) {
+        log(
+          "[gateway-proxy] proxy rate limit hit (>" +
+            MAX_FRAMES_PER_SECOND +
+            " frames/s sustained, burst " +
+            MAX_FRAME_BURST +
+            ")"
+        );
         closeBoth(1008, "rate limit exceeded");
         return;
       }
@@ -438,6 +466,7 @@ function createGatewayProxy(options) {
     });
 
     browserWs.on("close", () => {
+      log("[gateway-proxy] browser disconnected");
       closeBoth(1000, "client closed");
     });
 
