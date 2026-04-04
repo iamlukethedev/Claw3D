@@ -17,6 +17,8 @@ const REMOVABLE_SOURCES = new Set<RemovableSkillSource>([
   "openclaw-workspace",
 ]);
 
+const SAFE_PATH_RE = /^[a-zA-Z0-9_.~\x2F:\\-]+$/;
+
 const normalizeRequired = (value: unknown, field: string): string => {
   if (typeof value !== "string") {
     throw new Error(`${field} is required.`);
@@ -24,6 +26,14 @@ const normalizeRequired = (value: unknown, field: string): string => {
   const trimmed = value.trim();
   if (!trimmed) {
     throw new Error(`${field} is required.`);
+  }
+  return trimmed;
+};
+
+const normalizeRequiredPath = (value: unknown, field: string): string => {
+  const trimmed = normalizeRequired(value, field);
+  if (!SAFE_PATH_RE.test(trimmed)) {
+    throw new Error(`${field} contains invalid characters.`);
   }
   return trimmed;
 };
@@ -51,9 +61,9 @@ const normalizeRemoveRequest = (body: unknown): SkillRemoveRequest => {
   return {
     skillKey: normalizeRequired(record.skillKey, "skillKey"),
     source: sourceRaw as RemovableSkillSource,
-    baseDir: normalizeRequired(record.baseDir, "baseDir"),
-    workspaceDir: normalizeRequired(record.workspaceDir, "workspaceDir"),
-    managedSkillsDir: normalizeRequired(record.managedSkillsDir, "managedSkillsDir"),
+    baseDir: normalizeRequiredPath(record.baseDir, "baseDir"),
+    workspaceDir: normalizeRequiredPath(record.workspaceDir, "workspaceDir"),
+    managedSkillsDir: normalizeRequiredPath(record.managedSkillsDir, "managedSkillsDir"),
   };
 };
 
@@ -79,7 +89,8 @@ export async function POST(request: Request) {
       message.includes("Remote workspace skill removal is not supported over SSH") ||
       message.includes("Gateway URL is missing") ||
       message.includes("Invalid gateway URL") ||
-      message.includes("require OPENCLAW_GATEWAY_SSH_TARGET")
+      message.includes("require OPENCLAW_GATEWAY_SSH_TARGET") ||
+      message.includes("invalid characters")
         ? 400
         : 500;
     if (status >= 500) {
