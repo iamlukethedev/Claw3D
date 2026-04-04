@@ -14,6 +14,7 @@
     "cleanup:ux-artifacts": "node scripts/cleanup-ux-artifacts.mjs",
     "sync:gateway-client": "node scripts/sync-openclaw-gateway-client.ts",
     "studio:setup": "node scripts/studio-setup.js",
+    "doctor": "node scripts/claw3doctor.mjs",
     "smoke:dev-server": "node scripts/smoke-dev-server.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
