@@ -15,8 +15,26 @@ const loadDotenv = () => {
       if (!trimmed || trimmed.startsWith("#")) continue;
       const eqIdx = trimmed.indexOf("=");
       if (eqIdx === -1) continue;
-      const key = trimmed.slice(0, eqIdx).trim();
-      const value = trimmed.slice(eqIdx + 1).trim();
+      let key = trimmed.slice(0, eqIdx).trim();
+      let value = trimmed.slice(eqIdx + 1).trim();
+      // Strip optional `export` prefix.
+      if (key.startsWith("export ")) {
+        key = key.slice(7).trim();
+      }
+      // Unquote double- or single-quoted values.
+      if (
+        value.length >= 2 &&
+        ((value[0] === '"' && value[value.length - 1] === '"') ||
+          (value[0] === "'" && value[value.length - 1] === "'"))
+      ) {
+        value = value.slice(1, -1);
+      } else {
+        // Strip inline comments for unquoted values (" #" or " # ").
+        const commentIdx = value.indexOf(" #");
+        if (commentIdx !== -1) {
+          value = value.slice(0, commentIdx).trimEnd();
+        }
+      }
       // Don't override values already set in the real environment.
       if (process.env[key] === undefined) {
         process.env[key] = value;
