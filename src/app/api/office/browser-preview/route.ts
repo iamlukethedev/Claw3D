@@ -4,7 +4,7 @@ import {
   normalizeBrowserPreviewUrl,
   resolveBrowserControlBaseUrl,
 } from "@/lib/office/browserPreview";
-import { validateBrowserPreviewTarget } from "@/lib/security/urlSafety";
+import { validateBrowserPreviewTarget, isPrivateOrLoopbackHostname } from "@/lib/security/urlSafety";
 import { loadStudioSettings } from "@/lib/studio/settings-store";
 
 export const runtime = "nodejs";
@@ -166,6 +166,21 @@ export async function GET(request: Request) {
       method: "POST",
       body: JSON.stringify({ targetId, type: "png" }),
     }, token);
+
+    // Re-validate final URL after navigation to prevent SSRF via redirects/DNS rebinding
+    if (screenshot.url) {
+      try {
+        const finalParsed = new URL(screenshot.url);
+        if (isPrivateOrLoopbackHostname(finalParsed.hostname)) {
+          return NextResponse.json(
+            { error: "Browser preview target redirected to a private network address." },
+            { status: 400 }
+          );
+        }
+      } catch {
+        // Invalid URL in screenshot response - continue with caution
+      }
+    }
 
     if (!screenshot.path?.trim()) {
       throw new Error("Browser screenshot did not return a media path.");
