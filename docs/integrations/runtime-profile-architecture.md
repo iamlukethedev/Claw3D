@@ -186,7 +186,7 @@ Custom runtimes should fit the same profile model:
 - one or more named profiles
 - floor binding selects which profile powers which floor
 
-This avoids making the “Custom Floor” logic one-off and lets Claw3D grow
+This avoids making the "Custom Floor" logic one-off and lets Claw3D grow
 to multiple custom environments without another architecture pass.
 
 ## One Gateway Contract, Different Backends
