@@ -265,6 +265,7 @@ export class GatewayClient {
   private rejectConnect: ((error: Error) => void) | null = null;
   private manualDisconnect = false;
   private lastHello: GatewayHelloOk | null = null;
+  private _lastDisconnectCode: number | null = null;
 
   onStatus(handler: StatusHandler) {
     this.statusHandlers.add(handler);
@@ -323,6 +324,7 @@ export class GatewayClient {
       },
       onClose: ({ code, reason }) => {
         if (this.client !== nextClient) return;
+        this._lastDisconnectCode = code;
         const connectFailed =
           code === CONNECT_FAILED_CLOSE_CODE ? parseConnectFailedCloseReason(reason) : null;
         const err = connectFailed
@@ -412,6 +414,10 @@ export class GatewayClient {
 
   getLastHello() {
     return this.lastHello;
+  }
+
+  get lastDisconnectCode() {
+    return this._lastDisconnectCode;
   }
 
   private updateStatus(status: GatewayStatus) {
@@ -654,6 +660,10 @@ const isNonRetryableConnectErrorCode = (code: string | null): boolean => {
   return NON_RETRYABLE_CONNECT_ERROR_CODES.has(normalized);
 };
 
+/** WebSocket close code 1008 = policy violation (rate limit). */
+const WS_CLOSE_POLICY_VIOLATION = 1008;
+const RATE_LIMIT_RETRY_DELAY_MS = 15_000;
+
 export const resolveGatewayAutoRetryDelayMs = (params: {
   status: GatewayStatus;
   didAutoConnect: boolean;
@@ -662,6 +672,7 @@ export const resolveGatewayAutoRetryDelayMs = (params: {
   gatewayUrl: string;
   errorMessage: string | null;
   connectErrorCode: string | null;
+  lastDisconnectCode: number | null;
   attempt: number;
 }): number | null => {
   if (params.status !== "disconnected") return null;
@@ -673,8 +684,13 @@ export const resolveGatewayAutoRetryDelayMs = (params: {
   if (isNonRetryableConnectErrorCode(params.connectErrorCode)) return null;
   if (params.connectErrorCode === null && isAuthError(params.errorMessage)) return null;
 
+  const baseDelay =
+    params.lastDisconnectCode === WS_CLOSE_POLICY_VIOLATION
+      ? Math.max(INITIAL_RETRY_DELAY_MS, RATE_LIMIT_RETRY_DELAY_MS)
+      : INITIAL_RETRY_DELAY_MS;
+
   return Math.min(
-    INITIAL_RETRY_DELAY_MS * Math.pow(1.5, params.attempt),
+    baseDelay * Math.pow(1.5, params.attempt),
     MAX_RETRY_DELAY_MS
   );
 };
@@ -911,7 +927,6 @@ export const useGatewayConnection = (
         setDetectedAdapterType("custom");
         setStatus("connected");
         setConnectErrorCode(null);
-        retryAttemptRef.current = 0;
         gatewayDebugLog("connect:custom-success", { gatewayUrl });
       } catch (err) {
         setStatus("disconnected");
@@ -975,7 +990,6 @@ export const useGatewayConnection = (
           ? hello.adapterType
           : "openclaw";
       setDetectedAdapterType(nextDetectedAdapterType);
-      retryAttemptRef.current = 0;
       setHasLastKnownGoodState(nextDetectedAdapterType === selectedAdapterType);
       settingsCoordinator.schedulePatch({
         gateway: {
@@ -1037,6 +1051,7 @@ export const useGatewayConnection = (
       gatewayUrl,
       errorMessage: error,
       connectErrorCode,
+      lastDisconnectCode: client.lastDisconnectCode,
       attempt,
     });
     if (!isAutoManagedAdapter(selectedAdapterType)) return;
@@ -1049,12 +1064,15 @@ export const useGatewayConnection = (
       status,
     });
     retryTimerRef.current = setTimeout(() => {
+      // Call connect first (it synchronously resets retryAttemptRef to 0),
+      // then override with the correct attempt count so the next auto-retry
+      // uses proper exponential backoff.
+      void connect();
       retryAttemptRef.current = attempt + 1;
       gatewayDebugLog("auto-retry-fire", {
         selectedAdapterType,
         attempt: retryAttemptRef.current,
       });
-      void connect();
     }, delay);
 
     return () => {
@@ -1065,11 +1083,17 @@ export const useGatewayConnection = (
     };
   }, [connect, connectErrorCode, error, gatewayUrl, selectedAdapterType, status]);
 
-  // Reset retry count on successful connection
+  // Reset retry count after the connection has been stable for a minimum
+  // duration.  If the upstream drops the connection quickly (e.g. within a
+  // few seconds), keeping the current attempt count lets exponential backoff
+  // work properly instead of hammering the gateway every 2 seconds.
   useEffect(() => {
     if (status === "connected") {
       hasConnectedOnceRef.current = true;
-      retryAttemptRef.current = 0;
+      const stableTimer = setTimeout(() => {
+        retryAttemptRef.current = 0;
+      }, 10_000);
+      return () => clearTimeout(stableTimer);
     }
   }, [status]);
 
