@@ -8,6 +8,7 @@
     "dev:https": "node server/index.js --dev --https",
     "hermes-adapter": "node server/hermes-gateway-adapter.js",
     "demo-gateway": "node server/demo-gateway-adapter.js",
+    "zeus-gateway": "node server/zeus-gateway-adapter.js",
     "build": "next build",
     "start": "node server/index.js",
     "lint": "eslint .",
@@ -20,6 +21,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.82.0",
     "@noble/ed25519": "^3.0.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
