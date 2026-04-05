@@ -2704,12 +2704,13 @@ export function RetroOffice3D({
     target: [number, number, number];
     zoom?: number;
   } | null>(null);
+  const [sceneMode, setSceneMode] = useState<"city" | "office">("city");
+  const cityScapeMode = sceneMode === "city";
   const LOCAL_CAMERA_TARGET = useMemo(
     () =>
       toWorld(LOCAL_OFFICE_CANVAS_WIDTH / 2, LOCAL_OFFICE_CANVAS_HEIGHT / 2),
     [],
   );
-  const cityScapeMode = true;
   const cityCameraTarget = LOCAL_CAMERA_TARGET;
   const CAM_POS = useMemo<[number, number, number]>(() => {
     const activeTarget = cityScapeMode ? cityCameraTarget : LOCAL_CAMERA_TARGET;
@@ -2728,6 +2729,12 @@ export function RetroOffice3D({
     () => ({ pos: CAM_POS, target: cameraTarget, zoom: cameraZoom }),
     [CAM_POS, cameraTarget, cameraZoom]
   );
+  const handleEnterOfficeFromCity = useCallback(() => {
+    setSceneMode("office");
+  }, []);
+  const handleReturnToCity = useCallback(() => {
+    setSceneMode("city");
+  }, []);
   const canvasResetKey = useMemo(
     () =>
       [
@@ -5460,7 +5467,10 @@ export function RetroOffice3D({
             />
 
             {/* Floor + walls — always visible, no async loading. */}
-            <SceneFloorAndWalls showRemoteOffice={cityScapeMode} />
+            <SceneFloorAndWalls
+              showRemoteOffice={cityScapeMode}
+              onEnterHeadquarters={handleEnterOfficeFromCity}
+            />
 
             {/* Wall pictures — procedural, no async loading. */}
             <SceneWallPictures showRemoteOffice={cityScapeMode} />
@@ -7371,6 +7381,17 @@ export function RetroOffice3D({
               </button>
             </>
           )}
+        </div>
+      ) : null}
+      {!immersiveOverlayActive && !cityScapeMode ? (
+        <div className="absolute top-3 left-3 z-20">
+          <button
+            type="button"
+            onClick={handleReturnToCity}
+            className="rounded-md border border-cyan-500/35 bg-[#071018]/92 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100 transition-colors backdrop-blur-sm hover:border-cyan-300/55 hover:text-white"
+          >
+            Back to City
+          </button>
         </div>
       ) : null}
       {!readOnly && settingsModalOpen ? (

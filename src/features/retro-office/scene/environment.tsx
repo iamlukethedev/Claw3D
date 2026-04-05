@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useRef, type ReactNode } from "react";
+import { memo, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import type * as THREE from "three";
 import {
@@ -653,8 +653,17 @@ function RoadTile({
   );
 }
 
-function FullCityScene({ centerX, centerZ }: { centerX: number; centerZ: number }) {
+function FullCityScene({
+  centerX,
+  centerZ,
+  onEnterHeadquarters,
+}: {
+  centerX: number;
+  centerZ: number;
+  onEnterHeadquarters?: () => void;
+}) {
   const cityGrid = useMemo(() => buildCityGrid(), []);
+  const [hqHovered, setHqHovered] = useState(false);
   const baseOffsetX = centerX - ((CITY_GRID_COLUMNS - 1) * CITY_GRID_CELL_SIZE) / 2;
   const baseOffsetZ = centerZ - ((CITY_GRID_ROWS - 1) * CITY_GRID_CELL_SIZE) / 2;
   const cityWidth = CITY_GRID_COLUMNS * CITY_GRID_CELL_SIZE;
@@ -753,7 +762,29 @@ function FullCityScene({ centerX, centerZ }: { centerX: number; centerZ: number 
           />
         );
       })}
-      <group position={hqPosition}>
+      <group
+        position={hqPosition}
+        onPointerOver={(event) => {
+          event.stopPropagation();
+          setHqHovered(true);
+        }}
+        onPointerOut={(event) => {
+          event.stopPropagation();
+          setHqHovered(false);
+        }}
+        onClick={(event) => {
+          event.stopPropagation();
+          onEnterHeadquarters?.();
+        }}
+      >
+        <mesh position={[0, 0.01, 0.18]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[3.2, 2.8]} />
+          <meshBasicMaterial
+            color={hqHovered ? "#fde68a" : "#bbf7d0"}
+            transparent
+            opacity={hqHovered ? 0.24 : 0.14}
+          />
+        </mesh>
         <TowerBlock
           position={[-0.52, 0, -0.26]}
           width={0.9}
@@ -782,6 +813,22 @@ function FullCityScene({ centerX, centerZ }: { centerX: number; centerZ: number 
           trimColor="#dcfce7"
           windowColor="#bfdbfe"
         />
+        <mesh position={[0, 0.02, -1.02]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[1.85, 0.34]} />
+          <meshBasicMaterial
+            color={hqHovered ? "#fef08a" : "#e0f2fe"}
+            transparent
+            opacity={0.92}
+          />
+        </mesh>
+        <mesh position={[0, 0.03, -1.02]}>
+          <planeGeometry args={[1.7, 0.18]} />
+          <meshBasicMaterial color="#0f172a" transparent opacity={0.98} />
+        </mesh>
+        <mesh position={[0, 0.04, -1.02]}>
+          <planeGeometry args={[1.58, 0.12]} />
+          <meshBasicMaterial color={hqHovered ? "#fef08a" : "#f8fafc"} transparent opacity={1} />
+        </mesh>
       </group>
       <CityTrafficLayer
         cityRoadSpanX={CITY_GRID_CELL_SIZE * CITY_GRID_COLUMNS * 0.82}
@@ -861,8 +908,10 @@ const buildCityGrid = (): CityGridCell[] => {
 
 export const FloorAndWalls = memo(function FloorAndWalls({
   showRemoteOffice = true,
+  onEnterHeadquarters,
 }: {
   showRemoteOffice?: boolean;
+  onEnterHeadquarters?: () => void;
 }) {
   const districtWidth = CANVAS_W * SCALE;
   const districtHeight = CANVAS_H * SCALE;
@@ -919,7 +968,13 @@ export const FloorAndWalls = memo(function FloorAndWalls({
   const groundHeight = showRemoteOffice ? districtHeight : localOfficeHeight;
 
   if (showRemoteOffice) {
-    return <FullCityScene centerX={localOfficeCenterX} centerZ={localOfficeCenterZ} />;
+    return (
+      <FullCityScene
+        centerX={localOfficeCenterX}
+        centerZ={localOfficeCenterZ}
+        onEnterHeadquarters={onEnterHeadquarters}
+      />
+    );
   }
 
   return (
