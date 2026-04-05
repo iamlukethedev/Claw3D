@@ -114,13 +114,18 @@ async function main() {
 
   const httpsCert = useHttps ? await generateHttpsCert() : null;
 
+  const isHealthCheck = (req) =>
+    req.url === "/health" || req.url === "/healthz" || req.url === "/_health";
+
   const createServer = () =>
     useHttps
       ? https.createServer(httpsCert, (req, res) => {
+          if (isHealthCheck(req)) { res.statusCode = 200; res.end("OK"); return; }
           if (accessGate.handleHttp(req, res)) return;
           handle(req, res);
         })
       : http.createServer((req, res) => {
+          if (isHealthCheck(req)) { res.statusCode = 200; res.end("OK"); return; }
           if (accessGate.handleHttp(req, res)) return;
           handle(req, res);
         });

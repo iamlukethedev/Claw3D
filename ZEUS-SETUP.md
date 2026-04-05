@@ -98,6 +98,39 @@ pm2 restart zeus-gateway
 
 ---
 
+## Testing the Gateway
+
+```bash
+# Quick connectivity test (product-agent, 1 word reply, ~1s)
+node scripts/test-zeus-ws.js
+
+# Test specific agent
+node scripts/test-zeus-ws.js architecture-agent "What is your role?"
+
+# Test with custom timeout (reasoning models are slow)
+TIMEOUT_MS=120000 node scripts/test-zeus-ws.js architecture-agent "Critique X"
+```
+
+**WS Protocol (for manual testing):**
+```json
+// 1. Connect
+{ "type": "req", "id": "r0", "method": "connect", "params": {} }
+
+// 2. Send message
+{ "type": "req", "id": "r1", "method": "chat.send", "params": {
+  "sessionKey": "agent:product-agent:my-session",
+  "message": "Hello",
+  "idempotencyKey": "unique-key-123"
+}}
+
+// 3. Receive chunks (type=event, event=chat, payload.state=delta|final)
+{ "type": "event", "event": "chat", "seq": 1, "payload": {
+  "state": "delta", "message": { "role": "assistant", "content": "Hello..." }
+}}
+```
+
+---
+
 ## File Map
 
 ```
@@ -105,6 +138,7 @@ claw3d-fork/
 ├── server/zeus-gateway-adapter.js   ← main gateway (WebSocket + HTTP, LLM routing)
 ├── ecosystem.config.js              ← pm2 config (--env-file .env, autorestart)
 ├── .env                             ← API keys (gitignored)
+├── scripts/test-zeus-ws.js          ← WS test harness (verify gateway + agents)
 ├── logs/
 │   ├── zeus-gateway-error.log
 │   └── zeus-gateway.log

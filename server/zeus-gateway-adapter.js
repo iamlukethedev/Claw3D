@@ -7,7 +7,8 @@ const { randomUUID } = require("crypto");
 const { WebSocketServer } = require("ws");
 const Anthropic = require("@anthropic-ai/sdk");
 
-const ADAPTER_PORT = parseInt(process.env.ZEUS_ADAPTER_PORT || "18789", 10);
+// PORT is set by Railway/Heroku/etc; ZEUS_ADAPTER_PORT for local override; 18789 default
+const ADAPTER_PORT = parseInt(process.env.PORT || process.env.ZEUS_ADAPTER_PORT || "18789", 10);
 const MAIN_KEY = "main";
 
 // ─── LLM provider config ───────────────────────────────────────────────────────
@@ -38,7 +39,7 @@ const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY || "";
 // Keys for each NVIDIA model
 const NIM = {
   fast:          "meta/llama-3.3-70b-instruct",
-  reasoning:     "deepseek-ai/deepseek-r1",
+  reasoning:     "deepseek-ai/deepseek-r1-distill-llama-8b",
   multilingual:  "mistralai/mistral-large-2-instruct",
   synthesis:     "nvidia/llama-3.1-nemotron-ultra-253b-v1",
 };
@@ -46,12 +47,13 @@ const NIM = {
 // Per-agent tier assignment
 // Agents NOT listed here get "local" (qwen3:8b)
 const AGENT_TIER = {
-  // Reasoning — security-critical, must not miss things
-  "security-agent":               "reasoning",
-  "architecture-agent":           "reasoning",
-  "risk-manager":                 "reasoning",
-  "assessment-science-agent":     "reasoning",
-  "behavioral-nudge-engine":      "reasoning",  // ADHD psychology = nuanced
+  // Reasoning tier — using fast (llama-3.3-70b) which handles Russian well.
+  // deepseek-r1-distill-llama-8b available as NIM.reasoning but defaults English on this account.
+  "security-agent":               "fast",
+  "architecture-agent":           "fast",
+  "risk-manager":                 "fast",
+  "assessment-science-agent":     "fast",
+  "behavioral-nudge-engine":      "fast",  // ADHD psychology = nuanced
 
   // Fast generalist — strategy, product, growth
   "product-agent":                "fast",
@@ -181,25 +183,33 @@ function buildSystemPrompt(agent) {
     ? `Current status: ${liveState.status}. Last task: "${liveState.last_task || "none"}". Tasks completed: ${liveState.performance?.tasks_completed || 0}.`
     : "No tracked state yet (new agent).";
 
-  return `You are ${agent.name}, a specialist AI agent in the ZEUS swarm for the MindShift project.
+  return `You are ${agent.name}. You're part of Yusif's team — a real teammate, not a bot.
 
-Your role: ${agent.role}
-Your state: ${stateInfo}
+Your specialty: ${agent.role}
+Your current status: ${stateInfo}
 
-MindShift is an ADHD-aware productivity PWA (React + TypeScript + Supabase). You are reviewing and advising on this project.
+The project: MindShift — an ADHD-aware productivity app (React + TypeScript + Supabase). VOLAURA is the broader AI ecosystem it lives in.
 
-HARD CONSTRAINTS — never violate:
-1. You provide analysis, recommendations, and code review only. You do NOT execute code or shell commands.
-2. You stay within your domain expertise (${agent.role}).
-3. You are direct and concise — no filler, no hedging. Lead with the finding.
-4. You reference the project files you were given. Never invent facts.
-5. If you don't know something, say "I need to see [specific file]" — don't guess.
-6. Follow MindShift guardrails: no red color, ADHD-safe language, no shame mechanics.
+Language rule (non-negotiable):
+- Respond in the SAME language the user writes in. Russian message = Russian reply. English = English. Never switch languages unprompted.
 
-Output format:
-- For reviews: Finding → Evidence → Fix (concrete code or instruction)
-- For advice: Recommendation → Why → Risk if ignored
-- Keep responses under 300 words unless the task demands more.`;
+How you talk:
+- Like a smart colleague who actually cares about the outcome, not a report generator
+- Lead with your opinion or the answer. Put caveats after, not before.
+- Say "this is wrong" when something is wrong. Say "I don't know" when you don't know.
+- No "Finding → Evidence → Fix" templates. Just talk.
+- No "Great question!", no "Certainly!", no "How can I assist you today?", no corporate filler of any kind.
+- Swear if it fits. Be real.
+- Short when you're confident. Long only when the topic demands it.
+- If you need a file you don't have — just say which one and why.
+
+What you don't do:
+- Invent facts you weren't given
+- Go outside your domain without flagging it
+- Pretend to be neutral when you have a clear opinion
+- Follow MindShift's own rules: no red color, ADHD-safe copy, no shame mechanics — these are non-negotiable even for you
+
+You're here to help Yusif build something real. Act like it.`;
 }
 
 // ─── File context loading ──────────────────────────────────────────────────────
@@ -236,19 +246,38 @@ function getCachedContextFiles(sessionKey, agentId) {
   return contents;
 }
 
+// Shared context loaded for ALL agents — what the team is building and what happened
+const SHARED_CONTEXT_PATH = path.join(__dirname, "..", "memory", "session-context.md");
+
+function loadSharedContext() {
+  try {
+    return fs.readFileSync(SHARED_CONTEXT_PATH, "utf8");
+  } catch {
+    return null;
+  }
+}
+
 function buildUserPrompt(agentId, contextFiles, userMessage) {
-  const fileEntries = Object.entries(contextFiles);
-  if (fileEntries.length === 0) {
-    return userMessage;
+  let context = "";
+
+  // Shared team context — every agent knows what's happening
+  const sharedCtx = loadSharedContext();
+  if (sharedCtx) {
+    context += `# Team Context (shared — read this first)\n\`\`\`\n${sharedCtx.slice(0, 8_000)}\n\`\`\`\n\n`;
   }
 
-  let context = "# Project Files (your knowledge base for this session)\n\n";
-  for (const [filePath, content] of fileEntries) {
-    const name = path.basename(filePath);
-    context += `## ${name}\n\`\`\`\n${content.slice(0, 20_000)}\n\`\`\`\n\n`;
+  // Agent-specific files
+  const fileEntries = Object.entries(contextFiles);
+  if (fileEntries.length > 0) {
+    context += "# Your Domain Files\n\n";
+    for (const [filePath, content] of fileEntries) {
+      const name = path.basename(filePath);
+      context += `## ${name}\n\`\`\`\n${content.slice(0, 15_000)}\n\`\`\`\n\n`;
+    }
   }
-  context += `---\n\n# Task\n\n${userMessage}`;
-  return context;
+
+  if (!context) return userMessage;
+  return context + `---\n\n# Task\n\n${userMessage}`;
 }
 
 // ─── Agent roster (39 agents from ZEUS swarm) ─────────────────────────────────
@@ -330,6 +359,16 @@ function statusEmoji(status) {
     case "running": return "🔄";
     default:        return "🤖";
   }
+}
+
+// ─── Strip reasoning model think-tokens before sending to client ──────────────
+// DeepSeek R1 and similar models expose <think>...</think> blocks.
+// We strip complete blocks + any open block at end (not yet closed during stream).
+function visibleContent(text) {
+  let result = text.replace(/<think>[\s\S]*?<\/think>\s*/g, "");
+  const openIdx = result.indexOf("<think>");
+  if (openIdx >= 0) result = result.slice(0, openIdx);
+  return result.trim();
 }
 
 // ─── Protocol helpers ──────────────────────────────────────────────────────────
@@ -418,13 +457,13 @@ async function callClaude(agent, sessionKey, userMessage, sendEvent, runId) {
           const token = JSON.parse(line).message?.content || "";
           buf += token; fullReply += token;
           if (buf.match(/[.!?]\s/) || buf.length >= 150) {
-            emitChat("delta", { message: { role: "assistant", content: fullReply } });
+            emitChat("delta", { message: { role: "assistant", content: visibleContent(fullReply) } });
             buf = "";
           }
         } catch { /* malformed chunk */ }
       }
     }
-    if (buf) emitChat("delta", { message: { role: "assistant", content: fullReply } });
+    if (buf) emitChat("delta", { message: { role: "assistant", content: visibleContent(fullReply) } });
   }
 
   async function streamNvidia() {
@@ -459,13 +498,13 @@ async function callClaude(agent, sessionKey, userMessage, sendEvent, runId) {
           const token = JSON.parse(raw).choices?.[0]?.delta?.content || "";
           buf += token; fullReply += token;
           if (buf.match(/[.!?]\s/) || buf.length >= 150) {
-            emitChat("delta", { message: { role: "assistant", content: fullReply } });
+            emitChat("delta", { message: { role: "assistant", content: visibleContent(fullReply) } });
             buf = "";
           }
         } catch { /* malformed chunk */ }
       }
     }
-    if (buf) emitChat("delta", { message: { role: "assistant", content: fullReply } });
+    if (buf) emitChat("delta", { message: { role: "assistant", content: visibleContent(fullReply) } });
   }
 
   async function streamHaiku() {
@@ -478,12 +517,12 @@ async function callClaude(agent, sessionKey, userMessage, sendEvent, runId) {
       if (chunk.type === "content_block_delta" && chunk.delta?.type === "text_delta") {
         buf += chunk.delta.text; fullReply += chunk.delta.text;
         if (buf.match(/[.!?]\s/) || buf.length >= 150) {
-          emitChat("delta", { message: { role: "assistant", content: fullReply } });
+          emitChat("delta", { message: { role: "assistant", content: visibleContent(fullReply) } });
           buf = "";
         }
       }
     }
-    if (buf) emitChat("delta", { message: { role: "assistant", content: fullReply } });
+    if (buf) emitChat("delta", { message: { role: "assistant", content: visibleContent(fullReply) } });
   }
 
   // ── Routing with fallback chain ───────────────────────────────────────────────
@@ -508,11 +547,12 @@ async function callClaude(agent, sessionKey, userMessage, sendEvent, runId) {
     emitChat("delta", { message: { role: "assistant", content: fullReply } });
   }
 
-  // Persist to history
+  // Persist to history (stripped — think tokens confuse follow-up context)
+  const cleanReply = visibleContent(fullReply) || fullReply;
   history.push({ role: "user", content: userMessage });
-  history.push({ role: "assistant", content: fullReply });
+  history.push({ role: "assistant", content: cleanReply });
 
-  emitChat("final", { stopReason: "end_turn", message: { role: "assistant", content: fullReply } });
+  emitChat("final", { stopReason: "end_turn", message: { role: "assistant", content: cleanReply } });
   sendEvent({
     type: "event",
     event: "presence",
@@ -684,10 +724,10 @@ async function handleMethod(method, params, id, sendEvent) {
         try {
           if (aborted) { emitChat("aborted", {}); return; }
 
-          if (anthropic) {
+          if (anthropic || NVIDIA_API_KEY || OLLAMA_URL) {
             await callClaude(agent, sessionKey, message, sendEvent, runId);
           } else {
-            // Static mode fallback
+            // Static mode fallback — no provider configured
             const reply = staticReply(agent, message);
             const words = reply.split(" ");
             let partial = "";
@@ -769,6 +809,122 @@ async function handleMethod(method, params, id, sendEvent) {
     case "wake":
       return resOk(id, { ok: true });
 
+    // ─── Swarm coordinator — run task across multiple agents, synthesize ────────
+    case "swarm.run": {
+      const task = typeof p.task === "string" ? p.task.trim() : "";
+      if (!task) return resErr(id, "bad_request", "task is required");
+
+      const requestedAgents = Array.isArray(p.agents) ? p.agents.filter(a => agents.has(a)) : [];
+      const synthesize = p.synthesize !== false; // default true
+      const runId = typeof p.idempotencyKey === "string" && p.idempotencyKey ? p.idempotencyKey : randomId();
+
+      // Auto-select agents by task keywords if none specified
+      const resolveAgents = (task) => {
+        if (requestedAgents.length > 0) return requestedAgents;
+        const t = task.toLowerCase();
+        const selected = [];
+        if (/безопас|security|уязвим|auth|rls|key|token/.test(t)) selected.push("security-agent");
+        if (/архитект|architecture|структур|scalab|performance/.test(t)) selected.push("architecture-agent");
+        if (/продукт|product|user|ux|feature|юзер/.test(t)) selected.push("product-agent");
+        if (/рост|growth|retention|viral|metric/.test(t)) selected.push("growth-agent");
+        if (/тест|qa|баг|bug|test/.test(t)) selected.push("qa-engineer");
+        if (/культур|cultural|az|азерб|локал/.test(t)) selected.push("cultural-intelligence-strategist");
+        if (/adhd|nudge|ux|поведен/.test(t)) selected.push("behavioral-nudge-engine");
+        if (selected.length === 0) {
+          // Default panel for general tasks
+          selected.push("product-agent", "architecture-agent", "security-agent");
+        }
+        return selected;
+      };
+
+      const agentIds = resolveAgents(task);
+      const swarmSessionKey = `swarm:${runId}`;
+
+      // Emit swarm start event
+      sendEvent({ type: "event", event: "swarm", seq: 0, payload: {
+        runId, state: "started", agents: agentIds, task: task.slice(0, 200)
+      }});
+
+      setImmediate(async () => {
+        const results = [];
+        let seq = 1;
+
+        // Run agents in parallel
+        await Promise.all(agentIds.map(async (agentId) => {
+          const agent = agents.get(agentId);
+          if (!agent) return;
+          const agentSessionKey = `swarm-${runId}:${agentId}`;
+
+          sendEvent({ type: "event", event: "swarm", seq: seq++, payload: {
+            runId, state: "agent_started", agentId, agentName: agent.name
+          }});
+
+          try {
+            const reply = await callClaude(agent, agentSessionKey, task, (frame) => {
+              // Forward agent deltas tagged with agentId
+              if (frame.payload?.state === "delta" || frame.payload?.state === "final") {
+                sendEvent({ ...frame, payload: { ...frame.payload, runId, agentId, agentName: agent.name } });
+              }
+            }, `${runId}-${agentId}`);
+
+            const clean = visibleContent(reply) || reply;
+            results.push({ agentId, agentName: agent.name, reply: clean });
+            sendEvent({ type: "event", event: "swarm", seq: seq++, payload: {
+              runId, state: "agent_done", agentId, agentName: agent.name
+            }});
+          } catch (err) {
+            results.push({ agentId, agentName: agent.name, reply: `[Error: ${err.message}]` });
+          }
+        }));
+
+        // Synthesis step — Nemotron 253B if available, else llama-3.3-70b
+        if (synthesize && results.length > 1) {
+          sendEvent({ type: "event", event: "swarm", seq: seq++, payload: {
+            runId, state: "synthesizing"
+          }});
+
+          const synthAgent = { id: "swarm-synthesizer", name: "Swarm Synthesizer", role: "Cross-agent synthesis" };
+          const synthModel = NVIDIA_API_KEY ? NIM.synthesis : NIM.fast;
+          const synthProvider = NVIDIA_API_KEY ? "nvidia" : "ollama";
+
+          const synthPrompt = `You are synthesizing findings from ${results.length} specialist agents who reviewed this task:\n\n"${task}"\n\n${
+            results.map(r => `## ${r.agentName}\n${r.reply}`).join("\n\n")
+          }\n\n---\n\nSynthesize into one clear response. Lead with the most important finding. Assign priorities (P0/P1/P2). Be direct — no filler.`;
+
+          try {
+            // Override model for synthesis
+            const origAgentModel = agentModel;
+            const synthReply = await callClaude(
+              { id: "swarm-synthesizer", name: "Swarm Synthesizer", role: "synthesis" },
+              `${swarmSessionKey}:synthesis`,
+              synthPrompt,
+              (frame) => {
+                if (frame.payload?.state === "delta" || frame.payload?.state === "final") {
+                  sendEvent({ ...frame, payload: { ...frame.payload, runId, agentId: "swarm-synthesizer", agentName: "Synthesis" } });
+                }
+              },
+              `${runId}-synthesis`
+            );
+
+            sendEvent({ type: "event", event: "swarm", seq: seq++, payload: {
+              runId, state: "done", agentCount: results.length, synthesis: visibleContent(synthReply) || synthReply
+            }});
+          } catch {
+            sendEvent({ type: "event", event: "swarm", seq: seq++, payload: {
+              runId, state: "done", agentCount: results.length, synthesis: results.map(r => `**${r.agentName}:** ${r.reply}`).join("\n\n")
+            }});
+          }
+        } else {
+          sendEvent({ type: "event", event: "swarm", seq: seq++, payload: {
+            runId, state: "done", agentCount: results.length,
+            synthesis: results.map(r => `**${r.agentName}:** ${r.reply}`).join("\n\n")
+          }});
+        }
+      });
+
+      return resOk(id, { status: "started", runId, agents: agentIds });
+    }
+
     default:
       return resOk(id, {});
   }
@@ -812,7 +968,8 @@ function startAdapter() {
     }
 
     res.writeHead(200, { "Content-Type": "text/plain", ...cors });
-    res.end(`ZEUS Gateway — ${agents.size} agents — Claude ${anthropic ? "✅ active" : "⚠️ static mode"}\nREST: GET /agents\n`);
+    const aiStatus = anthropic ? "Claude ✅" : NVIDIA_API_KEY ? "NVIDIA ✅" : OLLAMA_URL ? "Ollama ✅" : "⚠️ no AI";
+    res.end(`ZEUS Gateway — ${agents.size} agents — ${aiStatus}\nREST: GET /agents\n`);
   });
 
   const wss = new WebSocketServer({ server: httpServer });
@@ -882,7 +1039,8 @@ function startAdapter() {
   httpServer.listen(ADAPTER_PORT, "127.0.0.1", () => {
     console.log(`[zeus-gateway] Listening on ws://localhost:${ADAPTER_PORT}`);
     console.log(`[zeus-gateway] ${agents.size} ZEUS agents loaded`);
-    console.log(`[zeus-gateway] Claude AI: ${anthropic ? `✅ active (${CLAUDE_MODEL})` : "⚠️  static mode — set ANTHROPIC_API_KEY"}`);
+    const aiMode = anthropic ? `Claude Haiku ✅` : NVIDIA_API_KEY ? `NVIDIA NIM ✅ (primary)` : OLLAMA_URL ? `Ollama ✅ (local)` : "⚠️ no AI configured";
+    console.log(`[zeus-gateway] AI: ${aiMode}`);
     console.log(`[zeus-gateway] MindShift context: ${MINDSHIFT}`);
   });
 }
