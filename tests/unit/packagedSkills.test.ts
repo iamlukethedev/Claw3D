@@ -8,6 +8,7 @@ import { resolveSkillMarketplaceMetadata } from "@/lib/skills/marketplace";
 import { readPackagedSkillFiles } from "@/lib/skills/packaged";
 
 const resolveAssetDir = (packageId: string) => path.join(process.cwd(), "assets/skills", packageId);
+const normalizeLineEndings = (value: string) => value.replace(/\r\n/g, "\n");
 
 describe("packaged skills", () => {
   it("keeps packaged skill files synchronized with the asset source files", () => {
@@ -24,7 +25,7 @@ describe("packaged skills", () => {
 
       for (const file of packagedFiles) {
         const assetContent = readFileSync(path.join(assetDir, file.relativePath), "utf8");
-        expect(file.content).toBe(assetContent);
+        expect(normalizeLineEndings(file.content)).toBe(normalizeLineEndings(assetContent));
       }
     }
   });

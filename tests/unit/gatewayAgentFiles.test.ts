@@ -18,7 +18,7 @@ describe("gateway agent files helpers", () => {
 
     await expect(
       readGatewayAgentFile({ client, agentId: "agent-1", name: "AGENTS.md" })
-    ).resolves.toEqual({ exists: false, content: "" });
+    ).resolves.toEqual({ exists: false, content: "", path: null, workspace: null });
   });
 
   it("returns exists=true and content when gateway returns content", async () => {
@@ -31,7 +31,7 @@ describe("gateway agent files helpers", () => {
 
     await expect(
       readGatewayAgentFile({ client, agentId: "agent-1", name: "AGENTS.md" })
-    ).resolves.toEqual({ exists: true, content: "hello" });
+    ).resolves.toEqual({ exists: true, content: "hello", path: null, workspace: null });
   });
 
   it("coerces non-string content to empty string", async () => {
@@ -44,7 +44,7 @@ describe("gateway agent files helpers", () => {
 
     await expect(
       readGatewayAgentFile({ client, agentId: "agent-1", name: "AGENTS.md" })
-    ).resolves.toEqual({ exists: true, content: "" });
+    ).resolves.toEqual({ exists: true, content: "", path: null, workspace: null });
   });
 
   it("throws when agentId is empty", async () => {

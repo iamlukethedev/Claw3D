@@ -413,8 +413,11 @@ describe("useAgentSettingsMutationController", () => {
       expect(restartBlockHookParams?.block).not.toBeNull();
     });
 
+    const timeoutHookParams = restartBlockHookParams;
+    expect(timeoutHookParams).not.toBeNull();
+
     await act(async () => {
-      restartBlockHookParams?.onTimeout();
+      timeoutHookParams!.onTimeout();
     });
     expect(ctx.setError).toHaveBeenCalledWith("Gateway restart timed out after renaming the agent.");
 
@@ -427,12 +430,16 @@ describe("useAgentSettingsMutationController", () => {
       await ctx.getValue().handleRenameAgent("agent-1", "Renamed Again");
     });
     await waitFor(() => {
-      expect(restartBlockHookParams?.block?.phase).toBe("awaiting-restart");
+      expect(ctx.getValue().restartingMutationBlock?.phase).toBe("awaiting-restart");
     });
 
+    const restartHookParams = restartBlockHookParams;
+    expect(restartHookParams?.onRestartComplete).toBeTypeOf("function");
+    expect(ctx.getValue().restartingMutationBlock?.phase).toBe("awaiting-restart");
+
     await act(async () => {
-      await restartBlockHookParams?.onRestartComplete(
-        restartBlockHookParams.block as MutationBlockState,
+      await restartHookParams!.onRestartComplete(
+        ctx.getValue().restartingMutationBlock as MutationBlockState,
         { isCancelled: () => false }
       );
     });

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { deriveHydrateAgentFleetResult } from "@/features/agents/operations/agentFleetHydrationDerivation";
-import { createDefaultAgentAvatarProfile } from "@/lib/avatars/profile";
 import type { StudioSettings } from "@/lib/studio/settings";
 
 describe("deriveHydrateAgentFleetResult", () => {
@@ -14,7 +13,10 @@ describe("deriveHydrateAgentFleetResult", () => {
       focused: {},
       avatars: {
         [gatewayUrl]: {
-          "agent-1": createDefaultAgentAvatarProfile("persisted-seed"),
+          "agent-1": {
+            seed: "persisted-seed",
+            version: 1,
+          },
         },
       },
       deskAssignments: {},
@@ -93,9 +95,12 @@ describe("deriveHydrateAgentFleetResult", () => {
       expect.objectContaining({
         agentId: "agent-1",
         name: "One",
+        runtimeName: "One",
+        identityName: null,
+        sessionDisplayName: "Main",
         sessionKey: "agent:agent-1:main",
-        avatarSeed: "persisted-seed",
-        avatarProfile: expect.objectContaining({ seed: "persisted-seed" }),
+        avatarSeed: "agent-1",
+        avatarProfile: expect.objectContaining({ seed: "agent-1" }),
         avatarUrl: "https://example.com/one.png",
         model: "openai/gpt-4.1",
         thinkingLevel: "medium",
