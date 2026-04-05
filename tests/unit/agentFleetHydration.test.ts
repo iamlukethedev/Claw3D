@@ -45,7 +45,7 @@ describe("hydrateAgentFleetFromGateway", () => {
             {
               id: "agent-1",
               name: "One",
-              identity: { avatarUrl: "https://example.com/one.png" },
+              identity: { name: "Main Persona", avatarUrl: "https://example.com/one.png" },
             },
             {
               id: "agent-2",
@@ -53,6 +53,27 @@ describe("hydrateAgentFleetFromGateway", () => {
               identity: { avatarUrl: "https://example.com/two.png" },
             },
           ],
+        };
+      }
+      if (method === "agents.files.get") {
+        const record = params as Record<string, unknown>;
+        if (record.agentId === "agent-2" && record.name === "IDENTITY.md") {
+          return {
+            workspace: "/tmp/workspace-agent-2",
+            file: {
+              missing: false,
+              content: "# IDENTITY.md - Who Am I?\n\n- Name: GLaDOS\n",
+              path: "/tmp/workspace-agent-2/IDENTITY.md",
+            },
+          };
+        }
+        return {
+          workspace: "/tmp/workspace-agent-1",
+          file: {
+            missing: false,
+            content: "# IDENTITY.md - Who Am I?\n\n- Name: Main Persona\n",
+            path: "/tmp/workspace-agent-1/IDENTITY.md",
+          },
         };
       }
       if (method === "exec.approvals.get") {
@@ -126,10 +147,11 @@ describe("hydrateAgentFleetFromGateway", () => {
     expect(result.seeds[0]).toEqual(
       expect.objectContaining({
         agentId: "agent-1",
-        name: "One",
+        name: "Main Persona",
+        runtimeName: "One",
+        identityName: "Main Persona",
+        sessionDisplayName: "Main",
         sessionKey: "agent:agent-1:main",
-        avatarSeed: "persisted-seed",
-        avatarProfile: expect.objectContaining({ seed: "persisted-seed" }),
         avatarUrl: "https://example.com/one.png",
         model: "openai/gpt-4.1",
         thinkingLevel: "medium",
@@ -141,6 +163,9 @@ describe("hydrateAgentFleetFromGateway", () => {
     expect(result.seeds[1]).toEqual(
       expect.objectContaining({
         agentId: "agent-2",
+        name: "GLaDOS",
+        runtimeName: "Two",
+        identityName: "GLaDOS",
         sessionExecHost: "gateway",
         sessionExecSecurity: "full",
         sessionExecAsk: "off",

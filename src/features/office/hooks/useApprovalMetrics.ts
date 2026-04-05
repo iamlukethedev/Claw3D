@@ -36,20 +36,24 @@ const MAX_APPROVAL_RECORDS = 300;
 export const useApprovalMetrics = ({
   client,
   status,
+  enabled = true,
   agents,
 }: {
   client: GatewayClient;
   status: GatewayStatus;
+  enabled?: boolean;
   agents: AgentState[];
 }) => {
   const [records, setRecords] = useState<ApprovalRecord[]>([]);
   const agentsRef = useRef(agents);
+  const visibleRecords = useMemo(() => (enabled ? records : []), [enabled, records]);
 
   useEffect(() => {
     agentsRef.current = agents;
   }, [agents]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (status !== "connected") return;
     return client.onEvent((event) => {
       const requested = parseExecApprovalRequested(event);
@@ -105,11 +109,11 @@ export const useApprovalMetrics = ({
         return [fallbackRecord, ...current].slice(0, MAX_APPROVAL_RECORDS);
       });
     });
-  }, [client, status]);
+  }, [client, enabled, status]);
 
   const byAgent = useMemo(() => {
     const metrics = new Map<string, ApprovalAgentMetrics>();
-    for (const record of records) {
+    for (const record of visibleRecords) {
       const agentId = record.agentId?.trim() ?? "";
       if (!agentId) continue;
       const current = metrics.get(agentId) ?? {
@@ -135,20 +139,20 @@ export const useApprovalMetrics = ({
       }
       return left.agentId.localeCompare(right.agentId);
     });
-  }, [records]);
+  }, [visibleRecords]);
 
   const totals = useMemo(() => {
     return {
-      requestedCount: records.length,
-      resolvedCount: records.filter((record) => record.decision !== null).length,
-      deniedCount: records.filter((record) => record.decision === "deny").length,
-      allowOnceCount: records.filter((record) => record.decision === "allow-once").length,
-      allowAlwaysCount: records.filter((record) => record.decision === "allow-always").length,
+      requestedCount: visibleRecords.length,
+      resolvedCount: visibleRecords.filter((record) => record.decision !== null).length,
+      deniedCount: visibleRecords.filter((record) => record.decision === "deny").length,
+      allowOnceCount: visibleRecords.filter((record) => record.decision === "allow-once").length,
+      allowAlwaysCount: visibleRecords.filter((record) => record.decision === "allow-always").length,
     };
-  }, [records]);
+  }, [visibleRecords]);
 
   return {
-    records,
+    records: visibleRecords,
     byAgent,
     totals,
   };

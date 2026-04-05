@@ -51,6 +51,7 @@ import type { OfficeDeskMonitor } from "@/lib/office/deskMonitor";
 import type { OfficeAnimationState } from "@/lib/office/eventTriggers";
 import type { StandupMeeting } from "@/lib/office/standup/types";
 import type { SkillStatusEntry } from "@/lib/skills/types";
+import type { StudioGatewayAdapterType } from "@/lib/studio/settings";
 import type {
   TaskBoardCard,
   TaskBoardStatus,
@@ -2358,12 +2359,21 @@ export function RetroOffice3D({
   onVoiceRepliesSpeedChange,
   onVoiceRepliesPreview,
   onGatewayDisconnect,
+  onGatewayConnect,
+  onGatewayUrlChange,
+  onGatewayTokenChange,
+  onGatewayAdapterTypeChange,
   onOpenOnboarding,
   atmAnalytics = null,
   feedEvents = EMPTY_FEED_EVENTS,
   gatewayStatus = "disconnected",
+  gatewayUrl = "",
+  gatewayToken = "",
+  selectedAdapterType = "openclaw",
+  activeAdapterType = "openclaw",
   runCountByAgentId = EMPTY_NUMBER_RECORD,
   lastSeenByAgentId = EMPTY_NUMBER_RECORD,
+  streamingTextByAgentId = {},
   onStandupArrivalsChange,
   onStandupStartRequested,
   onMonitorSelect,
@@ -2395,7 +2405,6 @@ export function RetroOffice3D({
   taskBoardCronLoading = false,
   taskBoardCronError = null,
   taskBoardCaptureDebug,
-  preferredKanbanAgentId = null,
   onTaskBoardCreateCard,
   onTaskBoardMoveCard,
   onTaskBoardSelectCard,
@@ -2465,12 +2474,21 @@ export function RetroOffice3D({
   onVoiceRepliesSpeedChange?: (speed: number) => void;
   onVoiceRepliesPreview?: (voiceId: string | null, voiceName: string) => void;
   onGatewayDisconnect?: () => void;
+  onGatewayConnect?: () => void;
+  onGatewayUrlChange?: (value: string) => void;
+  onGatewayTokenChange?: (value: string) => void;
+  onGatewayAdapterTypeChange?: (value: StudioGatewayAdapterType) => void;
   onOpenOnboarding?: () => void;
   atmAnalytics?: OfficeUsageAnalyticsParams | null;
   feedEvents?: FeedEvent[];
   gatewayStatus?: string;
+  gatewayUrl?: string;
+  gatewayToken?: string;
+  selectedAdapterType?: StudioGatewayAdapterType;
+  activeAdapterType?: StudioGatewayAdapterType;
   runCountByAgentId?: Record<string, number>;
   lastSeenByAgentId?: Record<string, number>;
+  streamingTextByAgentId?: Record<string, string | null>;
   onStandupArrivalsChange?: (arrivedAgentIds: string[]) => void;
   onStandupStartRequested?: () => void;
   onMonitorSelect?: (agentId: string | null) => void;
@@ -2506,7 +2524,6 @@ export function RetroOffice3D({
   taskBoardCaptureDebug?: ComponentProps<
     typeof KanbanImmersiveScreen
   >["taskCaptureDebug"];
-  preferredKanbanAgentId?: string | null;
   onTaskBoardCreateCard?: () => void;
   onTaskBoardMoveCard?: (cardId: string, status: TaskBoardStatus) => void;
   onTaskBoardSelectCard?: (cardId: string | null) => void;
@@ -2664,6 +2681,40 @@ export function RetroOffice3D({
     target: [number, number, number];
     zoom?: number;
   } | null>(null);
+  const LOCAL_CAMERA_TARGET = useMemo(
+    () =>
+      toWorld(LOCAL_OFFICE_CANVAS_WIDTH / 2, LOCAL_OFFICE_CANVAS_HEIGHT / 2),
+    [],
+  );
+  const CAM_POS = useMemo<[number, number, number]>(() => {
+    if (remoteOfficeEnabled) return DISTRICT_CAMERA_POSITION;
+    return [
+      LOCAL_CAMERA_TARGET[0] +
+        (DISTRICT_CAMERA_POSITION[0] - DISTRICT_CAMERA_TARGET[0]),
+      LOCAL_CAMERA_TARGET[1] +
+        (DISTRICT_CAMERA_POSITION[1] - DISTRICT_CAMERA_TARGET[1]),
+      LOCAL_CAMERA_TARGET[2] +
+        (DISTRICT_CAMERA_POSITION[2] - DISTRICT_CAMERA_TARGET[2]),
+    ];
+  }, [LOCAL_CAMERA_TARGET, remoteOfficeEnabled]);
+  const cameraTarget = remoteOfficeEnabled
+    ? DISTRICT_CAMERA_TARGET
+    : LOCAL_CAMERA_TARGET;
+  const cameraZoom = remoteOfficeEnabled ? DISTRICT_CAMERA_ZOOM : 56;
+  const overviewPreset = useMemo(
+    () => ({ pos: CAM_POS, target: cameraTarget, zoom: cameraZoom }),
+    [CAM_POS, cameraTarget, cameraZoom]
+  );
+  const canvasResetKey = useMemo(
+    () =>
+      [
+        remoteOfficeEnabled ? "remote" : "local",
+        gatewayStatus ?? "unknown",
+        String(agents.length),
+        String(officeCenterSignal),
+      ].join(":"),
+    [agents.length, gatewayStatus, officeCenterSignal, remoteOfficeEnabled],
+  );
   // New Idea 7: heatmap mode.
   const [heatmapMode, setHeatmapMode] = useState(false);
   const [trailMode, setTrailMode] = useState(false);
@@ -2945,9 +2996,7 @@ export function RetroOffice3D({
       const [wx, , wz] = toWorld(agent.x, agent.y);
       orbitRef.current.target.set(wx, 0, wz);
       orbitRef.current.update();
-      if (isRemoteOfficeAgentId(agentId)) {
-        onAgentChatSelect?.(agentId);
-      }
+      onAgentChatSelect?.(agentId);
     },
     [onAgentChatSelect, renderAgentLookupRef],
   );
@@ -3311,7 +3360,7 @@ export function RetroOffice3D({
       !activeGithubTerminalUid &&
       !activeQaTerminalUid
     ) {
-      cameraPresetRef.current = overviewPresetRef.current;
+      cameraPresetRef.current = overviewPreset;
     }
   }, [
     activeAtmUid,
@@ -3319,6 +3368,7 @@ export function RetroOffice3D({
     activeQaTerminalUid,
     followAgentId,
     monitorAgentId,
+    overviewPreset,
   ]);
 
   const closeManualSmsBoothView = useCallback(() => {
@@ -3340,7 +3390,7 @@ export function RetroOffice3D({
       !activeGithubTerminalUid &&
       !activeQaTerminalUid
     ) {
-      cameraPresetRef.current = overviewPresetRef.current;
+      cameraPresetRef.current = overviewPreset;
     }
   }, [
     activeAtmUid,
@@ -3348,6 +3398,7 @@ export function RetroOffice3D({
     activeQaTerminalUid,
     followAgentId,
     monitorAgentId,
+    overviewPreset,
   ]);
 
   const getBoothAudioContext = useCallback(async () => {
@@ -3947,7 +3998,7 @@ export function RetroOffice3D({
         ? `agent:${smsBoothAgentId}`
         : null;
     if (!activeViewKey && prevSmsBoothViewRef.current) {
-      cameraPresetRef.current = overviewPresetRef.current;
+      cameraPresetRef.current = overviewPreset;
     }
     if (!activeViewKey || !activeSmsBooth) {
       prevSmsBoothViewRef.current = activeViewKey;
@@ -3967,6 +4018,7 @@ export function RetroOffice3D({
   }, [
     activeSmsBooth,
     manualSmsBoothOpen,
+    overviewPreset,
     smsBoothAgentId,
     smsBoothCommandArrived,
   ]);
@@ -4095,7 +4147,7 @@ export function RetroOffice3D({
         ? `agent:${phoneBoothAgentId}`
         : null;
     if (!activeViewKey && prevPhoneBoothViewRef.current) {
-      cameraPresetRef.current = overviewPresetRef.current;
+      cameraPresetRef.current = overviewPreset;
     }
     if (!activeViewKey || !activePhoneBooth) {
       prevPhoneBoothViewRef.current = activeViewKey;
@@ -4115,6 +4167,7 @@ export function RetroOffice3D({
   }, [
     activePhoneBooth,
     manualPhoneBoothOpen,
+    overviewPreset,
     phoneBoothAgentId,
     phoneBoothCommandArrived,
   ]);
@@ -4242,7 +4295,7 @@ export function RetroOffice3D({
 
   useEffect(() => {
     if (!monitorAgentId && prevMonitorAgentIdRef.current) {
-      cameraPresetRef.current = overviewPresetRef.current;
+      cameraPresetRef.current = overviewPreset;
     }
     if (!monitorAgentId || !activeMonitorComputer) {
       prevMonitorAgentIdRef.current = monitorAgentId;
@@ -4258,7 +4311,7 @@ export function RetroOffice3D({
       zoom: 330,
     };
     prevMonitorAgentIdRef.current = monitorAgentId;
-  }, [activeMonitorComputer, monitorAgentId]);
+  }, [activeMonitorComputer, monitorAgentId, overviewPreset]);
 
   useEffect(() => {
     if (activeAtmUid && !activeAtm) {
@@ -4269,7 +4322,7 @@ export function RetroOffice3D({
         window.clearTimeout(timer);
       };
     }
-  }, [activeAtm, activeAtmUid]);
+  }, [activeAtm, activeAtmUid, overviewPreset]);
 
   useEffect(() => {
     if (activeKanbanUid && !activeKanbanBoard) {
@@ -4306,7 +4359,7 @@ export function RetroOffice3D({
 
   useEffect(() => {
     if (!activeAtmUid && prevAtmUidRef.current) {
-      cameraPresetRef.current = overviewPresetRef.current;
+      cameraPresetRef.current = overviewPreset;
     }
     if (!activeAtmUid || !activeAtm) {
       prevAtmUidRef.current = activeAtmUid;
@@ -4327,7 +4380,7 @@ export function RetroOffice3D({
       zoom: 250,
     };
     prevAtmUidRef.current = activeAtmUid;
-  }, [activeAtm, activeAtmUid]);
+  }, [activeAtm, activeAtmUid, overviewPreset]);
 
   useEffect(() => {
     prevKanbanUidRef.current = activeKanbanUid;
@@ -4340,7 +4393,7 @@ export function RetroOffice3D({
         ? `agent:${githubReviewAgentId}`
         : null;
     if (!activeViewKey && prevGithubViewRef.current) {
-      cameraPresetRef.current = overviewPresetRef.current;
+      cameraPresetRef.current = overviewPreset;
     }
     if (!activeViewKey || !activeGithubTerminal) {
       prevGithubViewRef.current = activeViewKey;
@@ -4366,6 +4419,7 @@ export function RetroOffice3D({
     activeGithubTerminalUid,
     githubCommandArrived,
     githubReviewAgentId,
+    overviewPreset,
   ]);
 
   useEffect(() => {
@@ -4375,7 +4429,7 @@ export function RetroOffice3D({
         ? `agent:${qaTestingAgentId}`
         : null;
     if (!activeViewKey && prevQaViewRef.current) {
-      cameraPresetRef.current = overviewPresetRef.current;
+      cameraPresetRef.current = overviewPreset;
     }
     if (!activeViewKey || !activeQaTerminal) {
       prevQaViewRef.current = activeViewKey;
@@ -4399,6 +4453,7 @@ export function RetroOffice3D({
   }, [
     activeQaTerminal,
     activeQaTerminalUid,
+    overviewPreset,
     qaCommandArrived,
     qaTestingAgentId,
   ]);
@@ -4688,6 +4743,8 @@ export function RetroOffice3D({
       onStandupStartRequested,
       qaTerminal,
       resolveAgentIdForDeskItem,
+      planPath,
+      renderAgentsRef,
       serverTerminal,
       voiceRepliesEnabled,
       voiceRepliesLoaded,
@@ -4739,7 +4796,7 @@ export function RetroOffice3D({
       !activeGithubTerminalUid &&
       !activeQaTerminalUid
     ) {
-      cameraPresetRef.current = overviewPresetRef.current;
+      cameraPresetRef.current = overviewPreset;
     }
   }, [
     activeAtmUid,
@@ -4747,6 +4804,7 @@ export function RetroOffice3D({
     activeQaTerminalUid,
     followAgentId,
     monitorAgentId,
+    overviewPreset,
   ]);
 
   useEffect(() => {
@@ -5159,37 +5217,17 @@ export function RetroOffice3D({
     return () => clearTimeout(timer);
   }, [spotlightAgentId]);
 
-  // Camera constants.
-  const LOCAL_CAMERA_TARGET = useMemo(
-    () =>
-      toWorld(LOCAL_OFFICE_CANVAS_WIDTH / 2, LOCAL_OFFICE_CANVAS_HEIGHT / 2),
-    [],
-  );
-  const CAM_POS = useMemo<[number, number, number]>(() => {
-    if (remoteOfficeEnabled) return DISTRICT_CAMERA_POSITION;
-    return [
-      LOCAL_CAMERA_TARGET[0] + (DISTRICT_CAMERA_POSITION[0] - DISTRICT_CAMERA_TARGET[0]),
-      LOCAL_CAMERA_TARGET[1] + (DISTRICT_CAMERA_POSITION[1] - DISTRICT_CAMERA_TARGET[1]),
-      LOCAL_CAMERA_TARGET[2] + (DISTRICT_CAMERA_POSITION[2] - DISTRICT_CAMERA_TARGET[2]),
-    ];
-  }, [remoteOfficeEnabled, LOCAL_CAMERA_TARGET]);
-  const cameraTarget = remoteOfficeEnabled
-    ? DISTRICT_CAMERA_TARGET
-    : LOCAL_CAMERA_TARGET;
-  const cameraZoom = remoteOfficeEnabled ? DISTRICT_CAMERA_ZOOM : 56;
-  const overviewPresetRef = useRef({ pos: CAM_POS, target: cameraTarget, zoom: cameraZoom });
-  overviewPresetRef.current = { pos: CAM_POS, target: cameraTarget, zoom: cameraZoom };
   const lastOfficeCenterSignalRef = useRef(officeCenterSignal);
 
   useEffect(() => {
-    cameraPresetRef.current = overviewPresetRef.current;
-  }, [CAM_POS, cameraTarget, cameraZoom]);
+    cameraPresetRef.current = overviewPreset;
+  }, [overviewPreset]);
 
   useEffect(() => {
     if (officeCenterSignal === lastOfficeCenterSignalRef.current) return;
     lastOfficeCenterSignalRef.current = officeCenterSignal;
-    cameraPresetRef.current = overviewPresetRef.current;
-  }, [officeCenterSignal, CAM_POS, cameraTarget, cameraZoom]);
+    cameraPresetRef.current = overviewPreset;
+  }, [officeCenterSignal, overviewPreset]);
 
   return (
     <div className="relative w-full h-full bg-[#1a1008] font-mono text-white overflow-hidden">
@@ -5216,6 +5254,7 @@ export function RetroOffice3D({
         */}
         {!immersiveOverlayActive ? (
           <Canvas
+            key={canvasResetKey}
             orthographic
             dpr={[0.85, 1.5]}
             camera={{
@@ -5747,6 +5786,7 @@ export function RetroOffice3D({
                   key={agent.id}
                   agentId={agent.id}
                   name={agent.name}
+                  subtitle={"subtitle" in agent ? agent.subtitle ?? null : null}
                   status={agent.status}
                   color={agentColorMap.get(agent.id) ?? "#888"}
                   appearance={
@@ -5765,14 +5805,17 @@ export function RetroOffice3D({
                       ? false
                       : standupMeeting?.phase === "in_progress"
                         ? Boolean(standupSpeechTextByAgentId[agent.id])
-                        : speechAgentIds.has(agent.id)
+                        : speechAgentIds.has(agent.id) ||
+                          Boolean(streamingTextByAgentId[agent.id])
                   }
                   speechText={
                     isJanitor
                       ? null
                       : standupMeeting?.phase === "in_progress"
                         ? (standupSpeechTextByAgentId[agent.id] ?? null)
-                        : (speechTextByAgentId[agent.id] ?? null)
+                        : (speechTextByAgentId[agent.id] ??
+                            streamingTextByAgentId[agent.id] ??
+                            null)
                   }
                   suppressSpeechBubble={
                     suppressSceneSpeechBubbles &&
@@ -5932,12 +5975,14 @@ export function RetroOffice3D({
 
       {/* Title — top center overlay. */}
       {!immersiveOverlayActive ? (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-3 pointer-events-none select-none z-10">
-          <div className="h-px w-12 bg-gradient-to-r from-transparent to-amber-500/40" />
-          <span className="text-sm tracking-[0.3em] text-amber-300/80 font-bold uppercase">
-            {officeTitle}
-          </span>
-          <div className="h-px w-12 bg-gradient-to-l from-transparent to-amber-500/40" />
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none select-none z-10">
+          <div className="flex items-center gap-3">
+            <div className="h-px w-12 bg-gradient-to-r from-transparent to-amber-500/40" />
+            <span className="text-sm tracking-[0.3em] text-amber-300/80 font-bold uppercase">
+              {officeTitle}
+            </span>
+            <div className="h-px w-12 bg-gradient-to-l from-transparent to-amber-500/40" />
+          </div>
         </div>
       ) : null}
 
@@ -7006,6 +7051,18 @@ export function RetroOffice3D({
               <span>Add</span>
             </button>
           ) : null}
+          <div
+            className={`flex h-7 items-center rounded-md border px-2 text-[10px] font-mono uppercase tracking-[0.12em] ${
+              gatewayStatus === "connected"
+                ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-100"
+                : gatewayStatus === "connecting"
+                  ? "border-amber-400/25 bg-amber-500/10 text-amber-100"
+                  : "border-rose-400/25 bg-rose-500/10 text-rose-100"
+            }`}
+            title={`Runtime: ${activeAdapterType} (${gatewayStatus})`}
+          >
+            {activeAdapterType} • {gatewayStatus}
+          </div>
           {/* New Idea 7: Heatmap toggle. */}
           <button
             onClick={() => setHeatmapMode((p) => !p)}
@@ -7099,11 +7156,22 @@ export function RetroOffice3D({
             <div className="min-h-0 flex-1 overflow-y-auto">
               <SettingsPanel
                 gatewayStatus={gatewayStatus}
-                gatewayUrl={atmAnalytics?.gatewayUrl}
+                gatewayUrl={gatewayUrl}
+                gatewayToken={gatewayToken}
+                selectedAdapterType={selectedAdapterType}
+                activeAdapterType={activeAdapterType}
                 onGatewayDisconnect={() => {
                   onGatewayDisconnect?.();
                   setSettingsModalOpen(false);
                 }}
+                onGatewayConnect={() => {
+                  onGatewayConnect?.();
+                }}
+                onGatewayUrlChange={(value) => onGatewayUrlChange?.(value)}
+                onGatewayTokenChange={(value) => onGatewayTokenChange?.(value)}
+                onGatewayAdapterTypeChange={(value) =>
+                  onGatewayAdapterTypeChange?.(value)
+                }
                 onOpenOnboarding={() => {
                   onOpenOnboarding?.();
                   setSettingsModalOpen(false);

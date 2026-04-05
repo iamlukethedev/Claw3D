@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentState } from "@/features/agents/state/store";
 import type { AgentEventPayload } from "@/features/agents/state/runtimeEventBridge";
 import type { GatewayClient, GatewayStatus } from "@/lib/gateway/GatewayClient";
@@ -57,22 +57,26 @@ const findAgentForRunEvent = (
 export const useRunLog = ({
   client,
   status,
+  enabled = true,
   agents,
   maxRecords = MAX_RUN_RECORDS,
 }: {
   client: GatewayClient;
   status: GatewayStatus;
+  enabled?: boolean;
   agents: AgentState[];
   maxRecords?: number;
 }) => {
   const [records, setRecords] = useState<RunRecord[]>([]);
   const agentsRef = useRef(agents);
+  const visibleRecords = useMemo(() => (enabled ? records : []), [enabled, records]);
 
   useEffect(() => {
     agentsRef.current = agents;
   }, [agents]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (status !== "connected") return;
     return client.onEvent((event) => {
       if (event.event !== "agent") return;
@@ -126,7 +130,7 @@ export const useRunLog = ({
         return [fallbackRecord, ...current].slice(0, Math.max(1, maxRecords));
       });
     });
-  }, [client, maxRecords, status]);
+  }, [client, enabled, maxRecords, status]);
 
-  return records;
+  return visibleRecords;
 };
