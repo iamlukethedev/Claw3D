@@ -1,11 +1,13 @@
 {
   "name": "claw3d",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "private": true,
   "license": "MIT",
   "scripts": {
     "dev": "node server/index.js --dev",
     "dev:https": "node server/index.js --dev --https",
+    "hermes-adapter": "node server/hermes-gateway-adapter.js",
+    "demo-gateway": "node server/demo-gateway-adapter.js",
     "build": "next build",
     "start": "node server/index.js",
     "lint": "eslint .",
@@ -21,7 +23,6 @@
     "@noble/ed25519": "^3.0.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
-    "@vercel/otel": "^2.1.0",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

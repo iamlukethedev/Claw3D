@@ -111,6 +111,7 @@ const DatePickerField = ({
 export function AnalyticsPanel({
   client,
   status,
+  approvalsEnabled = true,
   agents,
   runLog,
   gatewayUrl,
@@ -119,6 +120,7 @@ export function AnalyticsPanel({
 }: {
   client: GatewayClient;
   status: GatewayStatus;
+  approvalsEnabled?: boolean;
   agents: AgentState[];
   runLog: RunRecord[];
   gatewayUrl: string;
@@ -142,7 +144,12 @@ export function AnalyticsPanel({
     settingsCoordinator,
   });
 
-  const approvalMetrics = useApprovalMetrics({ client, status, agents });
+  const approvalMetrics = useApprovalMetrics({
+    client,
+    status,
+    enabled: approvalsEnabled,
+    agents,
+  });
   const performance = usePerformanceAnalytics({
     agents,
     runLog,

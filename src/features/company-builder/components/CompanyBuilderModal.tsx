@@ -194,7 +194,7 @@ export function CompanyBuilderModal({
             </div>
             <h2 className="mt-1 text-lg font-semibold">Design an AI company from one prompt</h2>
             <p className="mt-1 text-sm text-white/55">
-              Uses your connected OpenClaw runtime
+              Uses your connected runtime
               {plannerAgentName ? ` via ${plannerAgentName}.` : "."}
             </p>
           </div>
@@ -329,7 +329,7 @@ export function CompanyBuilderModal({
                     Company Actions
                   </p>
                   <p className="mt-1 text-[11px] text-white/45">
-                    Generate the org, then create it in OpenClaw.
+                    Generate the org, then create it in your connected runtime.
                   </p>
                 </div>
                 {replacesExistingAgents ? (
@@ -341,7 +341,7 @@ export function CompanyBuilderModal({
                 ) : null}
                 {!canUseAi ? (
                   <p className="text-xs text-amber-200/80">
-                    Connect to OpenClaw and keep at least one available planning agent in the fleet
+                    Connect to a runtime and keep at least one available planning agent in the fleet
                     to use AI suggestions.
                   </p>
                 ) : null}
@@ -416,7 +416,7 @@ export function CompanyBuilderModal({
                   <div>
                     <p className="text-sm font-semibold text-white">Org structure</p>
                     <p className="text-xs text-white/55">
-                      Edit the team before creating agents in OpenClaw.
+                      Edit the team before creating agents in your connected runtime.
                     </p>
                   </div>
                   <button
@@ -704,7 +704,7 @@ export function CompanyBuilderModal({
               {statusLine?.trim() || "Working on your company."}
             </p>
             <p className="mt-2 text-xs leading-5 text-white/55">
-              Claw3D is using your OpenClaw runtime right now. Please wait until this finishes.
+              Claw3D is using your connected runtime right now. Please wait until this finishes.
             </p>
             <div className="mt-5 flex gap-2">
               {Array.from({ length: 4 }, (_, index) => (
@@ -897,7 +897,8 @@ export function CompanyBuilderModal({
                   What should the company do?
                 </p>
                 <p className="mt-2 text-sm text-white/55">
-                  As soon as you submit this, OpenClaw will improve the brief automatically.
+                  As soon as you submit this, Claw3D will improve the brief using your connected
+                  runtime.
                 </p>
               </div>
               <button
@@ -923,9 +924,12 @@ export function CompanyBuilderModal({
               disabled={busy}
             />
             <div className="mt-5 flex items-center justify-between gap-3">
-              <p className="text-xs text-white/45">
-                The improved brief becomes the main editable input for generation.
-              </p>
+              <div>
+                <p className="text-xs text-white/45">
+                  The improved brief becomes the main editable input for generation.
+                </p>
+                {error ? <p className="mt-2 text-xs text-red-200">{error}</p> : null}
+              </div>
               <button
                 type="button"
                 className="inline-flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-[#1a1206] transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-40"

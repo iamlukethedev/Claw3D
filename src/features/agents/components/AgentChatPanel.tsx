@@ -125,6 +125,7 @@ type AgentChatPanelProps = {
   stopBusy: boolean;
   stopDisabledReason?: string | null;
   onLoadMoreHistory: () => void;
+  onOpenSettings?: () => void;
   onRename?: (name: string) => Promise<boolean>;
   onNewSession?: () => Promise<void> | void;
   onModelChange: (value: string | null) => void;
@@ -1201,6 +1202,7 @@ export const AgentChatPanel = ({
   stopBusy,
   stopDisabledReason = null,
   onLoadMoreHistory,
+  onOpenSettings,
   onRename,
   onNewSession,
   onModelChange,
@@ -1590,6 +1592,18 @@ export const AgentChatPanel = ({
           </div>
 
           <div className="mt-0.5 flex items-center gap-2">
+            {onOpenSettings ? (
+              <button
+                className="nodrag ui-btn-icon ui-btn-icon-sm shrink-0"
+                type="button"
+                data-testid="agent-settings-toggle"
+                aria-label="Open behavior"
+                title="Open behavior"
+                onClick={onOpenSettings}
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
             <button
               className="nodrag inline-flex items-center whitespace-nowrap rounded border border-[color:var(--status-approval-border)] bg-[color:var(--status-approval-bg)] px-2 py-0.5 font-mono text-[9px] font-medium tracking-[0.02em] text-white transition hover:bg-[color:var(--status-approval-bg)] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
               type="button"

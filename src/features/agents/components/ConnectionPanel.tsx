@@ -1,14 +1,20 @@
 import type { GatewayStatus } from "@/lib/gateway/GatewayClient";
+import type { StudioGatewayAdapterType } from "@/lib/studio/settings";
 import { X } from "lucide-react";
 import { resolveGatewayStatusBadgeClass, resolveGatewayStatusLabel } from "./colorSemantics";
 
 type ConnectionPanelProps = {
   gatewayUrl: string;
   token: string;
+  selectedAdapterType: StudioGatewayAdapterType;
+  activeAdapterType: StudioGatewayAdapterType;
+  localGatewayUrl?: string | null;
+  localGatewayToken?: string | null;
   status: GatewayStatus;
   error: string | null;
   onGatewayUrlChange: (value: string) => void;
   onTokenChange: (value: string) => void;
+  onAdapterTypeChange: (value: StudioGatewayAdapterType) => void;
   onConnect: () => void;
   onDisconnect: () => void;
   onClose?: () => void;
@@ -17,16 +23,37 @@ type ConnectionPanelProps = {
 export const ConnectionPanel = ({
   gatewayUrl,
   token,
+  selectedAdapterType,
+  activeAdapterType,
+  localGatewayUrl = null,
+  localGatewayToken = null,
   status,
   error,
   onGatewayUrlChange,
   onTokenChange,
+  onAdapterTypeChange,
   onConnect,
   onDisconnect,
   onClose,
 }: ConnectionPanelProps) => {
   const isConnected = status === "connected";
   const isConnecting = status === "connecting";
+  const tokenOptional =
+    selectedAdapterType === "hermes" ||
+    selectedAdapterType === "demo" ||
+    selectedAdapterType === "custom";
+  const applyDemoPreset = () => {
+    onAdapterTypeChange("demo");
+  };
+  const applyHermesPreset = () => {
+    onAdapterTypeChange("hermes");
+  };
+  const applyCustomPreset = () => {
+    onAdapterTypeChange("custom");
+  };
+  const applyOpenClawPreset = () => {
+    onAdapterTypeChange("openclaw");
+  };
 
   return (
     <div className="fade-up-delay flex flex-col gap-3">
@@ -73,16 +100,51 @@ export const ConnectionPanel = ({
           />
         </label>
         <label className="flex flex-col gap-1 font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
-          Upstream token
+          {tokenOptional ? "Upstream token (optional)" : "Upstream token"}
           <input
             className="ui-input h-10 rounded-md px-4 font-sans text-sm text-foreground outline-none"
             type="password"
             value={token}
             onChange={(event) => onTokenChange(event.target.value)}
-            placeholder="gateway token"
+            placeholder={tokenOptional ? "optional token" : "gateway token"}
             spellCheck={false}
           />
         </label>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+        <span className="font-mono">Selected backend: {selectedAdapterType}</span>
+        <span className="font-mono">Active backend: {activeAdapterType}</span>
+        <span>Each backend keeps its own saved URL and token.</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+          type="button"
+          onClick={applyDemoPreset}
+        >
+          Demo backend
+        </button>
+        <button
+          className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+          type="button"
+          onClick={applyHermesPreset}
+        >
+          Hermes backend
+        </button>
+        <button
+          className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+          type="button"
+          onClick={applyCustomPreset}
+        >
+          Custom backend
+        </button>
+        <button
+          className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+          type="button"
+          onClick={applyOpenClawPreset}
+        >
+          OpenClaw backend
+        </button>
       </div>
       {error ? (
         <p className="ui-alert-danger rounded-md px-4 py-2 text-sm">

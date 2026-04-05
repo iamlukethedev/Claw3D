@@ -12,16 +12,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { MessageSquare, ChevronDown, Mic } from "lucide-react";
 import { RetroOffice3D } from "@/features/retro-office/RetroOffice3D";
 import type { OfficeAgent } from "@/features/retro-office/core/types";
+import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
 import { GatewayConnectScreen } from "@/features/agents/components/GatewayConnectScreen";
 import { useAgentStore, type AgentState } from "@/features/agents/state/store";
 import {
   GatewayClient,
   buildAgentMainSessionKey,
-  useGatewayConnection,
   type EventFrame,
   isSameSessionKey,
   parseAgentIdFromSessionKey,
 } from "@/lib/gateway/GatewayClient";
+import { useRuntimeConnection } from "@/lib/runtime/useRuntimeConnection";
 import {
   createStudioSettingsCoordinator,
   type StudioSettingsLoadOptions,
@@ -214,6 +215,8 @@ const MAIN_AGENT_ID = "main";
 const MAX_OPENCLAW_LOG_ENTRIES = 200;
 const MAX_OPENCLAW_AGENT_OUTPUT_LINES = 12;
 const OFFICE_DANCE_MS = 60_000;
+const GATEWAY_LOADING_OVERLAY_DELAY_MS = 1_200;
+const GATEWAY_CONNECT_OVERLAY_DELAY_MS = 1_500;
 
 const getLatestUserRequestForAgent = (
   agent: AgentState,
@@ -510,6 +513,7 @@ const mapAgentToOffice = (agent: AgentState): OfficeAgent => {
     return {
       id: agent.agentId,
       name: agent.name || "Unknown",
+      subtitle: agent.role ?? null,
       status: "error",
       color: stringToColor(agent.agentId),
       item: getDeterministicItem(agent.agentId),
@@ -520,6 +524,7 @@ const mapAgentToOffice = (agent: AgentState): OfficeAgent => {
   return {
     id: agent.agentId,
     name: agent.name || "Unknown",
+    subtitle: agent.role ?? null,
     status: isWorking ? "working" : "idle",
     color: stringToColor(agent.agentId),
     item: getDeterministicItem(agent.agentId),
@@ -835,11 +840,14 @@ export function OfficeScreen({
   );
   const {
     client,
+    provider,
     status,
     connectPromptReady,
     shouldPromptForConnect,
     gatewayUrl,
     token,
+    selectedAdapterType,
+    activeAdapterType,
     localGatewayDefaults,
     error: gatewayError,
     connect,
@@ -847,12 +855,23 @@ export function OfficeScreen({
     useLocalGatewayDefaults,
     setGatewayUrl,
     setToken,
+    setSelectedAdapterType,
+    supportsCapability,
   } =
-    useGatewayConnection(settingsCoordinator);
+    useRuntimeConnection(settingsCoordinator);
+  const runtimeSupportsSkills = supportsCapability("skills");
+  const runtimeSupportsApprovals = supportsCapability("approvals");
+  const runtimeSupportsCron = supportsCapability("cron");
+  const runtimeSupportsModels = supportsCapability("models");
+  const runtimeSupportsRunLifecycle = supportsCapability("runtime-agent-events");
   const { state, dispatch, hydrateAgents, setError, setLoading } =
     useAgentStore();
   const [agentsLoaded, setAgentsLoaded] = useState(false);
   const [didAttemptGatewayConnect, setDidAttemptGatewayConnect] = useState(false);
+  const [showDelayedGatewayLoadingOverlay, setShowDelayedGatewayLoadingOverlay] =
+    useState(false);
+  const [showDelayedGatewayConnectOverlay, setShowDelayedGatewayConnectOverlay] =
+    useState(false);
   const [clockTick, setClockTick] = useState(0);
   const [debugRows, setDebugRows] = useState<OfficeDebugRow[]>([]);
   const [feedEvents, setFeedEvents] = useState<OfficeFeedEvent[]>([]);
@@ -1129,14 +1148,33 @@ export function OfficeScreen({
     },
     [dispatch, gatewayUrl, settingsCoordinator],
   );
+  const focusLocalAgent = useCallback(
+    (agentId: string, options?: { openChat?: boolean }) => {
+      setSelectedChatAgentId(agentId);
+      if (options?.openChat !== false) {
+        setChatOpen(true);
+      }
+      dispatch({ type: "selectAgent", agentId });
+    },
+    [dispatch],
+  );
+  const focusChatTarget = useCallback(
+    (agentId: string) => {
+      setSelectedChatAgentId(agentId);
+      setChatOpen(true);
+      if (!isRemoteOfficeAgentId(agentId)) {
+        dispatch({ type: "selectAgent", agentId });
+      }
+    },
+    [dispatch],
+  );
   const openAgentEditor = useCallback(
     (agentId: string, initialSection: AgentEditorSection = "avatar") => {
       setAgentEditorAgentId(agentId);
       setAgentEditorInitialSection(initialSection);
-      setSelectedChatAgentId(agentId);
-      dispatch({ type: "selectAgent", agentId });
+      focusLocalAgent(agentId, { openChat: false });
     },
-    [dispatch],
+    [focusLocalAgent],
   );
 
   const handleDeskAssignmentChange = useCallback(
@@ -1353,7 +1391,7 @@ export function OfficeScreen({
             ? { force: true }
             : { maxAgeMs: options?.settingsMaxAgeMs ?? 60_000 };
         const commands = await runStudioBootstrapLoadOperation({
-          client,
+          client: provider,
           gatewayUrl,
           cachedConfigSnapshot: gatewayConfigSnapshot.current,
           loadStudioSettings: () => loadStudioSettings(settingsLoadOptions),
@@ -1389,7 +1427,7 @@ export function OfficeScreen({
           }
           try {
             const inference = await inferRunningFromAgentSessions({
-              client,
+              client: provider,
               agentId: agent.agentId,
             });
             if (connectionEpochAtStart !== connectionEpochRef.current) {
@@ -1570,7 +1608,7 @@ export function OfficeScreen({
   const runCompanyBuilderAiTask = useCallback(
     async (prompt: string, statusText: string) => {
       if (status !== "connected") {
-        throw new Error("Connect to OpenClaw before using the company builder.");
+        throw new Error("Connect to a runtime before using the company builder.");
       }
       const livePlannerAgent = resolveCompanyPlanningAgent({
         agents: stateRef.current.agents,
@@ -1598,7 +1636,7 @@ export function OfficeScreen({
       try {
         const improvedBrief = await runCompanyBuilderAiTask(
           buildImproveCompanyBriefPrompt(brief),
-          "Improving your company brief with OpenClaw.",
+          "Improving your company brief with the connected runtime.",
         );
         setCompanyBuilderInput((current) => ({
           ...current,
@@ -1625,7 +1663,7 @@ export function OfficeScreen({
       try {
         const response = await runCompanyBuilderAiTask(
           buildGenerateCompanyPlanPrompt(brief),
-          "Generating your AI company structure with OpenClaw.",
+          "Generating your AI company structure with the connected runtime.",
         );
         const parsedPlan = parseCompanyPlanFromAssistantText(response);
         const nextInput: CompanyBuilderInput = {
@@ -1668,7 +1706,7 @@ export function OfficeScreen({
   const handleCreateCompanyFromPlan = useCallback(
     async (params: { input: CompanyBuilderInput; plan: CompanyBuilderPlan }) => {
       if (status !== "connected") {
-        const message = "Connect to OpenClaw before creating the company.";
+        const message = "Connect to a runtime before creating the company.";
         setCompanyBuilderError(message);
         throw new Error(message);
       }
@@ -1772,8 +1810,7 @@ export function OfficeScreen({
           persistSnapshot: persistCompanyBuilderSnapshot,
           setOfficeTitle,
           selectAgent: (agentId) => {
-            dispatch({ type: "selectAgent", agentId });
-            setSelectedChatAgentId(agentId);
+            focusLocalAgent(agentId);
           },
           setStatusLine: setCompanyBuilderStatusLine,
         });
@@ -1887,11 +1924,7 @@ export function OfficeScreen({
                 );
               }
             }
-            dispatch({
-              type: "selectAgent",
-              agentId: completion.agentId,
-            });
-            setSelectedChatAgentId(completion.agentId);
+            focusLocalAgent(completion.agentId);
             setCreateAgentBlock(null);
             setCreateAgentModalError(null);
           },
@@ -1911,6 +1944,7 @@ export function OfficeScreen({
       createAgentBusy,
       dispatch,
       enqueueConfigMutation,
+      focusLocalAgent,
       hasDeleteMutationBlock,
       loadAgents,
       setError,
@@ -2105,7 +2139,7 @@ export function OfficeScreen({
       const requestedSessionKey = params.sessionKey?.trim() ?? "";
       if (requestedSessionKey) {
         try {
-          const history = await client.call<{
+          const history = await provider.call<{
             messages?: Record<string, unknown>[];
           }>("chat.history", {
             sessionKey: requestedSessionKey,
@@ -2117,7 +2151,7 @@ export function OfficeScreen({
           const derived = buildHistoryLines(messages);
           let lastUser = derived.lastUser?.trim() ?? "";
           if (!lastUser) {
-            const previewResult = await client.call<SummaryPreviewSnapshot>(
+            const previewResult = await provider.call<SummaryPreviewSnapshot>(
               "sessions.preview",
               {
                 keys: [requestedSessionKey],
@@ -2213,7 +2247,7 @@ export function OfficeScreen({
         return;
       }
       const commands = await runHistorySyncOperation({
-        client,
+        client: provider,
         agentId: params.agentId,
         getAgent: (agentId) =>
           stateRef.current.agents.find((entry) => entry.agentId === agentId) ??
@@ -2239,7 +2273,7 @@ export function OfficeScreen({
         });
       }
     },
-    [client, debugEnabled, dispatch, status],
+    [debugEnabled, dispatch, provider, status],
   );
 
   const refreshRecentTransportSessionHistory = useCallback(
@@ -2324,7 +2358,6 @@ export function OfficeScreen({
   useEffect(() => {
     if (status === "disconnected") {
       connectionEpochRef.current += 1;
-      setAgentsLoaded(false);
       setCreateAgentWizardOpen(false);
       setCreateAgentBusy(false);
       setCreateAgentModalError(null);
@@ -2333,7 +2366,11 @@ export function OfficeScreen({
       loadAgentsInFlightRef.current = null;
       gatewayConfigSnapshot.current = null;
       lastLoadAgentsStartedAtRef.current = 0;
-      hydrateAgents([]);
+      setLoading(false);
+      if (stateRef.current.agents.length === 0) {
+        setAgentsLoaded(false);
+        hydrateAgents([]);
+      }
       setFeedEvents([]);
       setDebugRows([]);
       setRunCountByAgentId({});
@@ -2341,7 +2378,7 @@ export function OfficeScreen({
       prevAssistantPreviewRef.current = {};
       lastGatewayActivityAtRef.current = 0;
     }
-  }, [hydrateAgents, status]);
+  }, [hydrateAgents, setLoading, status]);
 
   useEffect(() => {
     if (!agentsLoaded) return;
@@ -2602,10 +2639,11 @@ export function OfficeScreen({
 
   useEffect(() => {
     if (status !== "connected") return;
+    if (!runtimeSupportsModels) return;
     let cancelled = false;
     void (async () => {
       try {
-        const result = await client.call<{ models: GatewayModelChoice[] }>(
+        const result = await provider.call<{ models: GatewayModelChoice[] }>(
           "models.list",
           {},
         );
@@ -2624,7 +2662,7 @@ export function OfficeScreen({
     return () => {
       cancelled = true;
     };
-  }, [status, client]);
+  }, [status, provider, runtimeSupportsModels]);
 
   useEffect(() => {
     if (chatOpen && !selectedChatAgentId && state.agents.length > 0) {
@@ -2638,7 +2676,7 @@ export function OfficeScreen({
   );
 
   const chatController = useChatInteractionController({
-    client,
+    client: provider,
     status,
     agents: state.agents,
     dispatch: (action) => dispatch(action as never),
@@ -2676,7 +2714,12 @@ export function OfficeScreen({
     setAgentEditorAgentId(null);
   }, [agentEditorAgentId, state.agents]);
 
-  const runLog = useRunLog({ client, status, agents: state.agents });
+  const runLog = useRunLog({
+    client,
+    status,
+    enabled: runtimeSupportsRunLifecycle,
+    agents: state.agents,
+  });
   const standupAgentSnapshots = useMemo<StandupAgentSnapshot[]>(
     () =>
       state.agents.map((agent) => ({
@@ -2696,6 +2739,7 @@ export function OfficeScreen({
     settingsCoordinator,
     client,
     status,
+    cronEnabled: runtimeSupportsCron,
     agents: state.agents,
     runLog,
     standup: standupController,
@@ -2723,6 +2767,7 @@ export function OfficeScreen({
   const marketplace = useOfficeSkillsMarketplace({
     client,
     status,
+    enabled: runtimeSupportsSkills,
     agents: state.agents,
     preferredAgentId: selectedLocalChatAgentId,
     onSkillActivityStart: handleMarketplaceGymStart,
@@ -2731,6 +2776,7 @@ export function OfficeScreen({
   const skillTriggers = useOfficeSkillTriggers({
     client,
     status,
+    enabled: runtimeSupportsSkills,
     agents: state.agents,
   });
   const animationNowMs = Date.now();
@@ -2863,9 +2909,8 @@ export function OfficeScreen({
 
   useEffect(() => {
     if (!activeGithubReviewAgentId) return;
-    setSelectedChatAgentId(activeGithubReviewAgentId);
-    dispatch({ type: "selectAgent", agentId: activeGithubReviewAgentId });
-  }, [activeGithubReviewAgentId, dispatch]);
+    focusLocalAgent(activeGithubReviewAgentId);
+  }, [activeGithubReviewAgentId, focusLocalAgent]);
 
   useEffect(() => {
     setQaTestingAgentId(activeQaTestingAgentId);
@@ -2873,9 +2918,8 @@ export function OfficeScreen({
 
   useEffect(() => {
     if (!activeQaTestingAgentId) return;
-    setSelectedChatAgentId(activeQaTestingAgentId);
-    dispatch({ type: "selectAgent", agentId: activeQaTestingAgentId });
-  }, [activeQaTestingAgentId, dispatch]);
+    focusLocalAgent(activeQaTestingAgentId);
+  }, [activeQaTestingAgentId, focusLocalAgent]);
 
   useEffect(() => {
     const activeKeys = new Set(
@@ -2929,9 +2973,7 @@ export function OfficeScreen({
             promptedPhoneCallKeysRef.current.delete(request.key);
             return;
           }
-          setSelectedChatAgentId(agentId);
-          setChatOpen(true);
-          dispatch({ type: "selectAgent", agentId });
+          focusLocalAgent(agentId);
           dispatch({
             type: "appendOutput",
             agentId,
@@ -2989,7 +3031,7 @@ export function OfficeScreen({
         prepareScenarioForAgent(agentId, request);
       }
     }
-  }, [dispatch, phoneCallByAgentId, state.agents]);
+  }, [dispatch, focusLocalAgent, phoneCallByAgentId, state.agents]);
 
   const activePhoneBoothAgentId = useMemo(
     () =>
@@ -3011,10 +3053,9 @@ export function OfficeScreen({
     ({ agentId, requestKey }: PhoneCallSpeakPayload) => {
       if (spokenPhoneCallKeysRef.current.has(requestKey)) return;
       spokenPhoneCallKeysRef.current.add(requestKey);
-      setSelectedChatAgentId(agentId);
-      dispatch({ type: "selectAgent", agentId });
+      focusLocalAgent(agentId);
     },
-    [dispatch],
+    [focusLocalAgent],
   );
 
   const handlePhoneCallComplete = useCallback(
@@ -3092,9 +3133,7 @@ export function OfficeScreen({
             promptedTextMessageKeysRef.current.delete(request.key);
             return;
           }
-          setSelectedChatAgentId(agentId);
-          setChatOpen(true);
-          dispatch({ type: "selectAgent", agentId });
+          focusLocalAgent(agentId);
           dispatch({
             type: "appendOutput",
             agentId,
@@ -3152,7 +3191,7 @@ export function OfficeScreen({
         prepareScenarioForAgent(agentId, request);
       }
     }
-  }, [dispatch, state.agents, textMessageByAgentId]);
+  }, [dispatch, focusLocalAgent, state.agents, textMessageByAgentId]);
 
   const activeSmsBoothAgentId = useMemo(
     () =>
@@ -3219,13 +3258,9 @@ export function OfficeScreen({
 
   const handleOpenAgentChat = useCallback(
     (agentId: string) => {
-      setSelectedChatAgentId(agentId);
-      setChatOpen(true);
-      if (!isRemoteOfficeAgentId(agentId)) {
-        dispatch({ type: "selectAgent", agentId });
-      }
+      focusChatTarget(agentId);
     },
-    [dispatch],
+    [focusChatTarget],
   );
   const updateRemoteChatSession = useCallback(
     (
@@ -3752,6 +3787,15 @@ export function OfficeScreen({
     state.agents,
     workingUntilByAgentId,
   ]);
+  const streamingTextByAgentId = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    for (const agent of state.agents) {
+      if (agent.streamText?.trim()) {
+        map[agent.agentId] = agent.streamText.trim();
+      }
+    }
+    return map;
+  }, [state.agents]);
   const openClawLiveStateText = useMemo(() => {
     const lines = ["== LIVE OPENCLAW STATE =="];
     if (state.agents.length === 0) {
@@ -4087,43 +4131,52 @@ export function OfficeScreen({
   // No longer force-close the jukebox panel when skill is disabled;
   // the panel handles the disabled state itself.
 
-  if (
+  useEffect(() => {
+    if (
+      status === "connecting" &&
+      !agentsLoaded &&
+      gatewayUrl.trim().length > 0 &&
+      !shouldPromptForConnect
+    ) {
+      const timeoutId = window.setTimeout(() => {
+        setShowDelayedGatewayLoadingOverlay(true);
+      }, GATEWAY_LOADING_OVERLAY_DELAY_MS);
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
+    }
+    setShowDelayedGatewayLoadingOverlay(false);
+  }, [agentsLoaded, gatewayUrl, shouldPromptForConnect, status]);
+
+  useEffect(() => {
+    if (
+      status === "disconnected" &&
+      !agentsLoaded &&
+      didAttemptGatewayConnect &&
+      !shouldPromptForConnect
+    ) {
+      const timeoutId = window.setTimeout(() => {
+        setShowDelayedGatewayConnectOverlay(true);
+      }, GATEWAY_CONNECT_OVERLAY_DELAY_MS);
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
+    }
+    setShowDelayedGatewayConnectOverlay(false);
+  }, [agentsLoaded, didAttemptGatewayConnect, shouldPromptForConnect, status]);
+
+  const showGatewayLoadingOverlay =
     !agentsLoaded &&
     (!connectPromptReady ||
       (gatewayUrl.trim().length > 0 &&
         !shouldPromptForConnect &&
-        (!didAttemptGatewayConnect || status === "connecting")))
-  ) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-black font-mono text-[#4FC3F7]">
-        CONNECTING TO GATEWAY...
-      </div>
-    );
-  }
-
-  if (
+        ((!didAttemptGatewayConnect && showDelayedGatewayLoadingOverlay) ||
+          (status === "connecting" && showDelayedGatewayLoadingOverlay))));
+  const showGatewayConnectOverlay =
     connectPromptReady &&
     status === "disconnected" &&
     !agentsLoaded &&
-    (shouldPromptForConnect || didAttemptGatewayConnect)
-  ) {
-    return (
-      <main className="min-h-screen bg-black px-4 py-10">
-        <GatewayConnectScreen
-          gatewayUrl={gatewayUrl}
-          token={token}
-          localGatewayDefaults={localGatewayDefaults}
-          status={status}
-          error={gatewayError}
-          showApprovalHint={didAttemptGatewayConnect}
-          onGatewayUrlChange={setGatewayUrl}
-          onTokenChange={setToken}
-          onUseLocalDefaults={useLocalGatewayDefaults}
-          onConnect={() => void connect()}
-        />
-      </main>
-    );
-  }
+    (shouldPromptForConnect || showDelayedGatewayConnectOverlay);
 
   const runningCount = state.agents.filter(
     (agent) =>
@@ -4145,7 +4198,44 @@ export function OfficeScreen({
     "Connected to the gateway, but no agents were loaded into the office.";
 
   return (
-    <main className="h-full w-full overflow-hidden bg-black">
+    <main className="relative h-full w-full overflow-hidden bg-black">
+      {showGatewayLoadingOverlay ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-[#120a05]/76"
+          aria-label="Connecting to runtime"
+          role="status"
+        >
+          <div className="rounded-xl border border-amber-700/45 bg-[#1a1008] px-8 py-6 shadow-2xl">
+            <RunningAvatarLoader
+              size={28}
+              trackWidth={76}
+              label="Connecting to your runtime..."
+              labelClassName="text-amber-100/80"
+            />
+          </div>
+        </div>
+      ) : null}
+      {showGatewayConnectOverlay ? (
+        <div className="pointer-events-auto absolute inset-0 z-50 flex items-start justify-center bg-[#120a05]/76 px-4 py-10">
+          <div className="w-full max-w-[860px] rounded-2xl border border-amber-900/55 bg-[#120a05]/98 p-3 shadow-2xl">
+            <GatewayConnectScreen
+              gatewayUrl={gatewayUrl}
+              token={token}
+              selectedAdapterType={selectedAdapterType}
+              activeAdapterType={activeAdapterType}
+              localGatewayDefaults={localGatewayDefaults}
+              status={status}
+              error={gatewayError}
+              showApprovalHint={didAttemptGatewayConnect}
+              onGatewayUrlChange={setGatewayUrl}
+              onTokenChange={setToken}
+              onAdapterTypeChange={setSelectedAdapterType}
+              onUseLocalDefaults={useLocalGatewayDefaults}
+              onConnect={() => void connect()}
+            />
+          </div>
+        </div>
+      ) : null}
       <section className="relative h-full min-h-0 min-w-0 overflow-hidden">
         <RetroOffice3D
           agents={allVisibleAgents}
@@ -4202,12 +4292,21 @@ export function OfficeScreen({
             gatewayUrl,
             settingsCoordinator,
           }}
+          gatewayUrl={gatewayUrl}
+          gatewayToken={token}
+          selectedAdapterType={selectedAdapterType}
+          activeAdapterType={activeAdapterType}
           onGatewayDisconnect={disconnect}
+          onGatewayConnect={() => void connect()}
+          onGatewayUrlChange={setGatewayUrl}
+          onGatewayTokenChange={setToken}
+          onGatewayAdapterTypeChange={setSelectedAdapterType}
           onOpenOnboarding={handleOpenOnboarding}
           feedEvents={feedEvents}
           gatewayStatus={status}
           runCountByAgentId={runCountByAgentId}
           lastSeenByAgentId={lastSeenByAgentId}
+          streamingTextByAgentId={streamingTextByAgentId}
           standupMeeting={standupController.meeting}
           standupAutoOpenBoard={standupController.openBoardByDefault}
           onStandupArrivalsChange={(arrivedAgentIds) => {
@@ -4224,8 +4323,7 @@ export function OfficeScreen({
           onMonitorSelect={(agentId) => {
             setMonitorAgentId(agentId);
             if (agentId && !isRemoteOfficeAgentId(agentId)) {
-              setSelectedChatAgentId(agentId);
-              dispatch({ type: "selectAgent", agentId });
+              focusLocalAgent(agentId, { openChat: false });
             }
           }}
           onAgentChatSelect={(agentId) => {
@@ -4268,7 +4366,6 @@ export function OfficeScreen({
             taskBoard.sharedTasksError ?? taskBoard.gatewayTasksError ?? taskBoard.cronError
           }
           taskBoardCaptureDebug={showOpenClawConsole ? taskBoard.taskCaptureDebug : undefined}
-          preferredKanbanAgentId={selectedChatAgentId ?? state.selectedAgentId}
           onTaskBoardCreateCard={() => {
             taskBoard.createManualCard();
           }}
@@ -4487,6 +4584,7 @@ export function OfficeScreen({
             <PlaybooksPanel
               client={client}
               status={status}
+              cronEnabled={runtimeSupportsCron}
               agents={state.agents}
               standup={standupController}
             />
@@ -4495,6 +4593,7 @@ export function OfficeScreen({
             <AnalyticsPanel
               client={client}
               status={status}
+              approvalsEnabled={runtimeSupportsApprovals}
               agents={state.agents}
               runLog={runLog}
               gatewayUrl={gatewayUrl}
@@ -4833,6 +4932,9 @@ export function OfficeScreen({
                     chatController.stopBusyAgentId === focusedChatAgent.agentId
                   }
                   onLoadMoreHistory={() => {}}
+                  onOpenSettings={() =>
+                    openAgentEditor(focusedChatAgent.agentId, "IDENTITY.md")
+                  }
                   onNewSession={() =>
                     chatController.handleNewSession(focusedChatAgent.agentId)
                   }

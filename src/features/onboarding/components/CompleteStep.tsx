@@ -62,7 +62,7 @@ export const CompleteStep = ({
         </p>
         <p className="max-w-sm text-sm text-white/60">
           {companyCreated
-            ? `${companyName?.trim() || "Your company"} is ready. Your new team has been created in OpenClaw and placed into the office.`
+            ? `${companyName?.trim() || "Your company"} is ready. Your new team has been created in the connected runtime and placed into the office.`
             : "Your gateway is connected and your agents are ready. Step inside and explore the 3D workspace where your AI team operates."}
         </p>
       </div>
