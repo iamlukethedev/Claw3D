@@ -148,6 +148,15 @@ import {
   markServerRoomMigrationApplied,
   saveFurniture,
 } from "@/features/retro-office/core/persistence";
+import {
+  createDistrictSimulationState,
+  DISTRICT_SIM_DEFAULT_DISTRICT_COUNT,
+  DISTRICT_SIM_DEFAULT_MAX_AGENTS,
+  getDistrictSimulationNeedEmoji,
+  reconcileDistrictSimulationAgents,
+  stepDistrictSimulation,
+  type DistrictSimulationState,
+} from "@/features/retro-office/core/districtSimulation";
 import type {
   FurnitureItem,
   JanitorActor,
@@ -2290,6 +2299,8 @@ function useAgentTick(
 
 const AWAY_THRESHOLD_MS = 15 * 60 * 1000;
 const COMPACT_AGENT_BADGE_LIMIT = 6;
+const DISTRICT_SIM_STEP_MINUTES = 10;
+const DISTRICT_SIM_STEP_INTERVAL_MS = 10_000;
 
 const estimatePhoneSpeechDurationMs = (
   text: string | null | undefined,
@@ -2308,6 +2319,18 @@ const getAgentInitials = (name: string | null | undefined): string => {
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
 };
+
+const formatDistrictSimTime = (minuteOfDay: number): string => {
+  const normalizedMinutes = ((minuteOfDay % 1440) + 1440) % 1440;
+  const hour = Math.floor(normalizedMinutes / 60)
+    .toString()
+    .padStart(2, "0");
+  const minute = (normalizedMinutes % 60).toString().padStart(2, "0");
+  return `${hour}:${minute}`;
+};
+
+const formatDistrictCurrency = (value: number): string =>
+  `$${Math.round(value).toLocaleString("en-US")}`;
 
 export function RetroOffice3D({
   agents,
@@ -2681,40 +2704,37 @@ export function RetroOffice3D({
     target: [number, number, number];
     zoom?: number;
   } | null>(null);
+  const [sceneMode, setSceneMode] = useState<"city" | "office">("city");
+  const cityScapeMode = sceneMode === "city";
   const LOCAL_CAMERA_TARGET = useMemo(
     () =>
       toWorld(LOCAL_OFFICE_CANVAS_WIDTH / 2, LOCAL_OFFICE_CANVAS_HEIGHT / 2),
     [],
   );
+  const cityCameraTarget = LOCAL_CAMERA_TARGET;
   const CAM_POS = useMemo<[number, number, number]>(() => {
-    if (remoteOfficeEnabled) return DISTRICT_CAMERA_POSITION;
+    const activeTarget = cityScapeMode ? cityCameraTarget : LOCAL_CAMERA_TARGET;
     return [
-      LOCAL_CAMERA_TARGET[0] +
+      activeTarget[0] +
         (DISTRICT_CAMERA_POSITION[0] - DISTRICT_CAMERA_TARGET[0]),
-      LOCAL_CAMERA_TARGET[1] +
+      activeTarget[1] +
         (DISTRICT_CAMERA_POSITION[1] - DISTRICT_CAMERA_TARGET[1]),
-      LOCAL_CAMERA_TARGET[2] +
+      activeTarget[2] +
         (DISTRICT_CAMERA_POSITION[2] - DISTRICT_CAMERA_TARGET[2]),
     ];
-  }, [LOCAL_CAMERA_TARGET, remoteOfficeEnabled]);
-  const cameraTarget = remoteOfficeEnabled
-    ? DISTRICT_CAMERA_TARGET
-    : LOCAL_CAMERA_TARGET;
-  const cameraZoom = remoteOfficeEnabled ? DISTRICT_CAMERA_ZOOM : 56;
+  }, [LOCAL_CAMERA_TARGET, cityCameraTarget, cityScapeMode]);
+  const cameraTarget = cityScapeMode ? cityCameraTarget : LOCAL_CAMERA_TARGET;
+  const cameraZoom = cityScapeMode ? 44 : 56;
   const overviewPreset = useMemo(
     () => ({ pos: CAM_POS, target: cameraTarget, zoom: cameraZoom }),
     [CAM_POS, cameraTarget, cameraZoom]
   );
-  const canvasResetKey = useMemo(
-    () =>
-      [
-        remoteOfficeEnabled ? "remote" : "local",
-        gatewayStatus ?? "unknown",
-        String(agents.length),
-        String(officeCenterSignal),
-      ].join(":"),
-    [agents.length, gatewayStatus, officeCenterSignal, remoteOfficeEnabled],
-  );
+  const handleEnterOfficeFromCity = useCallback(() => {
+    setSceneMode("office");
+  }, []);
+  const handleReturnToCity = useCallback(() => {
+    setSceneMode("city");
+  }, []);
   // New Idea 7: heatmap mode.
   const [heatmapMode, setHeatmapMode] = useState(false);
   const [trailMode, setTrailMode] = useState(false);
@@ -2792,6 +2812,42 @@ export function RetroOffice3D({
   );
   const [githubImmersiveReady, setGithubImmersiveReady] = useState(false);
   const [qaImmersiveReady, setQaImmersiveReady] = useState(false);
+  const [districtSimulation, setDistrictSimulation] =
+    useState<DistrictSimulationState>(() =>
+      createDistrictSimulationState({
+        agents: agents
+          .filter((agent) => !isRemoteOfficeAgentId(agent.id))
+          .map((agent) => ({ id: agent.id, name: agent.name })),
+        districtCount: DISTRICT_SIM_DEFAULT_DISTRICT_COUNT,
+        maxAgents: DISTRICT_SIM_DEFAULT_MAX_AGENTS,
+        seedKey: storageNamespace,
+      }),
+    );
+
+  useEffect(() => {
+    const simulationAgents = agents
+      .filter((agent) => !isRemoteOfficeAgentId(agent.id))
+      .map((agent) => ({ id: agent.id, name: agent.name }));
+    setDistrictSimulation((previous) =>
+      reconcileDistrictSimulationAgents(previous, {
+        agents: simulationAgents,
+        districtCount: DISTRICT_SIM_DEFAULT_DISTRICT_COUNT,
+        maxAgents: DISTRICT_SIM_DEFAULT_MAX_AGENTS,
+        seedKey: storageNamespace,
+      }),
+    );
+  }, [agents, storageNamespace]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setDistrictSimulation((previous) =>
+        stepDistrictSimulation(previous, { minutes: DISTRICT_SIM_STEP_MINUTES }),
+      );
+    }, DISTRICT_SIM_STEP_INTERVAL_MS);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   useEffect(() => {
     markAtmMigrationApplied(storageNamespace);
@@ -3169,6 +3225,71 @@ export function RetroOffice3D({
     0,
     agents.length - compactRosterAgents.length,
   );
+  const sceneTitle = cityScapeMode ? "OpenClaw City" : officeTitle;
+  const districtNeedEmojiByAgentId = useMemo(
+    () =>
+      districtSimulation.agents.reduce<Record<string, string>>((acc, agent) => {
+        const emoji = getDistrictSimulationNeedEmoji(agent.needs);
+        if (emoji) acc[agent.id] = emoji;
+        return acc;
+      }, {}),
+    [districtSimulation.agents],
+  );
+  const districtSimulationSummary = useMemo(() => {
+    const districts = Array.from(
+      { length: districtSimulation.districtCount },
+      (_, index) => ({
+        id: index,
+        population: 0,
+        working: 0,
+        socializing: 0,
+      }),
+    );
+    let totalWallet = 0;
+    let totalRooms = 0;
+    for (const agent of districtSimulation.agents) {
+      const district = districts[agent.districtId] ?? districts[0];
+      if (district) {
+        district.population += 1;
+        if (agent.activity === "work") district.working += 1;
+        if (agent.activity === "socialize") district.socializing += 1;
+      }
+      totalWallet += agent.wallet;
+      totalRooms += agent.roomsOwned;
+    }
+    const relationshipValues = Object.values(districtSimulation.relationships);
+    const averageRelationship =
+      relationshipValues.length === 0
+        ? 0
+        : relationshipValues.reduce((sum, value) => sum + value, 0) /
+          relationshipValues.length;
+    const criticalNeeds = districtSimulation.agents
+      .map((agent) => {
+        const lowestNeed = Math.min(
+          agent.needs.hunger,
+          agent.needs.energy,
+          agent.needs.social,
+          agent.needs.comfort,
+        );
+        return {
+          id: agent.id,
+          name: agent.name,
+          lowestNeed,
+          emoji: getDistrictSimulationNeedEmoji(agent.needs),
+        };
+      })
+      .filter((entry) => Boolean(entry.emoji))
+      .sort((left, right) => left.lowestNeed - right.lowestNeed)
+      .slice(0, 4);
+    return {
+      districts,
+      totalWallet,
+      totalRooms,
+      averageRelationship,
+      criticalNeeds,
+      simulatedAgents: districtSimulation.agents.length,
+    };
+  }, [districtSimulation]);
   const standupActive =
     standupMeeting?.phase === "gathering" ||
     standupMeeting?.phase === "in_progress";
@@ -5254,7 +5375,6 @@ export function RetroOffice3D({
         */}
         {!immersiveOverlayActive ? (
           <Canvas
-            key={canvasResetKey}
             orthographic
             dpr={[0.85, 1.5]}
             camera={{
@@ -5335,36 +5455,43 @@ export function RetroOffice3D({
               color="#7090ff"
             />
 
-            {/* Floor + walls — always visible, no async loading. */}
-            <SceneFloorAndWalls showRemoteOffice={remoteOfficeEnabled} />
-
-            {/* Wall pictures — procedural, no async loading. */}
-            <SceneWallPictures showRemoteOffice={remoteOfficeEnabled} />
+            {/* Keep both worlds mounted; only toggle visibility to avoid renderer churn. */}
+            <group visible={cityScapeMode}>
+              <SceneFloorAndWalls
+                showRemoteOffice
+                onEnterHeadquarters={handleEnterOfficeFromCity}
+              />
+            </group>
+            <group visible={!cityScapeMode}>
+              <SceneFloorAndWalls showRemoteOffice={false} />
+              <SceneWallPictures showRemoteOffice={false} />
+            </group>
 
             {/* Environment lighting — async, wrapped in its own Suspense so floor stays visible. */}
             <Suspense fallback={null}>
               <Environment preset="city" />
             </Suspense>
 
-            {/* Furniture models — each loads its GLB asynchronously. */}
-            <Suspense fallback={null}>
-              {!editMode ? (
-                <PrimitiveInstancedWallSegmentsModel items={wallItems} />
-              ) : null}
-              {!editMode ? (
-                <InstancedFurnitureItemsModel
-                  itemType="desk_cubicle"
-                  items={deskItems}
-                  onItemClick={handleDeskClick}
-                />
-              ) : null}
-              {!editMode ? (
-                <InstancedFurnitureItemsModel
-                  itemType="chair"
-                  items={chairItems}
-                />
-              ) : null}
-              {furniture.map((item) =>
+            {/* Furniture models — mounted persistently, hidden in city view. */}
+            <group visible={!cityScapeMode}>
+              <Suspense fallback={null}>
+                {!editMode ? (
+                  <PrimitiveInstancedWallSegmentsModel items={wallItems} />
+                ) : null}
+                {!editMode ? (
+                  <InstancedFurnitureItemsModel
+                    itemType="desk_cubicle"
+                    items={deskItems}
+                    onItemClick={handleDeskClick}
+                  />
+                ) : null}
+                {!editMode ? (
+                  <InstancedFurnitureItemsModel
+                    itemType="chair"
+                    items={chairItems}
+                  />
+                ) : null}
+                {furniture.map((item) =>
                 item.type === "wall" ? (
                   editMode ? (
                     <PrimitiveWallSegmentModel
@@ -5769,128 +5896,129 @@ export function RetroOffice3D({
                     onClick={handleDeskClick}
                   />
                 ),
-              )}
-            </Suspense>
+                )}
+              </Suspense>
 
-            {remoteLayoutFurniture.length > 0 ? (
-              <ReadOnlyFurnitureClone furniture={remoteLayoutFurniture} />
-            ) : null}
+              {remoteLayoutFurniture.length > 0 ? (
+                <ReadOnlyFurnitureClone furniture={remoteLayoutFurniture} />
+              ) : null}
 
-            {/* Removed standalone Jukebox as it's now in the furniture loop */}
+              {/* Removed standalone Jukebox as it's now in the furniture loop */}
 
-            {/* Agents — purely imperative, driven by renderAgentsRef inside useFrame. */}
-            {sceneAgents.map((agent) => {
-              const isJanitor = "role" in agent && agent.role === "janitor";
-              return (
-                <AgentObjectModel
-                  key={agent.id}
-                  agentId={agent.id}
-                  name={agent.name}
-                  subtitle={"subtitle" in agent ? agent.subtitle ?? null : null}
-                  status={agent.status}
-                  color={agentColorMap.get(agent.id) ?? "#888"}
-                  appearance={
-                    "avatarProfile" in agent
-                      ? (agent.avatarProfile ?? null)
-                      : null
-                  }
+              {/* Agents — purely imperative, driven by renderAgentsRef inside useFrame. */}
+              {sceneAgents.map((agent) => {
+                  const isJanitor = "role" in agent && agent.role === "janitor";
+                  return (
+                    <AgentObjectModel
+                      key={agent.id}
+                      agentId={agent.id}
+                      name={agent.name}
+                      subtitle={"subtitle" in agent ? agent.subtitle ?? null : null}
+                      status={agent.status}
+                      color={agentColorMap.get(agent.id) ?? "#888"}
+                      appearance={
+                        "avatarProfile" in agent
+                          ? (agent.avatarProfile ?? null)
+                          : null
+                      }
+                      agentsRef={renderAgentsRef}
+                      agentLookupRef={renderAgentLookupRef}
+                      onHover={isJanitor ? undefined : handleAgentHover}
+                      onUnhover={isJanitor ? undefined : handleAgentUnhover}
+                      onClick={isJanitor ? undefined : handleAgentClick}
+                      onContextMenu={isJanitor ? undefined : handleAgentContextMenu}
+                      showSpeech={
+                        isJanitor
+                          ? false
+                          : standupMeeting?.phase === "in_progress"
+                            ? Boolean(standupSpeechTextByAgentId[agent.id])
+                            : speechAgentIds.has(agent.id) ||
+                              Boolean(streamingTextByAgentId[agent.id])
+                      }
+                      speechText={
+                        isJanitor
+                          ? null
+                          : standupMeeting?.phase === "in_progress"
+                            ? (standupSpeechTextByAgentId[agent.id] ?? null)
+                            : (speechTextByAgentId[agent.id] ??
+                                streamingTextByAgentId[agent.id] ??
+                                null)
+                      }
+                      suppressSpeechBubble={
+                        suppressSceneSpeechBubbles &&
+                        standupMeeting?.currentSpeakerAgentId !== agent.id
+                      }
+                    />
+                  );
+                })}
+
+              <ScenePingPongBall agentsRef={renderAgentsRef} />
+
+              {/* New Idea 5: Agent color trails while walking. */}
+              {trailMode ? (
+                <AgentTrailSystem
                   agentsRef={renderAgentsRef}
-                  agentLookupRef={renderAgentLookupRef}
-                  onHover={isJanitor ? undefined : handleAgentHover}
-                  onUnhover={isJanitor ? undefined : handleAgentUnhover}
-                  onClick={isJanitor ? undefined : handleAgentClick}
-                  onContextMenu={isJanitor ? undefined : handleAgentContextMenu}
-                  showSpeech={
-                    isJanitor
-                      ? false
-                      : standupMeeting?.phase === "in_progress"
-                        ? Boolean(standupSpeechTextByAgentId[agent.id])
-                        : speechAgentIds.has(agent.id) ||
-                          Boolean(streamingTextByAgentId[agent.id])
-                  }
-                  speechText={
-                    isJanitor
-                      ? null
-                      : standupMeeting?.phase === "in_progress"
-                        ? (standupSpeechTextByAgentId[agent.id] ?? null)
-                        : (speechTextByAgentId[agent.id] ??
-                            streamingTextByAgentId[agent.id] ??
-                            null)
-                  }
-                  suppressSpeechBubble={
-                    suppressSceneSpeechBubbles &&
-                    standupMeeting?.currentSpeakerAgentId !== agent.id
-                  }
+                  colorMap={agentColorMap}
                 />
-              );
-            })}
+              ) : null}
 
-            <ScenePingPongBall agentsRef={renderAgentsRef} />
+              {/* New Idea 7: Heatmap overlay when heatmap mode is active. */}
+              {heatmapMode ? (
+                <AgentHeatmapSystem
+                  agentsRef={renderAgentsRef}
+                  heatmapMode={heatmapMode}
+                  heatGridRef={heatGridRef}
+                />
+              ) : null}
 
-            {/* New Idea 5: Agent color trails while walking. */}
-            {trailMode ? (
-              <AgentTrailSystem
-                agentsRef={renderAgentsRef}
-                colorMap={agentColorMap}
-              />
-            ) : null}
-
-            {/* New Idea 7: Heatmap overlay when heatmap mode is active. */}
-            {heatmapMode ? (
-              <AgentHeatmapSystem
-                agentsRef={renderAgentsRef}
-                heatmapMode={heatmapMode}
-                heatGridRef={heatGridRef}
-              />
-            ) : null}
-
-            {/* Placement ghost. */}
-            {editMode &&
+              {/* Placement ghost. */}
+              {editMode &&
+                drag.kind === "placing" &&
+                drag.itemType !== "wall" &&
+                ghostPos && (
+                  <Suspense fallback={null}>
+                    <FurniturePlacementGhost
+                      itemType={drag.itemType}
+                      position={ghostPos}
+                    />
+                  </Suspense>
+                )}
+              {editMode &&
               drag.kind === "placing" &&
-              drag.itemType !== "wall" &&
-              ghostPos && (
-                <Suspense fallback={null}>
-                  <FurniturePlacementGhost
-                    itemType={drag.itemType}
-                    position={ghostPos}
-                  />
-                </Suspense>
-              )}
-            {editMode &&
-            drag.kind === "placing" &&
-            drag.itemType === "wall" &&
-            wallGhostItem ? (
-              <PrimitiveWallSegmentModel
-                item={wallGhostItem}
-                isSelected={false}
-                isHovered={false}
-                editMode={false}
-                onPointerDown={() => {}}
-                onPointerOver={() => {}}
-                onPointerOut={() => {}}
-              />
-            ) : null}
-            {editMode &&
-            drag.kind === "placing" &&
-            drag.itemType === "door" &&
-            ghostPos ? (
-              <PrimitiveDoorModel
-                item={{
-                  _uid: "__door_ghost__",
-                  type: "door",
-                  x: worldToCanvas(ghostPos[0], ghostPos[2]).cx,
-                  y: worldToCanvas(ghostPos[0], ghostPos[2]).cy,
-                  w: DOOR_LENGTH,
-                  h: DOOR_THICKNESS,
-                }}
-                isSelected={false}
-                isHovered={false}
-                editMode={false}
-                onPointerDown={() => {}}
-                onPointerOver={() => {}}
-                onPointerOut={() => {}}
-              />
-            ) : null}
+              drag.itemType === "wall" &&
+              wallGhostItem ? (
+                <PrimitiveWallSegmentModel
+                  item={wallGhostItem}
+                  isSelected={false}
+                  isHovered={false}
+                  editMode={false}
+                  onPointerDown={() => {}}
+                  onPointerOver={() => {}}
+                  onPointerOut={() => {}}
+                />
+              ) : null}
+              {editMode &&
+              drag.kind === "placing" &&
+              drag.itemType === "door" &&
+              ghostPos ? (
+                <PrimitiveDoorModel
+                  item={{
+                    _uid: "__door_ghost__",
+                    type: "door",
+                    x: worldToCanvas(ghostPos[0], ghostPos[2]).cx,
+                    y: worldToCanvas(ghostPos[0], ghostPos[2]).cy,
+                    w: DOOR_LENGTH,
+                    h: DOOR_THICKNESS,
+                  }}
+                  isSelected={false}
+                  isHovered={false}
+                  editMode={false}
+                  onPointerDown={() => {}}
+                  onPointerOver={() => {}}
+                  onPointerOut={() => {}}
+                />
+              ) : null}
+            </group>
 
             {/* Floor raycaster for edit-mode interaction. */}
             <SceneFloorRaycaster
@@ -5979,7 +6107,7 @@ export function RetroOffice3D({
           <div className="flex items-center gap-3">
             <div className="h-px w-12 bg-gradient-to-r from-transparent to-amber-500/40" />
             <span className="text-sm tracking-[0.3em] text-amber-300/80 font-bold uppercase">
-              {officeTitle}
+              {sceneTitle}
             </span>
             <div className="h-px w-12 bg-gradient-to-l from-transparent to-amber-500/40" />
           </div>
@@ -5987,7 +6115,7 @@ export function RetroOffice3D({
       ) : null}
 
       {/* Agent roster — compact top summary with overflow panel. */}
-      {!readOnly && !immersiveOverlayActive ? (
+      {!cityScapeMode && !readOnly && !immersiveOverlayActive ? (
         <div className="absolute top-10 left-1/2 z-20 -translate-x-1/2">
           <div className="flex items-center gap-2 rounded-full border border-amber-900/25 bg-[#1c1610]/92 px-2 py-2 shadow-lg backdrop-blur-sm">
             <div className="flex items-center -space-x-1.5">
@@ -5997,6 +6125,7 @@ export function RetroOffice3D({
                 const working = status?.working ?? agent.status === "working";
                 const isRemoteAgent = isRemoteOfficeAgentId(agent.id);
                 const mood = moodByAgentId[agent.id];
+                const simNeedEmoji = districtNeedEmojiByAgentId[agent.id];
                 const dotClass = isError
                   ? "bg-red-400"
                   : working
@@ -6032,6 +6161,10 @@ export function RetroOffice3D({
                         }}
                       >
                         {mood.emoji}
+                      </span>
+                    ) : simNeedEmoji ? (
+                      <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm pointer-events-none">
+                        {simNeedEmoji}
                       </span>
                     ) : null}
                     <span>{getAgentInitials(agent.name)}</span>
@@ -6199,6 +6332,114 @@ export function RetroOffice3D({
             </div>
           ) : null}
         </div>
+      ) : null}
+
+      {!immersiveOverlayActive ? (
+        <aside className="absolute top-3 right-3 z-20 w-[min(92vw,320px)] rounded-2xl border border-cyan-900/25 bg-[#10171f]/94 p-3 shadow-xl backdrop-blur-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-300/70">
+                City simulation
+              </div>
+              <div className="mt-1 text-sm font-semibold text-cyan-100">
+                Day {districtSimulation.day} ·{" "}
+                {formatDistrictSimTime(districtSimulation.minuteOfDay)}
+              </div>
+            </div>
+            <span className="rounded-full border border-cyan-700/30 bg-cyan-800/20 px-2 py-1 font-mono text-[10px] text-cyan-200/80">
+              Scope A
+            </span>
+          </div>
+
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="rounded-lg border border-cyan-900/25 bg-black/20 px-2 py-1.5">
+              <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-cyan-400/65">
+                Agents
+              </div>
+              <div className="text-sm font-semibold text-white">
+                {districtSimulationSummary.simulatedAgents}
+              </div>
+            </div>
+            <div className="rounded-lg border border-cyan-900/25 bg-black/20 px-2 py-1.5">
+              <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-cyan-400/65">
+                Districts
+              </div>
+              <div className="text-sm font-semibold text-white">
+                {districtSimulation.districtCount}
+              </div>
+            </div>
+            <div className="rounded-lg border border-cyan-900/25 bg-black/20 px-2 py-1.5">
+              <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-cyan-400/65">
+                Housing
+              </div>
+              <div className="text-sm font-semibold text-white">
+                {districtSimulationSummary.totalRooms} rooms
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="rounded-lg border border-cyan-900/25 bg-black/20 px-2 py-1.5">
+              <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-cyan-400/65">
+                Economy
+              </div>
+              <div className="text-sm font-semibold text-white">
+                {formatDistrictCurrency(districtSimulationSummary.totalWallet)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-cyan-900/25 bg-black/20 px-2 py-1.5">
+              <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-cyan-400/65">
+                Relations
+              </div>
+              <div className="text-sm font-semibold text-white">
+                {districtSimulationSummary.averageRelationship.toFixed(1)}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <div className="mb-1 font-mono text-[9px] uppercase tracking-[0.16em] text-cyan-400/70">
+              District population
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {districtSimulationSummary.districts.map((district) => (
+                <div
+                  key={`district-${district.id}`}
+                  className="rounded-md border border-cyan-900/20 bg-black/15 px-2 py-1"
+                >
+                  <div className="flex items-center justify-between text-[10px] text-cyan-100">
+                    <span>D{district.id + 1}</span>
+                    <span>{district.population}</span>
+                  </div>
+                  <div className="font-mono text-[9px] text-cyan-400/70">
+                    W:{district.working} · S:{district.socializing}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {districtSimulationSummary.criticalNeeds.length > 0 ? (
+            <div className="mt-3">
+              <div className="mb-1 font-mono text-[9px] uppercase tracking-[0.16em] text-cyan-400/70">
+                Needs alerts
+              </div>
+              <div className="space-y-1">
+                {districtSimulationSummary.criticalNeeds.map((entry) => (
+                  <div
+                    key={`need-${entry.id}`}
+                    className="flex items-center justify-between rounded-md border border-cyan-900/20 bg-black/15 px-2 py-1 text-[10px]"
+                  >
+                    <span className="truncate text-cyan-100">{entry.name}</span>
+                    <span className="text-cyan-200">
+                      {entry.emoji} {entry.lowestNeed.toFixed(0)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </aside>
       ) : null}
 
       {/* Idea 1: Agent tooltip — shown when hovering an agent in the 3D scene. */}
@@ -7026,6 +7267,40 @@ export function RetroOffice3D({
         </div>
       )}
 
+      {!readOnly && !immersiveOverlayActive && cityScapeMode ? (
+        <div className="absolute top-14 left-3 z-20 flex flex-col items-start gap-2">
+          <button
+            type="button"
+            onClick={handleEnterOfficeFromCity}
+            className="rounded-xl border border-emerald-400/30 bg-[#071b12]/92 px-4 py-2 text-left shadow-lg backdrop-blur-sm transition-colors hover:border-emerald-300/50 hover:bg-[#0b2418]"
+          >
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-emerald-300/80">
+              Headquarters
+            </div>
+            <div className="mt-1 text-sm font-semibold text-white">
+              Enter office
+            </div>
+          </button>
+        </div>
+      ) : null}
+
+      {!readOnly && !immersiveOverlayActive && !cityScapeMode ? (
+        <div className="absolute top-14 left-3 z-20 flex flex-col items-start gap-2">
+          <button
+            type="button"
+            onClick={handleReturnToCity}
+            className="rounded-xl border border-cyan-400/30 bg-[#09131b]/92 px-4 py-2 text-left shadow-lg backdrop-blur-sm transition-colors hover:border-cyan-300/50 hover:bg-[#0d1c26]"
+          >
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-300/80">
+              City View
+            </div>
+            <div className="mt-1 text-sm font-semibold text-white">
+              Back to City
+            </div>
+          </button>
+        </div>
+      ) : null}
+
       {/* Toolbar — top right. */}
       {!readOnly && !immersiveOverlayActive ? (
         <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
@@ -7130,6 +7405,17 @@ export function RetroOffice3D({
               </button>
             </>
           )}
+        </div>
+      ) : null}
+      {!immersiveOverlayActive && !cityScapeMode ? (
+        <div className="absolute top-3 left-3 z-20">
+          <button
+            type="button"
+            onClick={handleReturnToCity}
+            className="rounded-md border border-cyan-500/35 bg-[#071018]/92 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100 transition-colors backdrop-blur-sm hover:border-cyan-300/55 hover:text-white"
+          >
+            Back to City
+          </button>
         </div>
       ) : null}
       {!readOnly && settingsModalOpen ? (
