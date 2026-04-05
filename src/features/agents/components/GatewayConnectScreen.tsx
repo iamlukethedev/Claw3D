@@ -2,18 +2,21 @@ import { useMemo, useState } from "react";
 import { Check, Copy, Eye, EyeOff } from "lucide-react";
 import type { GatewayStatus } from "@/lib/gateway/GatewayClient";
 import { isLocalGatewayUrl } from "@/lib/gateway/local-gateway";
-import type { StudioGatewaySettings } from "@/lib/studio/settings";
+import type { StudioGatewayAdapterType, StudioGatewaySettings } from "@/lib/studio/settings";
 import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
 
 type GatewayConnectScreenProps = {
   gatewayUrl: string;
   token: string;
+  selectedAdapterType: StudioGatewayAdapterType;
+  activeAdapterType: StudioGatewayAdapterType;
   localGatewayDefaults: StudioGatewaySettings | null;
   status: GatewayStatus;
   error: string | null;
   showApprovalHint: boolean;
   onGatewayUrlChange: (value: string) => void;
   onTokenChange: (value: string) => void;
+  onAdapterTypeChange: (value: StudioGatewayAdapterType) => void;
   onUseLocalDefaults: () => void;
   onConnect: () => void;
 };
@@ -30,17 +33,24 @@ const resolveLocalGatewayPort = (gatewayUrl: string): number => {
 export const GatewayConnectScreen = ({
   gatewayUrl,
   token,
+  selectedAdapterType,
+  activeAdapterType,
   localGatewayDefaults,
   status,
   error,
   showApprovalHint,
   onGatewayUrlChange,
   onTokenChange,
+  onAdapterTypeChange,
   onUseLocalDefaults,
   onConnect,
 }: GatewayConnectScreenProps) => {
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [showToken, setShowToken] = useState(false);
+  const tokenOptional =
+    selectedAdapterType === "hermes" ||
+    selectedAdapterType === "demo" ||
+    selectedAdapterType === "custom";
   const isLocal = useMemo(() => isLocalGatewayUrl(gatewayUrl), [gatewayUrl]);
   const localPort = useMemo(() => resolveLocalGatewayPort(gatewayUrl), [gatewayUrl]);
   const localGatewayCommand = useMemo(
@@ -51,6 +61,22 @@ export const GatewayConnectScreen = ({
     () => `pnpm openclaw gateway run --bind loopback --port ${localPort} --verbose`,
     [localPort]
   );
+  const localDemoCommand = useMemo(
+    () => `npm run demo-gateway`,
+    []
+  );
+  const useDemoPreset = () => {
+    onAdapterTypeChange("demo");
+  };
+  const useHermesPreset = () => {
+    onAdapterTypeChange("hermes");
+  };
+  const useOpenClawPreset = () => {
+    onAdapterTypeChange("openclaw");
+  };
+  const useCustomPreset = () => {
+    onAdapterTypeChange("custom");
+  };
   const statusCopy = useMemo(() => {
     if (status === "connecting" && isLocal) {
       return `Local gateway detected on port ${localPort}. Connecting…`;
@@ -133,14 +159,14 @@ export const GatewayConnectScreen = ({
       </div>
 
       <label className="flex flex-col gap-1 text-[11px] font-medium text-foreground/90">
-        Upstream token
+        {tokenOptional ? "Upstream token (optional)" : "Upstream token"}
         <div className="relative">
           <input
             className="ui-input h-10 w-full rounded-md px-4 pr-10 font-sans text-sm text-foreground outline-none"
             type={showToken ? "text" : "password"}
             value={token}
             onChange={(event) => onTokenChange(event.target.value)}
-            placeholder="gateway token"
+            placeholder={tokenOptional ? "optional token" : "gateway token"}
             spellCheck={false}
           />
           <button
@@ -168,13 +194,13 @@ export const GatewayConnectScreen = ({
       </button>
 
       {status === "connecting" ? (
-        <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+        <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
           <RunningAvatarLoader size={16} trackWidth={32} inline />
           Connecting…
-        </p>
+        </div>
       ) : null}
       {error ? <p className="ui-text-danger text-xs leading-snug">{error}</p> : null}
-      {showApprovalHint ? (
+      {showApprovalHint && selectedAdapterType === "openclaw" ? (
         <div className="rounded-md border border-border bg-muted/40 px-3 py-3 text-xs text-muted-foreground">
           <p className="leading-snug">
             If the first connection attempt did not work, go to your OpenClaw computer and approve this
@@ -208,7 +234,45 @@ export const GatewayConnectScreen = ({
           <p className="font-mono text-[10px] font-medium tracking-[0.06em] text-muted-foreground">
             Remote gateway (recommended)
           </p>
-          <p className="mt-2 text-sm text-foreground/90">Default: enter your URL and token to connect.</p>
+          <p className="mt-2 text-sm text-foreground/90">
+            Choose a backend, then connect to its gateway URL.
+          </p>
+          <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+            Selected backend: {selectedAdapterType} | Active backend: {activeAdapterType}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Each backend keeps its own saved URL and token.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+              onClick={useDemoPreset}
+            >
+              Demo backend
+            </button>
+            <button
+              type="button"
+              className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+              onClick={useHermesPreset}
+            >
+              Hermes backend
+            </button>
+            <button
+              type="button"
+              className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+              onClick={useCustomPreset}
+            >
+              Custom backend
+            </button>
+            <button
+              type="button"
+              className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+              onClick={useOpenClawPreset}
+            >
+              OpenClaw backend
+            </button>
+          </div>
         </div>
         {remoteForm}
       </div>
@@ -224,6 +288,41 @@ export const GatewayConnectScreen = ({
         </div>
         <div className="mt-3 space-y-3">
           {commandField}
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+            <p className="text-xs font-medium text-foreground">Just want to see the office?</p>
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">
+              Run <span className="font-mono text-foreground">{localDemoCommand}</span> to start a built-in mock gateway with demo agents.
+              Then choose <span className="font-mono text-foreground">Demo backend</span> and connect.
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+            <p className="text-xs font-medium text-foreground">Using Hermes locally?</p>
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">
+              Run <span className="font-mono text-foreground">npm run hermes-adapter</span>, then choose
+              <span className="font-mono text-foreground"> Hermes backend</span>. The default local URL is
+              <span className="font-mono text-foreground"> ws://localhost:18789</span>.
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+            <p className="text-xs font-medium text-foreground">Using a custom runtime locally?</p>
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">
+              Choose <span className="font-mono text-foreground">Custom backend</span> and point the URL
+              at your orchestrator or runtime boundary, for example
+              <span className="font-mono text-foreground"> http://localhost:7770</span>. Direct custom
+              runtime chat flows are not wired into Studio yet in this slice, but the provider seam and
+              metadata scaffold are now in place.
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+            <p className="text-xs font-medium text-foreground">Opening Claw3D from another machine?</p>
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">
+              Start Studio with <span className="font-mono text-foreground">HOST=0.0.0.0</span> (or a
+              specific LAN/Tailscale host) and set
+              <span className="font-mono text-foreground"> STUDIO_ACCESS_TOKEN</span> before exposing it
+              beyond localhost. Gateway settings are stored on the Studio host, but OpenClaw device approval
+              remains per browser/device.
+            </p>
+          </div>
           {localGatewayDefaults ? (
             <div className="ui-input rounded-md px-3 py-3">
               <div className="space-y-2">

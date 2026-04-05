@@ -4,6 +4,7 @@ import type { OfficeInteractionTargetId } from "@/lib/office/places";
 export type OfficeAgent = {
   id: string;
   name: string;
+  subtitle?: string | null;
   status: "working" | "idle" | "error";
   color: string;
   item: string;

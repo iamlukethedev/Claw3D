@@ -22,6 +22,25 @@ type GatewayClientLike = {
   call: (method: string, params: unknown) => Promise<unknown>;
 };
 
+const extractImmediateAssistantText = (payload: unknown): string | null => {
+  if (!payload || typeof payload !== "object") return null;
+  const value = payload as {
+    text?: unknown;
+    content?: unknown;
+    message?: unknown;
+  };
+  if (typeof value.text === "string" && value.text.trim()) {
+    return value.text.trim();
+  }
+  if (typeof value.content === "string" && value.content.trim()) {
+    return value.content.trim();
+  }
+  if (typeof value.message === "string" && value.message.trim()) {
+    return value.message.trim();
+  }
+  return null;
+};
+
 const resolveLatestTranscriptTimestampMs = (agent: AgentState): number | null => {
   const entries = agent.transcriptEntries;
   let latest: number | null = null;
@@ -200,6 +219,33 @@ export async function sendChatMessageViaStudio(params: {
     }
 
     if (resolveChatSendCompletionMode(sendResult, runId) === "terminal-immediate") {
+      const assistantText = extractImmediateAssistantText(sendResult);
+      if (assistantText) {
+        const assistantTimestamp = now();
+        params.dispatch({
+          type: "appendOutput",
+          agentId,
+          line: assistantText,
+          transcript: {
+            source: "local-send",
+            runId,
+            sessionKey: params.sessionKey,
+            timestampMs: assistantTimestamp,
+            role: "assistant",
+            kind: "assistant",
+          },
+        });
+        params.dispatch({
+          type: "updateAgent",
+          agentId,
+          patch: {
+            lastResult: assistantText,
+            latestPreview: assistantText,
+            lastAssistantMessageAt: assistantTimestamp,
+            lastActivityAt: assistantTimestamp,
+          },
+        });
+      }
       params.dispatch({
         type: "updateAgent",
         agentId,

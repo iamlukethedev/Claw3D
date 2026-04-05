@@ -18,16 +18,60 @@ import {
 export type StudioGatewaySettings = {
   url: string;
   token: string;
+  adapterType: StudioGatewayAdapterType;
+  profiles?: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>>;
+  lastKnownGood?: StudioGatewayConnectionState;
+};
+
+export type StudioGatewayAdapterType = "openclaw" | "hermes" | "demo" | "custom";
+
+export type StudioGatewayProfile = {
+  url: string;
+  token: string;
+};
+
+export type StudioGatewayConnectionState = {
+  url: string;
+  token: string;
+  adapterType: StudioGatewayAdapterType;
 };
 
 export type StudioGatewaySettingsPublic = {
   url: string;
   tokenConfigured: boolean;
+  adapterType: StudioGatewayAdapterType;
+  profiles?: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfilePublic>>;
+  lastKnownGood?: StudioGatewayConnectionStatePublic;
+};
+
+export type StudioGatewayProfilePublic = {
+  url: string;
+  tokenConfigured: boolean;
+};
+
+export type StudioGatewayConnectionStatePublic = {
+  url: string;
+  tokenConfigured: boolean;
+  adapterType: StudioGatewayAdapterType;
 };
 
 export type StudioGatewaySettingsPatch = {
   url?: string | null;
   token?: string | null;
+  adapterType?: StudioGatewayAdapterType | null;
+  profiles?: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfilePatch | null>> | null;
+  lastKnownGood?: StudioGatewayConnectionStatePatch | null;
+};
+
+export type StudioGatewayProfilePatch = {
+  url?: string | null;
+  token?: string | null;
+};
+
+export type StudioGatewayConnectionStatePatch = {
+  url?: string | null;
+  token?: string | null;
+  adapterType?: StudioGatewayAdapterType | null;
 };
 
 export type FocusFilter = "all" | "running" | "approvals";
@@ -208,7 +252,7 @@ const normalizeGatewayUrl = (value: unknown) => {
 };
 
 const normalizeGatewayKey = (value: unknown) => {
-  const key = coerceString(value);
+  const key = normalizeGatewayUrl(value);
   return key ? key : null;
 };
 
@@ -640,7 +684,49 @@ const normalizeGatewaySettings = (value: unknown): StudioGatewaySettings | null 
   const url = normalizeGatewayUrl(value.url);
   if (!url) return null;
   const token = coerceString(value.token);
+  const adapterType = normalizeGatewayAdapterType(value.adapterType);
+  const profiles = normalizeGatewayProfiles(value.profiles);
+  const lastKnownGood = normalizeGatewayConnectionState(value.lastKnownGood);
+  return {
+    url,
+    token,
+    adapterType,
+    ...(profiles ? { profiles } : {}),
+    ...(lastKnownGood ? { lastKnownGood } : {}),
+  };
+};
+
+const normalizeGatewayProfile = (value: unknown): StudioGatewayProfile | null => {
+  if (!isRecord(value)) return null;
+  const url = normalizeGatewayUrl(value.url);
+  if (!url) return null;
+  const token = coerceString(value.token);
   return { url, token };
+};
+
+const normalizeGatewayProfiles = (
+  value: unknown
+): Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> | undefined => {
+  if (!isRecord(value)) return undefined;
+  const profiles: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> = {};
+  for (const adapterType of ["openclaw", "hermes", "demo", "custom"] as const) {
+    const normalized = normalizeGatewayProfile(value[adapterType]);
+    if (normalized) {
+      profiles[adapterType] = normalized;
+    }
+  }
+  return Object.keys(profiles).length > 0 ? profiles : undefined;
+};
+
+const normalizeGatewayConnectionState = (
+  value: unknown
+): StudioGatewayConnectionState | null => {
+  if (!isRecord(value)) return null;
+  const url = normalizeGatewayUrl(value.url);
+  if (!url) return null;
+  const token = coerceString(value.token);
+  const adapterType = normalizeGatewayAdapterType(value.adapterType);
+  return { url, token, adapterType };
 };
 
 const mergeGatewaySettings = (
@@ -653,10 +739,95 @@ const mergeGatewaySettings = (
   if (!nextUrl) return null;
   const nextToken =
     patch.token === undefined ? current?.token ?? "" : coerceString(patch.token);
+  const nextAdapterType =
+    patch.adapterType === undefined
+      ? current?.adapterType ?? "openclaw"
+      : normalizeGatewayAdapterType(patch.adapterType);
+  const nextProfiles = mergeGatewayProfiles(current?.profiles, patch.profiles);
+  const nextLastKnownGood = mergeGatewayConnectionState(
+    current?.lastKnownGood ?? null,
+    patch.lastKnownGood
+  );
   return {
     url: nextUrl,
     token: nextToken,
+    adapterType: nextAdapterType,
+    ...(nextProfiles ? { profiles: nextProfiles } : {}),
+    ...(nextLastKnownGood ? { lastKnownGood: nextLastKnownGood } : {}),
   };
+};
+
+const mergeGatewayProfiles = (
+  current: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> | undefined,
+  patch:
+    | Partial<Record<StudioGatewayAdapterType, StudioGatewayProfilePatch | null>>
+    | null
+    | undefined,
+): Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> | undefined => {
+  if (patch === null) return undefined;
+  if (patch === undefined) return current;
+  const next: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> = {
+    ...(current ?? {}),
+  };
+  for (const adapterType of ["openclaw", "hermes", "demo", "custom"] as const) {
+    const profilePatch = patch[adapterType];
+    if (profilePatch === undefined) continue;
+    if (profilePatch === null) {
+      delete next[adapterType];
+      continue;
+    }
+    const existing = current?.[adapterType] ?? null;
+    const nextUrl =
+      profilePatch.url === undefined
+        ? existing?.url ?? ""
+        : normalizeGatewayUrl(profilePatch.url);
+    if (!nextUrl) {
+      delete next[adapterType];
+      continue;
+    }
+    const nextToken =
+      profilePatch.token === undefined ? existing?.token ?? "" : coerceString(profilePatch.token);
+    next[adapterType] = { url: nextUrl, token: nextToken };
+  }
+  return Object.keys(next).length > 0 ? next : undefined;
+};
+
+const mergeGatewayConnectionState = (
+  current: StudioGatewayConnectionState | null,
+  patch: StudioGatewayConnectionStatePatch | null | undefined
+): StudioGatewayConnectionState | null => {
+  if (patch === null) return null;
+  if (patch === undefined) return current;
+  const nextUrl =
+    patch.url === undefined ? current?.url ?? "" : normalizeGatewayUrl(patch.url);
+  if (!nextUrl) return null;
+  const nextToken =
+    patch.token === undefined ? current?.token ?? "" : coerceString(patch.token);
+  const nextAdapterType =
+    patch.adapterType === undefined
+      ? current?.adapterType ?? "openclaw"
+      : normalizeGatewayAdapterType(patch.adapterType);
+  return {
+    url: nextUrl,
+    token: nextToken,
+    adapterType: nextAdapterType,
+  };
+};
+
+const normalizeGatewayAdapterType = (
+  value: unknown,
+  fallback: StudioGatewayAdapterType = "openclaw"
+): StudioGatewayAdapterType => {
+  const adapterType = coerceString(value).toLowerCase();
+  if (
+    adapterType === "demo" ||
+    adapterType === "hermes" ||
+    adapterType === "openclaw" ||
+    adapterType === "custom"
+  ) {
+    return adapterType;
+  }
+  return fallback;
 };
 
 const normalizeFocused = (value: unknown): Record<string, StudioFocusedPreference> => {
@@ -866,6 +1037,25 @@ export const sanitizeStudioGatewaySettings = (
   return {
     url: value.url,
     tokenConfigured: value.token.length > 0,
+    adapterType: value.adapterType,
+    profiles: value.profiles
+      ? Object.fromEntries(
+          Object.entries(value.profiles).map(([adapterType, profile]) => [
+            adapterType,
+            {
+              url: profile.url,
+              tokenConfigured: profile.token.length > 0,
+            },
+          ]),
+        )
+      : undefined,
+    lastKnownGood: value.lastKnownGood
+      ? {
+          url: value.lastKnownGood.url,
+          tokenConfigured: value.lastKnownGood.token.length > 0,
+          adapterType: value.lastKnownGood.adapterType,
+        }
+      : undefined,
   };
 };
 

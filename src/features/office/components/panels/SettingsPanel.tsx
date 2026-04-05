@@ -2,11 +2,19 @@
 
 import { useState } from "react";
 import { CURATED_ELEVENLABS_VOICES } from "@/lib/voiceReply/catalog";
+import type { StudioGatewayAdapterType } from "@/lib/studio/settings";
 
 type SettingsPanelProps = {
   gatewayStatus?: string;
   gatewayUrl?: string;
+  gatewayToken?: string;
+  selectedAdapterType?: StudioGatewayAdapterType;
+  activeAdapterType?: StudioGatewayAdapterType;
   onGatewayDisconnect?: () => void;
+  onGatewayConnect?: () => void;
+  onGatewayUrlChange?: (value: string) => void;
+  onGatewayTokenChange?: (value: string) => void;
+  onGatewayAdapterTypeChange?: (value: StudioGatewayAdapterType) => void;
   onOpenOnboarding?: () => void;
   officeTitle: string;
   officeTitleLoaded: boolean;
@@ -36,7 +44,14 @@ type SettingsPanelProps = {
 export function SettingsPanel({
   gatewayStatus,
   gatewayUrl,
+  gatewayToken,
+  selectedAdapterType = "openclaw",
+  activeAdapterType = "openclaw",
   onGatewayDisconnect,
+  onGatewayConnect,
+  onGatewayUrlChange,
+  onGatewayTokenChange,
+  onGatewayAdapterTypeChange,
   onOpenOnboarding,
   officeTitle,
   officeTitleLoaded,
@@ -63,10 +78,17 @@ export function SettingsPanel({
   onVoiceRepliesPreview,
 }: SettingsPanelProps) {
   const normalizedGatewayUrl = gatewayUrl?.trim() ?? "";
+  const normalizedGatewayToken = gatewayToken ?? "";
   const gatewayStateLabel = gatewayStatus
     ? gatewayStatus.charAt(0).toUpperCase() + gatewayStatus.slice(1)
     : "Unknown";
-  const gatewayDisconnectDisabled = gatewayStatus !== "connected";
+  const isGatewayConnected = gatewayStatus === "connected";
+  const gatewayDisconnectDisabled = !isGatewayConnected;
+  const gatewayConnectDisabled = normalizedGatewayUrl.length === 0;
+  const tokenOptional =
+    selectedAdapterType === "hermes" ||
+    selectedAdapterType === "demo" ||
+    selectedAdapterType === "custom";
   const [remoteOfficeTokenDraft, setRemoteOfficeTokenDraft] = useState("");
 
   return (
@@ -101,28 +123,100 @@ export function SettingsPanel({
           <div>
             <div className="text-[11px] font-medium text-white">Gateway</div>
             <div className="mt-1 text-[10px] text-white/75">
-              Current studio connection and endpoint details.
+              Switch the active backend and update its saved endpoint details.
             </div>
           </div>
           <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-200/70">
             {gatewayStateLabel}
           </span>
         </div>
-        <div className="mt-3 rounded-md border border-cyan-500/10 bg-black/25 px-3 py-2 font-mono text-[10px] text-cyan-100/80">
-          {normalizedGatewayUrl || "No gateway URL configured."}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(
+            [
+              ["demo", "Demo"],
+              ["hermes", "Hermes"],
+              ["custom", "Custom"],
+              ["openclaw", "OpenClaw"],
+            ] as const
+          ).map(([adapterType, label]) => {
+            const selected = selectedAdapterType === adapterType;
+            return (
+              <button
+                key={adapterType}
+                type="button"
+                onClick={() => onGatewayAdapterTypeChange?.(adapterType)}
+                className={`rounded-md border px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] transition-colors ${
+                  selected
+                    ? "border-cyan-400/35 bg-cyan-500/12 text-cyan-50"
+                    : "border-cyan-500/10 bg-black/20 text-white/75 hover:border-cyan-400/25 hover:text-cyan-50"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-3 grid gap-3">
+          <div>
+            <div className="mb-1 text-[10px] uppercase tracking-[0.14em] text-cyan-100/65">
+              Upstream URL
+            </div>
+            <input
+              type="text"
+              value={gatewayUrl ?? ""}
+              onChange={(event) => onGatewayUrlChange?.(event.target.value)}
+              placeholder={
+                selectedAdapterType === "custom"
+                  ? "http://localhost:7770"
+                  : "ws://localhost:18789"
+              }
+              className="w-full rounded-md border border-cyan-500/10 bg-black/25 px-3 py-2 font-mono text-[11px] text-cyan-100 outline-none transition-colors placeholder:text-cyan-100/30 focus:border-cyan-400/30"
+            />
+          </div>
+          <div>
+            <div className="mb-1 text-[10px] uppercase tracking-[0.14em] text-cyan-100/65">
+              {tokenOptional ? "Upstream token (optional)" : "Upstream token"}
+            </div>
+            <input
+              type="password"
+              value={normalizedGatewayToken}
+              onChange={(event) => onGatewayTokenChange?.(event.target.value)}
+              placeholder={tokenOptional ? "optional token" : "gateway token"}
+              className="w-full rounded-md border border-cyan-500/10 bg-black/25 px-3 py-2 text-[11px] text-cyan-100 outline-none transition-colors placeholder:text-cyan-100/30 focus:border-cyan-400/30"
+            />
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-white/60">
+          <span className="font-mono">
+            Selected backend: {selectedAdapterType}
+          </span>
+          <span className="font-mono">
+            Active backend: {activeAdapterType}
+          </span>
+          <span>Each backend keeps its own saved URL and token.</span>
         </div>
         <div className="mt-3 flex items-center justify-between gap-3">
           <div className="text-[10px] text-white/60">
-            Disconnecting returns you to the gateway connect screen.
+            Connect to apply the selected backend, or disconnect to return to the connection screen.
           </div>
-          <button
-            type="button"
-            onClick={() => onGatewayDisconnect?.()}
-            disabled={gatewayDisconnectDisabled}
-            className="rounded-md border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-rose-100 transition-colors hover:border-rose-400/40 hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Disconnect gateway
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onGatewayConnect?.()}
+              disabled={gatewayConnectDisabled}
+              className="rounded-md border border-cyan-500/20 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-cyan-50 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/15 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {gatewayStatus === "connecting" ? "Connecting..." : "Connect"}
+            </button>
+            <button
+              type="button"
+              onClick={() => onGatewayDisconnect?.()}
+              disabled={gatewayDisconnectDisabled}
+              className="rounded-md border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-rose-100 transition-colors hover:border-rose-400/40 hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Disconnect gateway
+            </button>
+          </div>
         </div>
       </div>
       <div className="mt-3 rounded-lg border border-cyan-500/10 bg-black/20 px-4 py-3">

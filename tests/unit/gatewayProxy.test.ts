@@ -643,4 +643,234 @@ describe("createGatewayProxy", () => {
       ]);
     }
   });
+
+  it("surfaces upstream pairing rejection before browser close", async () => {
+    const upstream = new WebSocketServer({ port: 0 });
+    const address = upstream.address();
+    if (!address || typeof address === "string") {
+      throw new Error("expected upstream server to have a port");
+    }
+    const upstreamUrl = `ws://127.0.0.1:${address.port}`;
+
+    upstream.on("connection", (ws) => {
+      ws.on("message", (raw) => {
+        const parsed = JSON.parse(String(raw));
+        if (parsed?.method === "connect") {
+          ws.close(1008, "pairing required");
+        }
+      });
+    });
+
+    const { createGatewayProxy } = await import("../../server/gateway-proxy");
+
+    const proxyHttp = await import("node:http").then((m) => m.createServer());
+    const proxy = createGatewayProxy({
+      loadUpstreamSettings: async () => ({ url: upstreamUrl, token: "host-token-456" }),
+      allowWs: (req: { url?: string }) => req.url === "/api/gateway/ws",
+      logError: () => {},
+    });
+    proxyHttp.on("upgrade", (req, socket, head) => proxy.handleUpgrade(req, socket, head));
+
+    await new Promise<void>((resolve) => proxyHttp.listen(0, "127.0.0.1", resolve));
+    const proxyAddr = proxyHttp.address();
+    if (!proxyAddr || typeof proxyAddr === "string") {
+      throw new Error("expected proxy server to have a port");
+    }
+
+    const browser = new WebSocket(`ws://127.0.0.1:${proxyAddr.port}/api/gateway/ws`);
+    try {
+      await waitForEvent(browser, "open");
+      browser.send(
+        JSON.stringify({
+          type: "req",
+          id: "connect-pairing-required",
+          method: "connect",
+          params: { auth: {} },
+        })
+      );
+
+      const [rawMessage] = await waitForEvent<[WebSocket.RawData]>(browser, "message");
+      const response = JSON.parse(String(rawMessage ?? ""));
+      expect(response).toMatchObject({
+        type: "res",
+        id: "connect-pairing-required",
+        ok: false,
+        error: {
+          code: "studio.upstream_rejected",
+          message: "Upstream gateway rejected connect (1008): pairing required",
+        },
+      });
+    } finally {
+      for (const client of upstream.clients) {
+        client.close();
+      }
+      await Promise.all([
+        closeWebSocket(browser),
+        closeWebSocketServer(upstream),
+        closeHttpServer(proxyHttp),
+      ]);
+    }
+  });
+
+  it("allows short bursts of post-connect traffic without closing the socket", async () => {
+    const upstream = new WebSocketServer({ port: 0 });
+    const address = upstream.address();
+    if (!address || typeof address === "string") {
+      throw new Error("expected upstream server to have a port");
+    }
+    const upstreamUrl = `ws://127.0.0.1:${address.port}`;
+
+    upstream.on("connection", (ws) => {
+      ws.on("message", (raw) => {
+        const parsed = JSON.parse(String(raw));
+        if (parsed?.method === "connect") {
+          ws.send(
+            JSON.stringify({
+              type: "res",
+              id: parsed.id,
+              ok: true,
+              payload: { type: "hello-ok", protocol: 3, auth: {} },
+            })
+          );
+        }
+      });
+    });
+
+    const { createGatewayProxy } = await import("../../server/gateway-proxy");
+
+    const proxyHttp = await import("node:http").then((m) => m.createServer());
+    const proxy = createGatewayProxy({
+      loadUpstreamSettings: async () => ({ url: upstreamUrl, token: "host-token-456" }),
+      allowWs: (req: { url?: string }) => req.url === "/api/gateway/ws",
+      logError: () => {},
+    });
+    proxyHttp.on("upgrade", (req, socket, head) => proxy.handleUpgrade(req, socket, head));
+
+    await new Promise<void>((resolve) => proxyHttp.listen(0, "127.0.0.1", resolve));
+    const proxyAddr = proxyHttp.address();
+    if (!proxyAddr || typeof proxyAddr === "string") {
+      throw new Error("expected proxy server to have a port");
+    }
+
+    const browser = new WebSocket(`ws://127.0.0.1:${proxyAddr.port}/api/gateway/ws`);
+    try {
+      await waitForEvent(browser, "open");
+      browser.send(
+        JSON.stringify({
+          type: "req",
+          id: "connect-burst-ok",
+          method: "connect",
+          params: { auth: {} },
+        })
+      );
+
+      await waitForEvent(browser, "message");
+
+      for (let index = 0; index < 80; index += 1) {
+        browser.send(
+          JSON.stringify({
+            type: "req",
+            id: `burst-ok-${index}`,
+            method: "noop",
+            params: { index },
+          })
+        );
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 25));
+
+      expect(browser.readyState).toBe(WebSocket.OPEN);
+    } finally {
+      for (const client of upstream.clients) {
+        client.close();
+      }
+      await Promise.all([
+        closeWebSocket(browser),
+        closeWebSocketServer(upstream),
+        closeHttpServer(proxyHttp),
+      ]);
+    }
+  });
+
+  it("still rate limits abusive bursts that exceed the token bucket", async () => {
+    const upstream = new WebSocketServer({ port: 0 });
+    const address = upstream.address();
+    if (!address || typeof address === "string") {
+      throw new Error("expected upstream server to have a port");
+    }
+    const upstreamUrl = `ws://127.0.0.1:${address.port}`;
+
+    upstream.on("connection", (ws) => {
+      ws.on("message", (raw) => {
+        const parsed = JSON.parse(String(raw));
+        if (parsed?.method === "connect") {
+          ws.send(
+            JSON.stringify({
+              type: "res",
+              id: parsed.id,
+              ok: true,
+              payload: { type: "hello-ok", protocol: 3, auth: {} },
+            })
+          );
+        }
+      });
+    });
+
+    const { createGatewayProxy } = await import("../../server/gateway-proxy");
+
+    const proxyHttp = await import("node:http").then((m) => m.createServer());
+    const proxy = createGatewayProxy({
+      loadUpstreamSettings: async () => ({ url: upstreamUrl, token: "host-token-456" }),
+      allowWs: (req: { url?: string }) => req.url === "/api/gateway/ws",
+      logError: () => {},
+    });
+    proxyHttp.on("upgrade", (req, socket, head) => proxy.handleUpgrade(req, socket, head));
+
+    await new Promise<void>((resolve) => proxyHttp.listen(0, "127.0.0.1", resolve));
+    const proxyAddr = proxyHttp.address();
+    if (!proxyAddr || typeof proxyAddr === "string") {
+      throw new Error("expected proxy server to have a port");
+    }
+
+    const browser = new WebSocket(`ws://127.0.0.1:${proxyAddr.port}/api/gateway/ws`);
+    try {
+      await waitForEvent(browser, "open");
+      browser.send(
+        JSON.stringify({
+          type: "req",
+          id: "connect-burst-limit",
+          method: "connect",
+          params: { auth: {} },
+        })
+      );
+
+      await waitForEvent(browser, "message");
+      const closePromise = waitForEvent<[number, Buffer]>(browser, "close");
+
+      for (let index = 0; index < 200; index += 1) {
+        browser.send(
+          JSON.stringify({
+            type: "req",
+            id: `burst-limit-${index}`,
+            method: "noop",
+            params: { index },
+          })
+        );
+      }
+
+      const [closeCode, closeReason] = await closePromise;
+      expect(closeCode).toBe(1008);
+      expect(closeReason.toString()).toBe("rate limit exceeded");
+    } finally {
+      for (const client of upstream.clients) {
+        client.close();
+      }
+      await Promise.all([
+        closeWebSocket(browser),
+        closeWebSocketServer(upstream),
+        closeHttpServer(proxyHttp),
+      ]);
+    }
+  });
+
 });

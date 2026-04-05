@@ -49,7 +49,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: "connect",
     title: "Connect Your Gateway",
-    description: "Link to your OpenClaw instance",
+    description: "Link to your runtime instance",
     skippable: false,
   },
   {

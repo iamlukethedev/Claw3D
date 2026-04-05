@@ -36,7 +36,11 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const body = (await request.json()) as unknown;
+    const rawBody = await request.text();
+    if (!rawBody.trim()) {
+      return NextResponse.json({ error: "Invalid settings payload." }, { status: 400 });
+    }
+    const body = JSON.parse(rawBody) as unknown;
     if (!isPatch(body)) {
       return NextResponse.json({ error: "Invalid settings payload." }, { status: 400 });
     }

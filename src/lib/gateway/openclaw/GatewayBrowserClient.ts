@@ -6,6 +6,21 @@
 import { getPublicKeyAsync, signAsync, utils } from "@noble/ed25519";
 import { GatewayResponseError } from "@/lib/gateway/errors";
 
+const gatewayBrowserDebugEnabled =
+  process.env.NODE_ENV !== "production";
+
+const gatewayBrowserDebugLog = (
+  message: string,
+  details?: Record<string, unknown>
+) => {
+  if (!gatewayBrowserDebugEnabled) return;
+  if (details) {
+    console.info("[gateway-browser]", message, details);
+    return;
+  }
+  console.info("[gateway-browser]", message);
+};
+
 const GATEWAY_CLIENT_NAMES = {
   CONTROL_UI: "openclaw-control-ui",
 } as const;
@@ -350,6 +365,7 @@ export type GatewayResponseFrame = {
 export type GatewayHelloOk = {
   type: "hello-ok";
   protocol: number;
+  adapterType?: "openclaw" | "hermes" | "demo" | "custom";
   features?: { methods?: string[]; events?: string[] };
   snapshot?: unknown;
   auth?: {
@@ -415,11 +431,19 @@ export class GatewayBrowserClient {
 
   start() {
     this.closed = false;
+    gatewayBrowserDebugLog("start", {
+      url: this.opts.url,
+      authScopeKey: this.opts.authScopeKey ?? null,
+      disableDeviceAuth: Boolean(this.opts.disableDeviceAuth),
+      clientName: this.opts.clientName ?? null,
+      mode: this.opts.mode ?? null,
+    });
     this.connect();
   }
 
   stop() {
     this.closed = true;
+    gatewayBrowserDebugLog("stop");
     this.ws?.close();
     this.ws = null;
     this.flushPending(new Error("gateway client stopped"));
@@ -431,18 +455,23 @@ export class GatewayBrowserClient {
 
   private connect() {
     if (this.closed) return;
+    gatewayBrowserDebugLog("connect:open-socket", { url: this.opts.url });
     this.ws = new WebSocket(this.opts.url);
-    this.ws.onopen = () => this.queueConnect();
+    this.ws.onopen = () => {
+      gatewayBrowserDebugLog("socket:open");
+      this.queueConnect();
+    };
     this.ws.onmessage = (ev) => this.handleMessage(String(ev.data ?? ""));
     this.ws.onclose = (ev) => {
       const reason = String(ev.reason ?? "");
+      gatewayBrowserDebugLog("socket:close", { code: ev.code, reason });
       this.ws = null;
       this.flushPending(new Error(`gateway closed (${ev.code}): ${reason}`));
       this.opts.onClose?.({ code: ev.code, reason });
       this.scheduleReconnect();
     };
     this.ws.onerror = () => {
-      // ignored; close handler will fire
+      gatewayBrowserDebugLog("socket:error");
     };
   }
 
@@ -450,6 +479,7 @@ export class GatewayBrowserClient {
     if (this.closed) return;
     const delay = this.backoffMs;
     this.backoffMs = Math.min(this.backoffMs * 1.7, 15_000);
+    gatewayBrowserDebugLog("schedule-reconnect", { delay });
     window.setTimeout(() => this.connect(), delay);
   }
 
@@ -468,6 +498,12 @@ export class GatewayBrowserClient {
 
     const isSecureContext =
       !this.opts.disableDeviceAuth && typeof crypto !== "undefined" && !!crypto.subtle;
+    gatewayBrowserDebugLog("send-connect", {
+      url: this.opts.url,
+      disableDeviceAuth: Boolean(this.opts.disableDeviceAuth),
+      hasNonce: Boolean(this.connectNonce),
+      isSecureContext,
+    });
 
     const scopes = ["operator.admin", "operator.approvals", "operator.pairing"];
     const role = "operator";
@@ -545,8 +581,21 @@ export class GatewayBrowserClient {
       locale: navigator.language,
     };
 
+    gatewayBrowserDebugLog("connect-params", {
+      clientId: params.client.id,
+      clientMode: params.client.mode,
+      disableDeviceAuth: this.opts.disableDeviceAuth,
+      isSecureContext,
+      hasToken: Boolean(authToken),
+      hasDeviceIdentity: Boolean(deviceIdentity),
+    });
+
     void this.request<GatewayHelloOk>("connect", params)
       .then((hello) => {
+        gatewayBrowserDebugLog("hello-ok", {
+          protocol: hello?.protocol ?? null,
+          hasAuthToken: Boolean(hello?.auth?.deviceToken),
+        });
         if (hello?.auth?.deviceToken && deviceIdentity) {
           storeDeviceAuthToken({
             deviceId: deviceIdentity.deviceId,
@@ -560,6 +609,9 @@ export class GatewayBrowserClient {
         this.opts.onHello?.(hello);
       })
       .catch((err) => {
+        gatewayBrowserDebugLog("connect-failed", {
+          message: err instanceof Error ? err.message : String(err),
+        });
         if (canFallbackToShared && deviceIdentity) {
           clearDeviceAuthToken({ deviceId: deviceIdentity.deviceId, role, scope: authScopeKey });
         }
@@ -587,6 +639,7 @@ export class GatewayBrowserClient {
     if (frame.type === "event") {
       const evt = parsed as GatewayEventFrame;
       if (evt.event === "connect.challenge") {
+        gatewayBrowserDebugLog("connect-challenge");
         const payload = evt.payload as { nonce?: unknown } | undefined;
         const nonce = payload && typeof payload.nonce === "string" ? payload.nonce : null;
         if (nonce) {
@@ -650,6 +703,7 @@ export class GatewayBrowserClient {
     this.connectNonce = null;
     this.connectSent = false;
     if (this.connectTimer !== null) window.clearTimeout(this.connectTimer);
+    gatewayBrowserDebugLog("queue-connect", { delayMs: 750 });
     this.connectTimer = window.setTimeout(() => {
       void this.sendConnect();
     }, 750);
