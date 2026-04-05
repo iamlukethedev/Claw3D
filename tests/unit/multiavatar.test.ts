@@ -8,6 +8,8 @@ describe("multiavatar helpers", () => {
     expect(svg).toContain("<svg");
     expect(svg).toContain("</svg>");
     expect(svg).toContain("AA");
+    expect(svg).toContain("bunny avatar");
+    expect(svg).toContain('data-bunny="true"');
   });
 
   it("buildAvatarDataUrl returns a data url", () => {

@@ -15,6 +15,13 @@ import type {
 import { AgentModelProps } from "@/features/retro-office/objects/types";
 
 const MAX_NAMEPLATE_TEXT_LENGTH = 10;
+const BUNNY_EYE_BASE_Y = 0.502;
+const BUNNY_EYE_BASE_Z = 0.1;
+const BUNNY_HIGHLIGHT_BASE_Y = 0.51;
+const BUNNY_MOUTH_BASE_Y = 0.462;
+const BUNNY_MOUTH_BASE_Z = 0.101;
+const BUNNY_BROW_BASE_Y = 0.548;
+const BUNNY_BROW_BASE_Z = 0.1;
 
 const formatAgentNameplateText = (value: string): string => {
   const normalized = value.replace(/\s+/g, " ").trim();
@@ -374,33 +381,35 @@ export const AgentModel = memo(function AgentModel({
       if (!eyeRef.current) continue;
       eyeRef.current.scale.x = eyeScaleX;
       eyeRef.current.scale.y = eyeScaleY;
-      eyeRef.current.position.y = 0.475 + eyeOffsetY;
+      eyeRef.current.position.y = BUNNY_EYE_BASE_Y + eyeOffsetY;
+      eyeRef.current.position.z = BUNNY_EYE_BASE_Z;
     }
     for (const highlightRef of [leftEyeHighlightRef, rightEyeHighlightRef]) {
       if (!highlightRef.current) continue;
       highlightRef.current.visible = eyeOpen > 0.45 && !isAway;
-      highlightRef.current.position.y = 0.482 + eyeOffsetY;
+      highlightRef.current.position.y = BUNNY_HIGHLIGHT_BASE_Y + eyeOffsetY;
+      highlightRef.current.position.z = BUNNY_EYE_BASE_Z + 0.002;
     }
 
     if (mouthRef.current) {
       mouthRef.current.rotation.z = 0;
-      mouthRef.current.position.set(0, 0.436, 0.074);
+      mouthRef.current.position.set(0, BUNNY_MOUTH_BASE_Y, BUNNY_MOUTH_BASE_Z);
       if (isAway) {
         mouthRef.current.scale.set(0.5, 0.12, 1);
-        mouthRef.current.position.y = 0.434;
+        mouthRef.current.position.y = BUNNY_MOUTH_BASE_Y - 0.01;
       } else if (isError) {
         mouthRef.current.scale.set(1.28, 0.16, 1);
-        mouthRef.current.position.y = 0.43;
+        mouthRef.current.position.y = BUNNY_MOUTH_BASE_Y - 0.014;
       } else if (working) {
         mouthRef.current.scale.set(0.92, 0.14, 1);
-        mouthRef.current.position.y = 0.437;
+        mouthRef.current.position.y = BUNNY_MOUTH_BASE_Y - 0.008;
       } else if (agent.state === "walking") {
         const talkPulse =
           0.38 + (Math.sin(agent.frame * 0.14 + blinkSeed) + 1) * 0.22;
         mouthRef.current.scale.set(0.95, talkPulse, 1);
       } else {
         mouthRef.current.scale.set(1.35, 0.34, 1);
-        mouthRef.current.position.y = 0.428;
+        mouthRef.current.position.y = BUNNY_MOUTH_BASE_Y - 0.018;
       }
     }
 
@@ -411,42 +420,52 @@ export const AgentModel = memo(function AgentModel({
       leftMouthCornerRef.current.visible = showSmileCorners || showFrownCorners;
       rightMouthCornerRef.current.visible =
         showSmileCorners || showFrownCorners;
-      leftMouthCornerRef.current.position.set(-0.031, 0.434, 0.074);
-      rightMouthCornerRef.current.position.set(0.031, 0.434, 0.074);
+      leftMouthCornerRef.current.position.set(
+        -0.028,
+        BUNNY_MOUTH_BASE_Y - 0.022,
+        BUNNY_MOUTH_BASE_Z,
+      );
+      rightMouthCornerRef.current.position.set(
+        0.028,
+        BUNNY_MOUTH_BASE_Y - 0.022,
+        BUNNY_MOUTH_BASE_Z,
+      );
       if (showFrownCorners) {
         leftMouthCornerRef.current.rotation.z = -0.6;
         rightMouthCornerRef.current.rotation.z = 0.6;
-        leftMouthCornerRef.current.position.y = 0.425;
-        rightMouthCornerRef.current.position.y = 0.425;
+        leftMouthCornerRef.current.position.y = BUNNY_MOUTH_BASE_Y - 0.03;
+        rightMouthCornerRef.current.position.y = BUNNY_MOUTH_BASE_Y - 0.03;
       } else if (showSmileCorners) {
         leftMouthCornerRef.current.rotation.z = 0.62;
         rightMouthCornerRef.current.rotation.z = -0.62;
-        leftMouthCornerRef.current.position.y = 0.438;
-        rightMouthCornerRef.current.position.y = 0.438;
+        leftMouthCornerRef.current.position.y = BUNNY_MOUTH_BASE_Y - 0.016;
+        rightMouthCornerRef.current.position.y = BUNNY_MOUTH_BASE_Y - 0.016;
       }
     }
 
     if (leftBrowRef.current && rightBrowRef.current) {
-      leftBrowRef.current.position.y = 0.52;
-      rightBrowRef.current.position.y = 0.52;
+      leftBrowRef.current.position.y = BUNNY_BROW_BASE_Y;
+      rightBrowRef.current.position.y = BUNNY_BROW_BASE_Y;
+      leftBrowRef.current.position.z = BUNNY_BROW_BASE_Z;
+      rightBrowRef.current.position.z = BUNNY_BROW_BASE_Z;
       if (isAway) {
         leftBrowRef.current.rotation.z = -0.24;
         rightBrowRef.current.rotation.z = 0.24;
-        leftBrowRef.current.position.y = 0.512;
-        rightBrowRef.current.position.y = 0.512;
+        leftBrowRef.current.position.y = BUNNY_BROW_BASE_Y - 0.008;
+        rightBrowRef.current.position.y = BUNNY_BROW_BASE_Y - 0.008;
       } else if (isError) {
         leftBrowRef.current.rotation.z = 0.42;
         rightBrowRef.current.rotation.z = -0.42;
-        leftBrowRef.current.position.y = 0.516;
-        rightBrowRef.current.position.y = 0.516;
+        leftBrowRef.current.position.y = BUNNY_BROW_BASE_Y - 0.004;
+        rightBrowRef.current.position.y = BUNNY_BROW_BASE_Y - 0.004;
       } else if (working) {
         leftBrowRef.current.rotation.z = 0.3;
         rightBrowRef.current.rotation.z = -0.3;
       } else {
         leftBrowRef.current.rotation.z = -0.18;
         rightBrowRef.current.rotation.z = 0.18;
-        leftBrowRef.current.position.y = 0.526;
-        rightBrowRef.current.position.y = 0.526;
+        leftBrowRef.current.position.y = BUNNY_BROW_BASE_Y + 0.006;
+        rightBrowRef.current.position.y = BUNNY_BROW_BASE_Y + 0.006;
       }
     }
 
@@ -546,44 +565,16 @@ export const AgentModel = memo(function AgentModel({
   const topColor = resolvedAppearance.clothing.topColor;
   const trouserColor = resolvedAppearance.clothing.bottomColor;
   const shoeColor = resolvedAppearance.clothing.shoesColor;
-  const hairColor = resolvedAppearance.hair.color;
-  const hairStyle = resolvedAppearance.hair.style;
   const topStyle = resolvedAppearance.clothing.topStyle;
   const bottomStyle = resolvedAppearance.clothing.bottomStyle;
-  const hatStyle = resolvedAppearance.accessories.hatStyle;
-  const showGlasses = resolvedAppearance.accessories.glasses;
-  const showHeadset = resolvedAppearance.accessories.headset;
   const showBackpack = resolvedAppearance.accessories.backpack;
   const accessoryColor = topColor;
+  const furColor = `#${new THREE.Color(skin).lerp(new THREE.Color("#fffaf0"), 0.45).getHexString()}`;
+  const earInnerColor = `#${new THREE.Color(topColor).lerp(new THREE.Color("#f9a8d4"), 0.55).getHexString()}`;
+  const noseColor = `#${new THREE.Color(topColor).lerp(new THREE.Color("#fb7185"), 0.65).getHexString()}`;
   const sleeveColor = topStyle === "jacket" ? "#dbe4ff" : topColor;
   const cuffColor = topStyle === "hoodie" ? "#d1d5db" : sleeveColor;
   const topAccentColor = topStyle === "jacket" ? "#1f2937" : cuffColor;
-
-  const faceTexture = useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 64;
-    canvas.height = 64;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return new THREE.CanvasTexture(canvas);
-
-    ctx.fillStyle = skin;
-    ctx.fillRect(0, 0, 64, 64);
-    ctx.fillStyle = "rgba(255,255,255,0.14)";
-    ctx.fillRect(0, 0, 64, 10);
-    ctx.fillStyle = "rgba(196,122,84,0.18)";
-    ctx.beginPath();
-    ctx.arc(18, 38, 7, 0, Math.PI * 2);
-    ctx.arc(46, 38, 7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#d8a06e";
-    ctx.fillRect(30, 28, 4, 10);
-    ctx.fillRect(29, 37, 6, 2);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.needsUpdate = true;
-    return texture;
-  }, [skin]);
 
   const resolvedSpeechText =
     showSpeech && speechText?.trim()
@@ -895,152 +886,75 @@ export const AgentModel = memo(function AgentModel({
       </group>
       <mesh position={[0, 0.39, 0]}>
         <boxGeometry args={[0.07, 0.05, 0.07]} />
-        <meshLambertMaterial color={skin} />
+        <meshLambertMaterial color={furColor} />
       </mesh>
-      <mesh position={[0, 0.47, 0]}>
-        <boxGeometry args={[0.16, 0.16, 0.14]} />
-        <meshLambertMaterial attach="material-0" color={skin} />
-        <meshLambertMaterial attach="material-1" color={skin} />
-        <meshLambertMaterial attach="material-2" color={skin} />
-        <meshLambertMaterial attach="material-3" color={skin} />
-        <meshLambertMaterial attach="material-4" map={faceTexture} />
-        <meshLambertMaterial attach="material-5" color={skin} />
+      <mesh position={[0, 0.5, 0]}>
+        <boxGeometry args={[0.2, 0.18, 0.17]} />
+        <meshLambertMaterial color={furColor} />
       </mesh>
-      {hairStyle === "short" ? (
-        <mesh position={[0, 0.555, 0]}>
-          <boxGeometry args={[0.17, 0.05, 0.15]} />
-          <meshLambertMaterial color={hairColor} />
-        </mesh>
-      ) : null}
-      {hairStyle === "parted" ? (
-        <>
-          <mesh position={[0, 0.555, 0]}>
-            <boxGeometry args={[0.17, 0.045, 0.15]} />
-            <meshLambertMaterial color={hairColor} />
-          </mesh>
-          <mesh position={[-0.035, 0.59, 0.01]} rotation={[0.1, 0, -0.2]}>
-            <boxGeometry args={[0.12, 0.03, 0.08]} />
-            <meshLambertMaterial color={hairColor} />
-          </mesh>
-        </>
-      ) : null}
-      {hairStyle === "spiky" ? (
-        <>
-          <mesh position={[0, 0.55, 0]}>
-            <boxGeometry args={[0.16, 0.035, 0.14]} />
-            <meshLambertMaterial color={hairColor} />
-          </mesh>
-          <mesh position={[-0.05, 0.59, 0]} rotation={[0, 0, -0.2]}>
-            <boxGeometry args={[0.04, 0.06, 0.04]} />
-            <meshLambertMaterial color={hairColor} />
-          </mesh>
-          <mesh position={[0, 0.605, 0]} rotation={[0, 0, 0]}>
-            <boxGeometry args={[0.04, 0.08, 0.04]} />
-            <meshLambertMaterial color={hairColor} />
-          </mesh>
-          <mesh position={[0.05, 0.59, 0]} rotation={[0, 0, 0.2]}>
-            <boxGeometry args={[0.04, 0.06, 0.04]} />
-            <meshLambertMaterial color={hairColor} />
-          </mesh>
-        </>
-      ) : null}
-      {hairStyle === "bun" ? (
-        <>
-          <mesh position={[0, 0.548, 0]}>
-            <boxGeometry args={[0.17, 0.04, 0.15]} />
-            <meshLambertMaterial color={hairColor} />
-          </mesh>
-          <mesh position={[0, 0.6, -0.035]}>
-            <sphereGeometry args={[0.042, 14, 14]} />
-            <meshLambertMaterial color={hairColor} />
-          </mesh>
-        </>
-      ) : null}
-      {hatStyle === "cap" ? (
-        <>
-          <mesh position={[0, 0.59, 0]}>
-            <boxGeometry args={[0.172, 0.03, 0.152]} />
-            <meshLambertMaterial color={accessoryColor} />
-          </mesh>
-          <mesh position={[0, 0.575, 0.07]}>
-            <boxGeometry args={[0.09, 0.012, 0.05]} />
-            <meshLambertMaterial color={accessoryColor} />
-          </mesh>
-        </>
-      ) : null}
-      {hatStyle === "beanie" ? (
-        <mesh position={[0, 0.59, 0]}>
-          <boxGeometry args={[0.18, 0.06, 0.16]} />
-          <meshLambertMaterial color={accessoryColor} />
-        </mesh>
-      ) : null}
-      {showHeadset ? (
-        <>
-          <mesh position={[0, 0.57, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <torusGeometry args={[0.09, 0.008, 8, 24, Math.PI]} />
-            <meshLambertMaterial color="#94a3b8" />
-          </mesh>
-          <mesh position={[-0.1, 0.48, 0]}>
-            <boxGeometry args={[0.018, 0.05, 0.028]} />
-            <meshLambertMaterial color="#475569" />
-          </mesh>
-          <mesh position={[0.1, 0.48, 0]}>
-            <boxGeometry args={[0.018, 0.05, 0.028]} />
-            <meshLambertMaterial color="#475569" />
-          </mesh>
-          <mesh position={[0.085, 0.43, 0.06]} rotation={[0.25, 0.25, -0.4]}>
-            <boxGeometry args={[0.012, 0.06, 0.012]} />
-            <meshLambertMaterial color="#94a3b8" />
-          </mesh>
-        </>
-      ) : null}
-      <mesh ref={leftBrowRef} position={[-0.04, 0.52, 0.074]}>
+      <mesh position={[-0.062, 0.725, 0.012]} rotation={[0.05, 0, 0.12]}>
+        <boxGeometry args={[0.062, 0.28, 0.06]} />
+        <meshLambertMaterial color={furColor} />
+      </mesh>
+      <mesh position={[0.062, 0.725, 0.012]} rotation={[0.05, 0, -0.12]}>
+        <boxGeometry args={[0.062, 0.28, 0.06]} />
+        <meshLambertMaterial color={furColor} />
+      </mesh>
+      <mesh position={[-0.062, 0.725, 0.043]} rotation={[0.05, 0, 0.12]}>
+        <boxGeometry args={[0.028, 0.23, 0.02]} />
+        <meshLambertMaterial color="#f472b6" />
+      </mesh>
+      <mesh position={[0.062, 0.725, 0.043]} rotation={[0.05, 0, -0.12]}>
+        <boxGeometry args={[0.028, 0.23, 0.02]} />
+        <meshLambertMaterial color="#f472b6" />
+      </mesh>
+      <mesh position={[0, 0.468, 0.098]}>
+        <boxGeometry args={[0.094, 0.07, 0.03]} />
+        <meshLambertMaterial color="#fff7ed" />
+      </mesh>
+      <mesh position={[-0.068, 0.485, 0.095]}>
+        <boxGeometry args={[0.03, 0.03, 0.012]} />
+        <meshLambertMaterial color={earInnerColor} transparent opacity={0.35} />
+      </mesh>
+      <mesh position={[0.068, 0.485, 0.095]}>
+        <boxGeometry args={[0.03, 0.03, 0.012]} />
+        <meshLambertMaterial color={earInnerColor} transparent opacity={0.35} />
+      </mesh>
+      <mesh ref={leftBrowRef} position={[-0.04, BUNNY_BROW_BASE_Y, BUNNY_BROW_BASE_Z]}>
         <boxGeometry args={[0.04, 0.01, 0.01]} />
         <meshBasicMaterial color="#342016" />
       </mesh>
-      <mesh ref={rightBrowRef} position={[0.04, 0.52, 0.074]}>
+      <mesh ref={rightBrowRef} position={[0.04, BUNNY_BROW_BASE_Y, BUNNY_BROW_BASE_Z]}>
         <boxGeometry args={[0.04, 0.01, 0.01]} />
         <meshBasicMaterial color="#342016" />
       </mesh>
-      <mesh ref={leftEyeRef} position={[-0.04, 0.475, 0.072]}>
-        <boxGeometry args={[0.03, 0.03, 0.01]} />
+      <mesh ref={leftEyeRef} position={[-0.04, BUNNY_EYE_BASE_Y, BUNNY_EYE_BASE_Z]}>
+        <boxGeometry args={[0.028, 0.032, 0.01]} />
         <meshBasicMaterial color="#1a1a2e" />
       </mesh>
-      <mesh ref={rightEyeRef} position={[0.04, 0.475, 0.072]}>
-        <boxGeometry args={[0.03, 0.03, 0.01]} />
+      <mesh ref={rightEyeRef} position={[0.04, BUNNY_EYE_BASE_Y, BUNNY_EYE_BASE_Z]}>
+        <boxGeometry args={[0.028, 0.032, 0.01]} />
         <meshBasicMaterial color="#1a1a2e" />
       </mesh>
-      <mesh ref={leftEyeHighlightRef} position={[-0.03, 0.482, 0.074]}>
+      <mesh ref={leftEyeHighlightRef} position={[-0.032, BUNNY_HIGHLIGHT_BASE_Y, BUNNY_BROW_BASE_Z]}>
         <boxGeometry args={[0.008, 0.008, 0.01]} />
         <meshBasicMaterial color="#fff" />
       </mesh>
-      <mesh ref={rightEyeHighlightRef} position={[0.05, 0.482, 0.074]}>
+      <mesh ref={rightEyeHighlightRef} position={[0.048, BUNNY_HIGHLIGHT_BASE_Y, BUNNY_BROW_BASE_Z]}>
         <boxGeometry args={[0.008, 0.008, 0.01]} />
         <meshBasicMaterial color="#fff" />
       </mesh>
-      {showGlasses ? (
-        <>
-          <mesh position={[-0.04, 0.475, 0.078]}>
-            <boxGeometry args={[0.05, 0.05, 0.01]} />
-            <meshBasicMaterial color="#111827" wireframe />
-          </mesh>
-          <mesh position={[0.04, 0.475, 0.078]}>
-            <boxGeometry args={[0.05, 0.05, 0.01]} />
-            <meshBasicMaterial color="#111827" wireframe />
-          </mesh>
-          <mesh position={[0, 0.475, 0.078]}>
-            <boxGeometry args={[0.02, 0.008, 0.01]} />
-            <meshBasicMaterial color="#111827" />
-          </mesh>
-        </>
-      ) : null}
-      <mesh ref={mouthRef} position={[0, 0.436, 0.074]}>
-        <boxGeometry args={[0.05, 0.014, 0.01]} />
+      <mesh position={[0, 0.49, 0.115]}>
+        <boxGeometry args={[0.022, 0.018, 0.012]} />
+        <meshBasicMaterial color={noseColor} />
+      </mesh>
+      <mesh ref={mouthRef} position={[0, BUNNY_MOUTH_BASE_Y, BUNNY_MOUTH_BASE_Z]}>
+        <boxGeometry args={[0.05, 0.012, 0.01]} />
         <meshBasicMaterial color="#9c4a4a" />
       </mesh>
       <mesh
         ref={leftMouthCornerRef}
-        position={[-0.031, 0.438, 0.074]}
+        position={[-0.031, BUNNY_MOUTH_BASE_Y + 0.002, BUNNY_MOUTH_BASE_Z]}
         visible={false}
       >
         <boxGeometry args={[0.014, 0.014, 0.01]} />
@@ -1048,11 +962,15 @@ export const AgentModel = memo(function AgentModel({
       </mesh>
       <mesh
         ref={rightMouthCornerRef}
-        position={[0.031, 0.438, 0.074]}
+        position={[0.031, BUNNY_MOUTH_BASE_Y + 0.002, BUNNY_MOUTH_BASE_Z]}
         visible={false}
       >
         <boxGeometry args={[0.014, 0.014, 0.01]} />
         <meshBasicMaterial color="#9c4a4a" />
+      </mesh>
+      <mesh position={[0, 0.315, -0.075]}>
+        <sphereGeometry args={[0.042, 12, 12]} />
+        <meshLambertMaterial color={furColor} />
       </mesh>
       <mesh
         ref={pulseRingRef}
