@@ -4,7 +4,7 @@ module.exports = {
       name: "zeus-gateway",
       script: "server/zeus-gateway-adapter.js",
       cwd: "C:/Users/user/Downloads/claw3d-fork",
-      env_file: ".env",
+      node_args: "--env-file .env",
       autorestart: true,
       watch: false,
       max_restarts: 10,
