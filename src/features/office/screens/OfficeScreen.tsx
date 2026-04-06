@@ -30,6 +30,7 @@ import {
 import {
   resolveDeskAssignments,
   resolveOfficePreferencePublic,
+  resolveStudioActiveFloorId,
 } from "@/lib/studio/settings";
 import {
   createGatewayAgent,
@@ -142,6 +143,7 @@ import { KanbanDisabledPanel } from "@/features/office/components/panels/KanbanD
 import { PlaybooksPanel } from "@/features/office/components/panels/PlaybooksPanel";
 import { SkillsMarketplaceModal } from "@/features/office/components/panels/SkillsMarketplaceModal";
 import { TaskBoardPanel } from "@/features/office/components/panels/TaskBoardPanel";
+import { OfficeFloorNav } from "@/features/office/components/OfficeFloorNav";
 import { JukeboxPanel } from "@/features/spotify-jukebox/components/JukeboxPanel";
 import { JukeboxDisabledPanel } from "@/features/spotify-jukebox/components/JukeboxDisabledPanel";
 import { executeBrowserJukeboxCommand } from "@/features/spotify-jukebox/agentBridge";
@@ -178,6 +180,16 @@ import {
   type OfficePhoneCallRequest,
   type OfficeTextMessageRequest,
 } from "@/lib/office/eventTriggers";
+import {
+  buildFloorRosterErrorState,
+  buildFloorRosterState,
+  createFloorRosterCache,
+} from "@/lib/office/floorRoster";
+import {
+  getOfficeFloor,
+  resolveActiveOfficeFloorId,
+  type FloorId,
+} from "@/lib/office/floors";
 import { buildOfficeSkillTriggerHoldMaps } from "@/lib/office/places";
 import type { MockPhoneCallScenario } from "@/lib/office/call/types";
 import type { MockTextMessageScenario } from "@/lib/office/text/types";
@@ -984,6 +996,10 @@ export function OfficeScreen({
   const [deskAssignmentByDeskUid, setDeskAssignmentByDeskUid] = useState<
     Record<string, string>
   >({});
+  const [activeFloorId, setActiveFloorId] = useState<FloorId>("lobby");
+  const [floorRosterCache, setFloorRosterCache] = useState(() =>
+    createFloorRosterCache(),
+  );
   const [gatewayModels, setGatewayModels] = useState<GatewayModelChoice[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
@@ -1018,6 +1034,10 @@ export function OfficeScreen({
   const { showOnboarding, completeOnboarding, resetOnboarding } =
     useOnboardingState();
   const [forceShowOnboarding, setForceShowOnboarding] = useState(false);
+  const activeFloor = useMemo(
+    () => getOfficeFloor(resolveActiveOfficeFloorId(activeFloorId)),
+    [activeFloorId],
+  );
   useEffect(() => {
     initJukeboxStore();
   }, [initJukeboxStore]);
@@ -1158,6 +1178,30 @@ export function OfficeScreen({
     },
     [dispatch],
   );
+  const handleSelectFloor = useCallback(
+    (floorId: FloorId) => {
+      const resolved = resolveActiveOfficeFloorId(floorId);
+      setActiveFloorId(resolved);
+      settingsCoordinator.schedulePatch(
+        {
+          activeFloorId: resolved,
+        },
+        0,
+      );
+      setOfficeCameraCenterSignal((current) => current + 1);
+      const preferredAgentId =
+        floorRosterCache[resolved]?.selectedAgentId ??
+        floorRosterCache[resolved]?.entries[0]?.agentId ??
+        null;
+      if (
+        preferredAgentId &&
+        stateRef.current.agents.some((agent) => agent.agentId === preferredAgentId)
+      ) {
+        focusLocalAgent(preferredAgentId, { openChat: false });
+      }
+    },
+    [floorRosterCache, focusLocalAgent, settingsCoordinator],
+  );
   const focusChatTarget = useCallback(
     (agentId: string) => {
       setSelectedChatAgentId(agentId);
@@ -1290,6 +1334,24 @@ export function OfficeScreen({
 
   useEffect(() => {
     let cancelled = false;
+    void (async () => {
+      try {
+        const settings = await loadStudioSettings({ maxAgeMs: 30_000 });
+        if (!settings || cancelled) return;
+        setActiveFloorId(resolveStudioActiveFloorId(settings));
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load active floor preference.", error);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadStudioSettings]);
+
+  useEffect(() => {
+    let cancelled = false;
     const key = gatewayUrl.trim();
     if (!key) {
       setDeskAssignmentByDeskUid({});
@@ -1403,6 +1465,18 @@ export function OfficeScreen({
         if (connectionEpochAtStart !== connectionEpochRef.current) {
           return;
         }
+        const hydrateCommand = commands.find(
+          (command): command is Extract<
+            (typeof commands)[number],
+            { kind: "hydrate-agents" }
+          > => command.kind === "hydrate-agents",
+        );
+        const errorCommand = commands.find(
+          (command): command is Extract<
+            (typeof commands)[number],
+            { kind: "set-error" }
+          > => command.kind === "set-error",
+        );
         executeStudioBootstrapLoadCommands({
           commands,
           setGatewayConfigSnapshot: (val: GatewayModelPolicySnapshot) => {
@@ -1413,6 +1487,32 @@ export function OfficeScreen({
             dispatch({ type: "updateAgent", agentId, patch });
           },
           setError,
+        });
+        setFloorRosterCache((previous) => {
+          if (hydrateCommand) {
+            return {
+              ...previous,
+              [activeFloor.id]: buildFloorRosterState({
+                floorId: activeFloor.id,
+                result: {
+                  seeds: hydrateCommand.seeds,
+                  suggestedSelectedAgentId:
+                    hydrateCommand.initialSelectedAgentId ?? null,
+                },
+              }),
+            };
+          }
+          if (errorCommand) {
+            return {
+              ...previous,
+              [activeFloor.id]: buildFloorRosterErrorState({
+                floorId: activeFloor.id,
+                message: errorCommand.message,
+                previous: previous[activeFloor.id] ?? null,
+              }),
+            };
+          }
+          return previous;
         });
         if (connectionEpochAtStart !== connectionEpochRef.current) {
           return;
@@ -1510,6 +1610,7 @@ export function OfficeScreen({
     setError,
     setLoading,
     status,
+    activeFloor.id,
   ]);
 
   const handleCloseCreateAgentWizard = useCallback(
@@ -4512,6 +4613,12 @@ export function OfficeScreen({
           </div>
         </div>
       ) : null}
+
+      <OfficeFloorNav
+        activeFloorId={activeFloor.id}
+        floorRosterCache={floorRosterCache}
+        onSelectFloor={handleSelectFloor}
+      />
 
       {deleteAgentStatusLine ? (
         <div className="pointer-events-none fixed left-1/2 top-5 z-40 -translate-x-1/2 px-4">

@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import { createDefaultAgentAvatarProfile } from "@/lib/avatars/profile";
 
 import {
+  defaultStudioSettings,
+  defaultStudioFloorRuntimeState,
   mergeStudioSettings,
   normalizeStudioSettings,
+  resolveStudioActiveFloorId,
+  resolveStudioFloorRuntimeState,
 } from "@/lib/studio/settings";
 
 describe("studio settings normalization", () => {
@@ -11,6 +15,7 @@ describe("studio settings normalization", () => {
     const normalized = normalizeStudioSettings(null);
     expect(normalized.version).toBe(1);
     expect(normalized.gateway).toBeNull();
+    expect(normalized.activeFloorId).toBe("lobby");
     expect(normalized.focused).toEqual({});
     expect(normalized.avatars).toEqual({});
     expect(normalized.office).toEqual({});
@@ -190,6 +195,88 @@ describe("studio settings normalization", () => {
         title: "Orbit Control",
       }),
     );
+  });
+
+  it("creates default per-floor runtime state", () => {
+    const normalized = normalizeStudioSettings(null);
+
+    expect(normalized.officeFloors["openclaw-ground"]).toEqual(
+      expect.objectContaining({
+        floorId: "openclaw-ground",
+        provider: "openclaw",
+        runtimeProfileId: "openclaw-default",
+        gatewayUrl: null,
+        status: "disconnected",
+      }),
+    );
+  });
+
+  it("normalizes and merges per-floor runtime state", () => {
+    const normalized = normalizeStudioSettings({
+      officeFloors: {
+        "hermes-first": {
+          runtimeProfileId: " hermes-pi ",
+          gatewayUrl: " ws://127.0.0.1:18789 ",
+          status: "connected",
+          lastKnownGoodAt: 1234,
+          lastErrorCode: " ignored ",
+          lastErrorMessage: " ignored ",
+        },
+      },
+    });
+
+    expect(normalized.officeFloors["hermes-first"]).toEqual(
+      expect.objectContaining({
+        floorId: "hermes-first",
+        provider: "hermes",
+        runtimeProfileId: "hermes-pi",
+        gatewayUrl: "ws://localhost:18789",
+        status: "connected",
+        lastKnownGoodAt: 1234,
+        lastErrorCode: "ignored",
+        lastErrorMessage: "ignored",
+      }),
+    );
+
+    const merged = mergeStudioSettings(normalized, {
+      officeFloors: {
+        "hermes-first": {
+          status: "error",
+          lastErrorCode: "connect_timeout",
+          lastErrorMessage: "Timed out connecting",
+        },
+      },
+    });
+
+    expect(merged.officeFloors["hermes-first"]).toEqual(
+      expect.objectContaining({
+        runtimeProfileId: "hermes-pi",
+        gatewayUrl: "ws://localhost:18789",
+        status: "error",
+        lastErrorCode: "connect_timeout",
+        lastErrorMessage: "Timed out connecting",
+      }),
+    );
+  });
+
+  it("resolves floor runtime state with fallback", () => {
+    const normalized = normalizeStudioSettings(null);
+
+    expect(resolveStudioFloorRuntimeState(normalized, "training")).toEqual(
+      defaultStudioFloorRuntimeState("training"),
+    );
+  });
+
+  it("normalizes and merges active floor selection", () => {
+    const normalized = normalizeStudioSettings({
+      activeFloorId: "hermes-first",
+    });
+    expect(resolveStudioActiveFloorId(normalized)).toBe("hermes-first");
+
+    const merged = mergeStudioSettings(normalized, {
+      activeFloorId: "training",
+    });
+    expect(resolveStudioActiveFloorId(merged)).toBe("lobby");
   });
 
   it("normalizes task board cards per gateway", () => {
