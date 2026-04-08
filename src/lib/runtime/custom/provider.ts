@@ -5,10 +5,7 @@ import type {
   GatewayStatus,
 } from "@/lib/gateway/GatewayClient";
 import type { GatewayClient } from "@/lib/gateway/GatewayClient";
-import {
-  buildAgentMainSessionKey,
-  parseAgentIdFromSessionKey,
-} from "@/lib/gateway/GatewayClient";
+import { buildAgentMainSessionKey, parseAgentIdFromSessionKey } from "@/lib/gateway/sessionKeys";
 import {
   fetchCustomRuntimeJson,
   normalizeCustomBaseUrl,

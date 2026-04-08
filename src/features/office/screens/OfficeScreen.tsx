@@ -17,11 +17,13 @@ import { GatewayConnectScreen } from "@/features/agents/components/GatewayConnec
 import { useAgentStore, type AgentState } from "@/features/agents/state/store";
 import {
   GatewayClient,
-  buildAgentMainSessionKey,
   type EventFrame,
   isSameSessionKey,
-  parseAgentIdFromSessionKey,
 } from "@/lib/gateway/GatewayClient";
+import {
+  buildAgentMainSessionKey,
+  parseAgentIdFromSessionKey,
+} from "@/lib/gateway/sessionKeys";
 import { useRuntimeConnection } from "@/lib/runtime/useRuntimeConnection";
 import {
   createStudioSettingsCoordinator,

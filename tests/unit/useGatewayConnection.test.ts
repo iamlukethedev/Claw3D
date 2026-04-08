@@ -78,6 +78,7 @@ const setupAndImportHook = async (gatewayUrl: string | null) => {
       schedulePatch: (patch: unknown) => void;
       flushPending: () => Promise<void>;
     }) => {
+      status: "disconnected" | "connecting" | "connected";
       gatewayUrl: string;
       token: string;
       selectedAdapterType: "openclaw" | "hermes" | "demo" | "custom";
@@ -240,6 +241,65 @@ describe("useGatewayConnection", () => {
     });
     expect(captured.authScopeKey).toBe("wss://pi5.myth-coho.ts.net");
     expect(captured.clientName).toBe("webchat-ui");
+  });
+
+  it("auto_reconnects_openclaw_with_last_known_good_without_a_browser_token", async () => {
+    const { useGatewayConnection, captured } = await setupAndImportHook(null);
+    const coordinator = {
+      loadSettings: async () => null,
+      loadSettingsEnvelope: async () => ({
+        settings: {
+          version: 1,
+          gateway: {
+            url: "wss://pi5.myth-coho.ts.net",
+            token: "",
+            adapterType: "openclaw",
+            lastKnownGood: {
+              url: "wss://pi5.myth-coho.ts.net",
+              token: "",
+              adapterType: "openclaw",
+            },
+          },
+          focused: {},
+          avatars: {},
+          analytics: {},
+          voiceReplies: {},
+          office: {},
+          deskAssignments: {},
+          standup: {},
+          taskBoard: {},
+        },
+        localGatewayDefaults: null,
+      }),
+      schedulePatch: () => {},
+      flushPending: async () => {},
+    };
+
+    const Probe = () => {
+      const state = useGatewayConnection(coordinator);
+      return createElement(
+        "div",
+        null,
+        createElement("div", { "data-testid": "status" }, state.status),
+        createElement("div", { "data-testid": "token" }, state.token),
+        createElement(
+          "div",
+          { "data-testid": "shouldPromptForConnect" },
+          state.shouldPromptForConnect ? "yes" : "no"
+        )
+      );
+    };
+
+    render(createElement(Probe));
+
+    await waitFor(() => {
+      expect(captured.url).toBe("ws://localhost:3000/api/gateway/ws");
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("status")).toHaveTextContent("connected");
+    });
+    expect(screen.getByTestId("token")).toHaveTextContent("");
+    expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("no");
   });
 
   it("keeps_control_ui_identity_for_local_openclaw_connections", async () => {

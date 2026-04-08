@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   GatewayBrowserClient,
-  clearGatewayBrowserSessionStorage,
   type GatewayHelloOk,
 } from "./openclaw/GatewayBrowserClient";
 import type {
@@ -34,6 +33,10 @@ const gatewayDebugLog = (message: string, details?: Record<string, unknown>) => 
   console.info("[gateway-client]", message);
 };
 import { probeCustomRuntime } from "@/lib/runtime/custom/http";
+export {
+  buildAgentMainSessionKey,
+  parseAgentIdFromSessionKey,
+} from "@/lib/gateway/sessionKeys";
 
 export type ReqFrame = {
   type: "req";
@@ -77,17 +80,6 @@ export const parseGatewayFrame = (raw: string): GatewayFrame | null => {
   } catch {
     return null;
   }
-};
-
-export const buildAgentMainSessionKey = (agentId: string, mainKey: string) => {
-  const trimmedAgent = agentId.trim();
-  const trimmedKey = mainKey.trim() || "main";
-  return `agent:${trimmedAgent}:${trimmedKey}`;
-};
-
-export const parseAgentIdFromSessionKey = (sessionKey: string): string | null => {
-  const match = sessionKey.match(/^agent:([^:]+):/);
-  return match ? match[1] : null;
 };
 
 export const isSameSessionKey = (a: string, b: string) => {
@@ -1181,7 +1173,6 @@ export const useGatewayConnection = (
       return;
     }
     client.disconnect();
-    clearGatewayBrowserSessionStorage();
   }, [client, selectedAdapterType]);
 
   const clearError = useCallback(() => {
@@ -1198,7 +1189,6 @@ export const useGatewayConnection = (
     (selectedAdapterType === "custom" ||
       !hasLastKnownGoodState ||
       !gatewayUrl.trim() ||
-      (selectedAdapterType === "openclaw" && !token.trim()) ||
       wasManualDisconnectRef.current ||
       Boolean(error));
 

@@ -16,8 +16,8 @@ import {
 import type { EventFrame } from "@/lib/gateway/GatewayClient";
 import {
   isSameSessionKey,
-  parseAgentIdFromSessionKey,
 } from "@/lib/gateway/GatewayClient";
+import { parseAgentIdFromSessionKey } from "@/lib/gateway/sessionKeys";
 import type {
   OfficeCleaningCue,
   SessionEpochSnapshot,

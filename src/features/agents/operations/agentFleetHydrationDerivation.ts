@@ -1,4 +1,4 @@
-import { buildAgentMainSessionKey } from "@/lib/gateway/GatewayClient";
+import { buildAgentMainSessionKey } from "@/lib/gateway/sessionKeys";
 import { createDefaultAgentAvatarProfile } from "@/lib/avatars/profile";
 import { resolveConfiguredModelKey, type GatewayModelPolicySnapshot } from "@/lib/gateway/models";
 import {

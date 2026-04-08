@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { getPublicKeyAsync, signAsync, utils } from "@noble/ed25519";
 import { GatewayResponseError } from "@/lib/gateway/errors";
+export { buildAgentMainSessionKey } from "@/lib/gateway/sessionKeys";
 
 type GatewayResponseFrame = {
   type: "res";
@@ -170,12 +171,6 @@ const withTimeout = async <T>(
       clearTimeout(timeoutId);
     }
   }
-};
-
-export const buildAgentMainSessionKey = (agentId: string, mainKey: string) => {
-  const trimmedAgent = agentId.trim();
-  const trimmedKey = mainKey.trim() || "main";
-  return `agent:${trimmedAgent}:${trimmedKey}`;
 };
 
 export class NodeGatewayClient {
@@ -365,6 +360,10 @@ export class NodeGatewayClient {
     return response;
   }
 
+  async call<T = unknown>(method: string, params: unknown): Promise<T> {
+    return this.request<T>(method, params);
+  }
+
   close() {
     this.closed = true;
     this.rejectAllPending(new Error("Remote gateway client closed."));
@@ -375,6 +374,10 @@ export class NodeGatewayClient {
         this.socket = null;
       }
     }
+  }
+
+  disconnect() {
+    this.close();
   }
 
   private rejectAllPending(error: Error) {

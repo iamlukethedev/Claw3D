@@ -1363,7 +1363,6 @@ const AgentsPageScreen = () => {
     (!connectPromptReady ||
       (gatewayUrl.trim().length > 0 &&
         !shouldPromptForConnect &&
-        token.trim().length > 0 &&
         (!didAttemptGatewayConnect || status === "connecting")))
   ) {
     return (

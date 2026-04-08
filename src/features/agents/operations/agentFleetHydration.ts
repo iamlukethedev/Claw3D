@@ -1,7 +1,7 @@
 import {
-  buildAgentMainSessionKey,
   isSameSessionKey,
 } from "@/lib/gateway/GatewayClient";
+import { buildAgentMainSessionKey } from "@/lib/gateway/sessionKeys";
 import { type GatewayModelPolicySnapshot } from "@/lib/gateway/models";
 import {
   isTemporarySkillAgentName,

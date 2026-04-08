@@ -57,6 +57,7 @@ export const ITEM_FOOTPRINT: Record<string, [number, number]> = {
   whiteboard: [10, 60],
   cabinet: [200, 40],
   computer: [30, 20],
+  picture_prop: [44, 24],
   lamp: [30, 30],
   printer: [40, 35],
   stove: [40, 40],
@@ -165,6 +166,7 @@ export const ITEM_METADATA: Record<string, { blocksNavigation: boolean; navPaddi
   yoga_mat:        { blocksNavigation: true  },
   // ── art room ──────────────────────────────────────────────────────────────
   easel:           { blocksNavigation: true  }, // floor-standing prop (issue #4)
+  picture_prop:    { blocksNavigation: true  },
   // ── water cooler ──────────────────────────────────────────────────────────
   water_cooler:    { blocksNavigation: true  }, // freestanding floor appliance (issue #4)
   // ── decorative / small ────────────────────────────────────────────────────

@@ -6,10 +6,10 @@ import type {
   SummaryStatusSnapshot,
 } from "@/features/agents/state/runtimeEventBridge";
 import {
-  buildAgentMainSessionKey,
   GatewayClient,
   isGatewayDisconnectLikeError,
 } from "@/lib/gateway/GatewayClient";
+import { buildAgentMainSessionKey } from "@/lib/gateway/sessionKeys";
 import { buildOfficePresenceSnapshotFromGateway } from "@/lib/office/gatewayPresence";
 import type { OfficePresenceSnapshot } from "@/lib/office/presence";
 

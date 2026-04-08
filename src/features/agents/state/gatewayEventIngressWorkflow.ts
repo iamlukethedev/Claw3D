@@ -1,6 +1,7 @@
 import { resolveExecApprovalEventEffects, type ExecApprovalEventEffects } from "@/features/agents/approvals/execApprovalLifecycleWorkflow";
 import type { AgentState } from "@/features/agents/state/store";
-import { parseAgentIdFromSessionKey, type EventFrame } from "@/lib/gateway/GatewayClient";
+import type { EventFrame } from "@/lib/gateway/GatewayClient";
+import { parseAgentIdFromSessionKey } from "@/lib/gateway/sessionKeys";
 
 export type CronTranscriptIntent = {
   agentId: string;

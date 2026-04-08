@@ -1,4 +1,5 @@
-import { buildAgentMainSessionKey, type GatewayClient } from "@/lib/gateway/GatewayClient";
+import type { GatewayClient } from "@/lib/gateway/GatewayClient";
+import { buildAgentMainSessionKey } from "@/lib/gateway/sessionKeys";
 import {
   removeGatewayAgentFromConfigOnly,
   updateGatewayAgentOverrides,

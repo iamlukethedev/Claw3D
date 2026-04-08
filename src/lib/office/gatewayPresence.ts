@@ -2,7 +2,7 @@ import type {
   SummaryPreviewSnapshot,
   SummaryStatusSnapshot,
 } from "@/features/agents/state/runtimeEventBridge";
-import { buildAgentMainSessionKey } from "@/lib/gateway/GatewayClient";
+import { buildAgentMainSessionKey } from "@/lib/gateway/sessionKeys";
 import type { OfficeAgentPresence, OfficePresenceSnapshot } from "@/lib/office/presence";
 
 type GatewayAgentsListEntry = {

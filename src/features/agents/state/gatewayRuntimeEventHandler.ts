@@ -25,8 +25,8 @@ import {
 import {
   type EventFrame,
   isSameSessionKey,
-  parseAgentIdFromSessionKey,
 } from "@/lib/gateway/GatewayClient";
+import { parseAgentIdFromSessionKey } from "@/lib/gateway/sessionKeys";
 import { normalizeAssistantDisplayText } from "@/lib/text/assistantText";
 import {
   extractText,

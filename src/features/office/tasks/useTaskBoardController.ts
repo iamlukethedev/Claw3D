@@ -32,11 +32,11 @@ import {
   type CronJobSummary,
 } from "@/lib/cron/types";
 import {
-  parseAgentIdFromSessionKey,
   type EventFrame,
   type GatewayClient,
   type GatewayStatus,
 } from "@/lib/gateway/GatewayClient";
+import { parseAgentIdFromSessionKey } from "@/lib/gateway/sessionKeys";
 import {
   resolveTaskBoardPreference,
   type StudioTaskBoardPreference,

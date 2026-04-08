@@ -64,6 +64,82 @@ export type RenderAgent = SceneActor & {
   janitorPauseUntil?: number;
 };
 
+export type Picture3dMaterial = {
+  color: string;
+  roughness?: number;
+  metalness?: number;
+};
+
+export type Picture3dPrimitiveBase = {
+  material: Picture3dMaterial;
+  position: [number, number, number];
+  rotation?: [number, number, number];
+};
+
+export type Picture3dBoxPrimitive = Picture3dPrimitiveBase & {
+  kind: "box";
+  size: [number, number, number];
+};
+
+export type Picture3dCylinderPrimitive = Picture3dPrimitiveBase & {
+  kind: "cylinder";
+  radiusBottom: number;
+  radiusTop: number;
+  height: number;
+  radialSegments?: number;
+};
+
+export type Picture3dSpherePrimitive = Picture3dPrimitiveBase & {
+  kind: "sphere";
+  radius: number;
+  widthSegments?: number;
+  heightSegments?: number;
+};
+
+export type Picture3dPrimitive =
+  | Picture3dBoxPrimitive
+  | Picture3dCylinderPrimitive
+  | Picture3dSpherePrimitive;
+
+export type Picture3dRecipe = {
+  title: string;
+  summary: string;
+  footprintMeters: {
+    width: number;
+    depth: number;
+    height: number;
+  };
+  primitives: Picture3dPrimitive[];
+};
+
+export type PictureVisualSummary = {
+  palette: {
+    dominantColor: string;
+    accentColor: string;
+  };
+  aspectRatio: number;
+  pixelWidth: number;
+  pixelHeight: number;
+  occupancyRows: string[];
+  featureHints: string[];
+};
+
+export type PicturePropAsset = {
+  fileName: string;
+  imageDataUrl: string;
+  sourceImageDataUrl?: string;
+  aspectRatio: number;
+  dominantColor: string;
+  accentColor: string;
+  pixelWidth: number;
+  pixelHeight: number;
+  provider: string;
+  model: string;
+  summary: string;
+  visualSummary?: PictureVisualSummary;
+  recipe: Picture3dRecipe;
+};
+
 export type FurnitureItem = {
   _uid: string;
   type: string;
@@ -77,6 +153,7 @@ export type FurnitureItem = {
   facing?: number;
   vertical?: boolean;
   elevation?: number;
+  pictureAsset?: PicturePropAsset | null;
 };
 
 export type FurnitureSeed = Omit<FurnitureItem, "_uid">;

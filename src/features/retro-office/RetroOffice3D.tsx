@@ -13,8 +13,11 @@ import {
   Trash2,
   Users,
   X,
+  Download,
+  ImagePlus,
 } from "lucide-react";
 import {
+  type ChangeEvent,
   type ComponentProps,
   memo,
   Suspense,
@@ -26,6 +29,7 @@ import {
 } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, OrbitControls } from "@react-three/drei";
+import Image from "next/image";
 import * as THREE from "three";
 import { SettingsPanel } from "@/features/office/components/panels/SettingsPanel";
 import { AtmImmersiveScreen } from "@/features/office/screens/AtmImmersiveScreen";
@@ -104,6 +108,13 @@ import {
   REMOTE_ROAM_POINTS,
 } from "@/features/retro-office/core/district";
 import {
+  buildPicturePropItem,
+  createPictureAssetFromFile,
+  exportPictureAssetToGlb,
+  getPicturePropGlbFileName,
+  PICTURE_PROP_TYPE,
+} from "@/features/retro-office/core/pictureAsset";
+import {
   buildJanitorActorsForCue,
   pruneExpiredJanitorActors,
 } from "@/features/retro-office/core/janitors";
@@ -152,6 +163,7 @@ import type {
   FurnitureItem,
   JanitorActor,
   OfficeAgent,
+  PicturePropAsset,
   QaLabStationLocation,
   RenderAgent,
   SceneActor,
@@ -203,6 +215,11 @@ import {
   TrashCanModel as PrimitiveTrashCanModel,
   WallSegmentModel as PrimitiveWallSegmentModel,
 } from "@/features/retro-office/objects/primitives";
+import {
+  PicturePropGhost as PicturePlacementGhost,
+  PicturePropModel as InteractivePicturePropModel,
+  ReadOnlyPicturePropModel,
+} from "@/features/retro-office/objects/pictureProps";
 import {
   FloorAndWalls as SceneFloorAndWalls,
   WallPictures as SceneWallPictures,
@@ -390,6 +407,12 @@ const PALETTE: PaletteEntry[] = [
     defaults: { w: 200, h: 40 },
   },
   {
+    type: PICTURE_PROP_TYPE,
+    label: "Picture Prop",
+    icon: "🖼️",
+    defaults: { w: 44, h: 24 },
+  },
+  {
     type: "dishwasher",
     label: "Dishwasher",
     icon: "🧼",
@@ -460,7 +483,16 @@ const ReadOnlyFurnitureClone = memo(function ReadOnlyFurnitureClone({
       {furniture.map((item) =>
         item.type === "wall" ||
         item.type === "desk_cubicle" ||
-        item.type === "chair" ? null : item.type === "door" ? (
+        item.type === "chair" ? null : item.type === PICTURE_PROP_TYPE ? (
+          <ReadOnlyPicturePropModel
+            key={item._uid}
+            item={item}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "door" ? (
           <PrimitiveDoorModel
             key={item._uid}
             item={item}
@@ -2619,6 +2651,13 @@ export function RetroOffice3D({
   const [hoverUid, setHoverUid] = useState<string | null>(null);
   const [drag, setDrag] = useState<DragState>({ kind: "idle" });
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const pictureFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [pictureDraft, setPictureDraft] = useState<PicturePropAsset | null>(null);
+  const [pictureDraftError, setPictureDraftError] = useState<string | null>(null);
+  const [pictureDraftStatus, setPictureDraftStatus] = useState<
+    "idle" | "processing"
+  >("idle");
+  const [pictureGlbBusyKey, setPictureGlbBusyKey] = useState<string | null>(null);
   const [ghostPos, setGhostPos] = useState<[number, number, number] | null>(
     null,
   );
@@ -3196,6 +3235,10 @@ export function RetroOffice3D({
     selectedItem?.type === "desk_cubicle"
       ? (deskAssignmentByDeskUid[selectedItem._uid] ?? "")
       : "";
+  const selectedPictureAsset =
+    selectedItem?.type === PICTURE_PROP_TYPE
+      ? (selectedItem.pictureAsset ?? null)
+      : null;
   const selectedDeskActionItem = useMemo(
     () =>
       deskActionUid
@@ -4891,6 +4934,22 @@ export function RetroOffice3D({
           setWallDrawStart(null);
           return;
         }
+        if (drag.itemType === PICTURE_PROP_TYPE) {
+          if (!pictureDraft) {
+            setPictureDraftError("Upload a picture before placing it in the office.");
+            setDrag({ kind: "idle" });
+            setGhostPos(null);
+            return;
+          }
+          const newItem = buildPicturePropItem(pictureDraft, nextUid(), cx, cy);
+          setFurniture((prev) => [...prev, newItem]);
+          setSelectedUid(newItem._uid);
+          setDrawerOpen(false);
+          setDrag({ kind: "idle" });
+          setGhostPos(null);
+          setWallDrawStart(null);
+          return;
+        }
         const palEntry = PALETTE.find((p) => p.type === drag.itemType);
         const isCouch = drag.itemType === "couch_v";
         const newItem: FurnitureItem = {
@@ -4913,7 +4972,7 @@ export function RetroOffice3D({
       }
       if (drag.kind === "moving") setDrag({ kind: "idle" });
     },
-    [drag, furniture, wallDrawStart, worldToCanvas],
+    [drag, furniture, pictureDraft, wallDrawStart, worldToCanvas],
   );
 
   const startPlacing = useCallback((type: string) => {
@@ -4923,6 +4982,84 @@ export function RetroOffice3D({
     setWallDrawStart(null);
     setGhostPos(null);
   }, []);
+
+  const openPicturePicker = useCallback(() => {
+    setPictureDraftError(null);
+    pictureFileInputRef.current?.click();
+  }, []);
+
+  const handlePictureUploadChange = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (!file) return;
+      setPictureDraftStatus("processing");
+      setPictureDraftError(null);
+      try {
+        const previewAsset = await createPictureAssetFromFile(file);
+        const formData = new FormData();
+        formData.set("image", file);
+        formData.set("previewDataUrl", previewAsset.imageDataUrl);
+        formData.set("gatewayUrl", gatewayUrl);
+        formData.set("gatewayToken", gatewayToken);
+        formData.set("adapterType", activeAdapterType);
+        const response = await fetch("/api/office/picture-model", {
+          method: "POST",
+          body: formData,
+        });
+        const payload = (await response.json().catch(() => null)) as
+          | {
+              asset?: PicturePropAsset;
+              error?: string;
+            }
+          | null;
+        if (!response.ok || !payload?.asset) {
+          throw new Error(payload?.error || "AI 3D reconstruction failed.");
+        }
+        setPictureDraft(payload.asset);
+      } catch (error) {
+        setPictureDraftError(
+          error instanceof Error
+            ? error.message
+            : "Picture model generation failed.",
+        );
+      } finally {
+        setPictureDraftStatus("idle");
+      }
+    },
+    [activeAdapterType, gatewayToken, gatewayUrl],
+  );
+
+  const handlePictureGlbDownload = useCallback(async (asset: PicturePropAsset) => {
+    const fileName = getPicturePropGlbFileName(asset);
+    setPictureGlbBusyKey(fileName);
+    try {
+      const glbBlob = await exportPictureAssetToGlb(asset);
+      const downloadUrl = URL.createObjectURL(glbBlob);
+      const anchor = document.createElement("a");
+      anchor.href = downloadUrl;
+      anchor.download = fileName;
+      anchor.click();
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      setPictureDraftError(
+        error instanceof Error ? error.message : "GLB export failed.",
+      );
+    } finally {
+      setPictureGlbBusyKey(null);
+    }
+  }, []);
+
+  const handlePaletteSelect = useCallback(
+    (type: string) => {
+      if (type === PICTURE_PROP_TYPE && !pictureDraft) {
+        openPicturePicker();
+        return;
+      }
+      startPlacing(type);
+    },
+    [openPicturePicker, pictureDraft, startPlacing],
+  );
 
   const closeSelectedEditor = useCallback(() => {
     setSelectedUid(null);
@@ -5406,6 +5543,17 @@ export function RetroOffice3D({
                       onClick={handleDeskClick}
                     />
                   ) : null
+                ) : item.type === PICTURE_PROP_TYPE ? (
+                  <InteractivePicturePropModel
+                    key={item._uid}
+                    item={item}
+                    isSelected={item._uid === selectedUid}
+                    isHovered={item._uid === hoverUid}
+                    editMode={editMode}
+                    onPointerDown={handleFurniturePointerDown}
+                    onPointerOver={handleFurniturePointerOver}
+                    onPointerOut={handleFurniturePointerOut}
+                  />
                 ) : item.type === "door" ? (
                   <PrimitiveDoorModel
                     key={item._uid}
@@ -5850,10 +5998,14 @@ export function RetroOffice3D({
               drag.itemType !== "wall" &&
               ghostPos && (
                 <Suspense fallback={null}>
-                  <FurniturePlacementGhost
-                    itemType={drag.itemType}
-                    position={ghostPos}
-                  />
+                  {drag.itemType === PICTURE_PROP_TYPE && pictureDraft ? (
+                    <PicturePlacementGhost asset={pictureDraft} position={ghostPos} />
+                  ) : (
+                    <FurniturePlacementGhost
+                      itemType={drag.itemType}
+                      position={ghostPos}
+                    />
+                  )}
                 </Suspense>
               )}
             {editMode &&
@@ -6994,12 +7146,53 @@ export function RetroOffice3D({
               </div>
             </div>
           ) : null}
+          {selectedPictureAsset ? (
+            <div className="mt-3 border-t border-amber-900/20 pt-3">
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-amber-500/65">
+                AI Model to GLB
+              </div>
+              <div className="relative h-24 w-full overflow-hidden rounded-md border border-amber-800/20">
+                <Image
+                  src={selectedPictureAsset.imageDataUrl}
+                  alt={selectedPictureAsset.fileName}
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              </div>
+              <div className="mt-2 text-[10px] text-amber-500/55">
+                {selectedPictureAsset.fileName}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  void handlePictureGlbDownload(selectedPictureAsset);
+                }}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-amber-700/35 bg-[#1c1610] px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-100 transition-colors hover:bg-[#261e16]"
+              >
+                <Download size={12} />
+                <span>
+                  {pictureGlbBusyKey ===
+                  getPicturePropGlbFileName(selectedPictureAsset)
+                    ? "Building GLB"
+                    : "Download GLB"}
+                </span>
+              </button>
+            </div>
+          ) : null}
         </div>
       )}
 
       {/* Object Drawer — bottom right above toolbar when open. */}
       {!immersiveOverlayActive && editMode && drawerOpen && !selectedItem && (
         <div className="absolute bottom-14 right-3 w-52 max-h-[calc(100vh-100px)] overflow-y-auto rounded-lg bg-[#1c1610]/95 border border-amber-800/20 p-3 shadow-xl backdrop-blur-sm z-20">
+          <input
+            ref={pictureFileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePictureUploadChange}
+          />
           <div className="text-[10px] text-amber-500/70 font-bold uppercase tracking-widest mb-3">
             Objects
           </div>
@@ -7007,7 +7200,7 @@ export function RetroOffice3D({
             {PALETTE.map((entry) => (
               <button
                 key={entry.type}
-                onClick={() => startPlacing(entry.type)}
+                onClick={() => handlePaletteSelect(entry.type)}
                 className={`flex flex-col items-center gap-1 p-2 rounded-md border transition-all text-center ${
                   drag.kind === "placing" &&
                   (drag as { kind: "placing"; itemType: string }).itemType ===
@@ -7022,6 +7215,79 @@ export function RetroOffice3D({
                 </span>
               </button>
             ))}
+          </div>
+          <div className="mt-3 rounded-lg border border-amber-800/20 bg-[#120e08] p-3">
+            <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-500/65">
+              Image to 3D Lab
+            </div>
+            <div className="mt-1 text-[10px] leading-relaxed text-amber-500/55">
+              Upload a picture and let AI reconstruct it as a simplified 3D office asset, then export that model as a GLB.
+            </div>
+            {pictureDraft ? (
+              <div className="relative mt-3 h-24 w-full overflow-hidden rounded-md border border-amber-800/20">
+                <Image
+                  src={pictureDraft.imageDataUrl}
+                  alt={pictureDraft.fileName}
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              </div>
+            ) : null}
+            {pictureDraft ? (
+              <div className="mt-2 text-[10px] text-amber-500/55">
+                {pictureDraft.fileName}
+              </div>
+            ) : null}
+            {pictureDraftError ? (
+              <div className="mt-2 text-[10px] text-rose-300/80">
+                {pictureDraftError}
+              </div>
+            ) : null}
+            <div className="mt-3 grid gap-2">
+              <button
+                type="button"
+                onClick={openPicturePicker}
+                className="flex w-full items-center justify-center gap-2 rounded-md border border-amber-700/35 bg-[#1c1610] px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-100 transition-colors hover:bg-[#261e16]"
+              >
+                <ImagePlus size={12} />
+                <span>
+                  {pictureDraftStatus === "processing"
+                    ? "Processing"
+                    : pictureDraft
+                      ? "Replace Picture"
+                      : "Upload Picture"}
+                </span>
+              </button>
+              {pictureDraft ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handlePictureGlbDownload(pictureDraft);
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-md border border-amber-700/35 bg-[#1c1610] px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-100 transition-colors hover:bg-[#261e16]"
+                >
+                  <Download size={12} />
+                  <span>
+                    {pictureGlbBusyKey === getPicturePropGlbFileName(pictureDraft)
+                      ? "Building GLB"
+                      : "Download GLB"}
+                  </span>
+                </button>
+              ) : null}
+              <button
+                type="button"
+                disabled={!pictureDraft || pictureDraftStatus === "processing"}
+                onClick={() => handlePaletteSelect(PICTURE_PROP_TYPE)}
+                className={`flex w-full items-center justify-center gap-2 rounded-md border px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] transition-colors ${
+                  pictureDraft && pictureDraftStatus !== "processing"
+                    ? "border-amber-500/40 bg-amber-500/18 text-amber-100 hover:bg-amber-500/24"
+                    : "border-amber-900/20 bg-[#16100a] text-amber-400/40"
+                }`}
+              >
+                <span>Generate and Place</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
