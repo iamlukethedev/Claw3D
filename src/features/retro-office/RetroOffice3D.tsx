@@ -49,9 +49,14 @@ import { buildMockTextMessageScenario } from "@/lib/office/text/mock";
 import type { MockTextMessageScenario } from "@/lib/office/text/types";
 import type { OfficeDeskMonitor } from "@/lib/office/deskMonitor";
 import type { OfficeAnimationState } from "@/lib/office/eventTriggers";
+import { DEFAULT_OFFICE_AGENT_STATE_MAPPING } from "@/lib/office/agentStateMapping";
 import type { StandupMeeting } from "@/lib/office/standup/types";
 import type { SkillStatusEntry } from "@/lib/skills/types";
 import type { StudioGatewayAdapterType } from "@/lib/studio/settings";
+import type {
+  OfficeAgentStateMapping,
+  OfficeAgentStateMappingPatch,
+} from "@/lib/office/agentStateMapping";
 import type {
   TaskBoardCard,
   TaskBoardStatus,
@@ -2343,6 +2348,7 @@ export function RetroOffice3D({
   remoteOfficeStatusText = "Remote office disabled.",
   remoteLayoutSnapshot = null,
   remoteOfficeTokenConfigured = false,
+  agentStateMapping = DEFAULT_OFFICE_AGENT_STATE_MAPPING,
   voiceRepliesEnabled = false,
   voiceRepliesVoiceId = null,
   voiceRepliesSpeed = 1,
@@ -2354,6 +2360,7 @@ export function RetroOffice3D({
   onRemoteOfficePresenceUrlChange,
   onRemoteOfficeGatewayUrlChange,
   onRemoteOfficeTokenChange,
+  onAgentStateMappingChange,
   onVoiceRepliesToggle,
   onVoiceRepliesVoiceChange,
   onVoiceRepliesSpeedChange,
@@ -2456,6 +2463,7 @@ export function RetroOffice3D({
   remoteOfficeStatusText?: string;
   remoteLayoutSnapshot?: OfficeLayoutSnapshot | null;
   remoteOfficeTokenConfigured?: boolean;
+  agentStateMapping?: OfficeAgentStateMapping;
   voiceRepliesEnabled?: boolean;
   voiceRepliesVoiceId?: string | null;
   voiceRepliesSpeed?: number;
@@ -2469,6 +2477,7 @@ export function RetroOffice3D({
   onRemoteOfficePresenceUrlChange?: (url: string) => void;
   onRemoteOfficeGatewayUrlChange?: (url: string) => void;
   onRemoteOfficeTokenChange?: (token: string) => void;
+  onAgentStateMappingChange?: (mapping: OfficeAgentStateMappingPatch) => void;
   onVoiceRepliesToggle?: (enabled: boolean) => void;
   onVoiceRepliesVoiceChange?: (voiceId: string | null) => void;
   onVoiceRepliesSpeedChange?: (speed: number) => void;
@@ -7203,6 +7212,10 @@ export function RetroOffice3D({
                 onRemoteOfficeTokenChange={(token) =>
                   onRemoteOfficeTokenChange?.(token)
                 }
+                agentStateMapping={agentStateMapping}
+                onAgentStateMappingChange={(mapping) =>
+                  onAgentStateMappingChange?.(mapping)
+                }
                 voiceRepliesEnabled={voiceRepliesEnabled}
                 voiceRepliesVoiceId={voiceRepliesVoiceId}
                 voiceRepliesSpeed={voiceRepliesSpeed}
@@ -7227,6 +7240,68 @@ export function RetroOffice3D({
 
       {!immersiveOverlayActive ? (
         <>
+          {(() => {
+            const localAgents = agents.filter((agent) => !isRemoteOfficeAgentId(agent.id));
+            const remoteAgents = agents.filter((agent) => isRemoteOfficeAgentId(agent.id));
+            const countByStatus = (
+              source: typeof agents,
+              status: "working" | "idle" | "error",
+            ) => source.filter((agent) => agent.status === status).length;
+            return (
+              <div className="absolute left-3 top-14 z-10 w-[260px] rounded-xl border border-cyan-400/15 bg-[#081018]/78 px-3 py-3 text-[10px] text-cyan-50/90 shadow-xl backdrop-blur-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
+                      Fleet visibility
+                    </div>
+                    <div className="mt-1 text-[10px] text-cyan-100/55">
+                      Local and remote agent presence at a glance.
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-cyan-400/20 bg-cyan-500/8 px-2 py-1 font-mono uppercase tracking-[0.14em] text-cyan-100/75">
+                    {agents.length} total
+                  </span>
+                </div>
+                <div className="mt-3 grid gap-2">
+                  {[
+                    {
+                      label: "Local fleet",
+                      agents: localAgents,
+                    },
+                    {
+                      label: remoteOfficeEnabled ? "Remote fleet" : "Remote fleet off",
+                      agents: remoteAgents,
+                    },
+                  ].map((section) => (
+                    <div
+                      key={section.label}
+                      className="rounded-lg border border-cyan-500/10 bg-black/18 px-3 py-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium uppercase tracking-[0.14em] text-cyan-100/85">
+                          {section.label}
+                        </span>
+                        <span className="font-mono text-cyan-100/55">
+                          {section.agents.length}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
+                        <span className="rounded-full bg-emerald-500/12 px-2 py-1 text-emerald-100/85">
+                          {countByStatus(section.agents, "working")} working
+                        </span>
+                        <span className="rounded-full bg-sky-500/12 px-2 py-1 text-sky-100/85">
+                          {countByStatus(section.agents, "idle")} idle
+                        </span>
+                        <span className="rounded-full bg-rose-500/12 px-2 py-1 text-rose-100/85">
+                          {countByStatus(section.agents, "error")} error
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           {/* Ideas 3 + 6 + 8: Mini status bar — bottom left. */}
           <div className="absolute bottom-3 left-3 flex flex-col items-start gap-1.5 z-10 pointer-events-none select-none">
             {/* Idea 3: Activity feed entries — newest on bottom. */}

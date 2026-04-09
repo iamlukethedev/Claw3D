@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { StudioSettingsCoordinator } from "@/lib/studio/coordinator";
+import type { OfficeAgentStateMappingPatch } from "@/lib/office/agentStateMapping";
 import {
   defaultStudioOfficePreferencePublic,
   resolveOfficePreferencePublic,
@@ -67,6 +68,37 @@ export const useStudioOfficePreference = ({
           office: {
             [gatewayKey]: {
               title,
+            },
+          },
+        },
+        0
+      );
+    },
+    [gatewayUrl, settingsCoordinator]
+  );
+
+  const setAgentStateMapping = useCallback(
+    (agentStateMapping: OfficeAgentStateMappingPatch) => {
+      const gatewayKey = gatewayUrl.trim();
+      setPreference((current) => ({
+        ...current,
+        agentStateMapping: {
+          local: {
+            ...current.agentStateMapping.local,
+            ...(agentStateMapping.local ?? {}),
+          },
+          remote: {
+            ...current.agentStateMapping.remote,
+            ...(agentStateMapping.remote ?? {}),
+          },
+        },
+      }));
+      if (!gatewayKey) return;
+      settingsCoordinator.schedulePatch(
+        {
+          office: {
+            [gatewayKey]: {
+              agentStateMapping,
             },
           },
         },
@@ -197,6 +229,7 @@ export const useStudioOfficePreference = ({
     loaded,
     preference,
     title: preference.title,
+    agentStateMapping: preference.agentStateMapping,
     remoteOfficeEnabled: preference.remoteOfficeEnabled,
     remoteOfficeSourceKind: preference.remoteOfficeSourceKind,
     remoteOfficeLabel: preference.remoteOfficeLabel,
@@ -204,6 +237,7 @@ export const useStudioOfficePreference = ({
     remoteOfficeGatewayUrl: preference.remoteOfficeGatewayUrl,
     remoteOfficeTokenConfigured: preference.remoteOfficeTokenConfigured,
     setTitle,
+    setAgentStateMapping,
     setRemoteOfficeEnabled,
     setRemoteOfficeSourceKind,
     setRemoteOfficeLabel,

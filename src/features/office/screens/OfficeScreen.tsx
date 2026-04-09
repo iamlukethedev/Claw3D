@@ -115,6 +115,12 @@ import {
 import { writeGatewayAgentFiles } from "@/lib/gateway/agentFiles";
 import { randomUUID } from "@/lib/uuid";
 import {
+  DEFAULT_OFFICE_AGENT_STATE_MAPPING,
+  resolveLocalOfficeRenderableStatus,
+  resolveRemoteOfficeRenderableStatus,
+  type OfficeAgentStateMapping,
+} from "@/lib/office/agentStateMapping";
+import {
   HQSidebar,
   type HQSidebarTab,
 } from "@/features/office/components/HQSidebar";
@@ -508,41 +514,34 @@ const getDeterministicItem = (id: string) => {
   return ITEMS[Math.abs(hash) % ITEMS.length];
 };
 
-const mapAgentToOffice = (agent: AgentState): OfficeAgent => {
-  if (agent.status === "error") {
-    return {
-      id: agent.agentId,
-      name: agent.name || "Unknown",
-      subtitle: agent.role ?? null,
-      status: "error",
-      color: stringToColor(agent.agentId),
-      item: getDeterministicItem(agent.agentId),
-      avatarProfile: agent.avatarProfile ?? null,
-    };
-  }
-  const isWorking = agent.status === "running" || Boolean(agent.runId);
+const mapAgentToOffice = (
+  agent: AgentState,
+  mapping: OfficeAgentStateMapping = DEFAULT_OFFICE_AGENT_STATE_MAPPING,
+): OfficeAgent => {
   return {
     id: agent.agentId,
     name: agent.name || "Unknown",
     subtitle: agent.role ?? null,
-    status: isWorking ? "working" : "idle",
+    status: resolveLocalOfficeRenderableStatus(agent, mapping),
     color: stringToColor(agent.agentId),
     item: getDeterministicItem(agent.agentId),
     avatarProfile: agent.avatarProfile ?? null,
   };
 };
 
-const mapRemotePresenceAgentToOffice = (agent: {
+const mapRemotePresenceAgentToOffice = (
+  agent: {
   agentId: string;
   name: string;
   state: "idle" | "working" | "meeting" | "error";
-}): OfficeAgent => {
+  },
+  mapping: OfficeAgentStateMapping = DEFAULT_OFFICE_AGENT_STATE_MAPPING,
+): OfficeAgent => {
   const stableId = `remote:${agent.agentId}`;
-  const isWorking = agent.state === "working" || agent.state === "meeting";
   return {
     id: stableId,
     name: agent.name || "Unknown",
-    status: agent.state === "error" ? "error" : isWorking ? "working" : "idle",
+    status: resolveRemoteOfficeRenderableStatus(agent.state, mapping),
     color: stringToColor(stableId),
     item: getDeterministicItem(stableId),
     avatarProfile: null,
@@ -1063,6 +1062,7 @@ export function OfficeScreen({
   const {
     loaded: officeTitleLoaded,
     title: officeTitle,
+    agentStateMapping,
     remoteOfficeEnabled,
     remoteOfficeSourceKind,
     remoteOfficeLabel,
@@ -1070,6 +1070,7 @@ export function OfficeScreen({
     remoteOfficeGatewayUrl,
     remoteOfficeTokenConfigured,
     setTitle: setOfficeTitle,
+    setAgentStateMapping,
     setRemoteOfficeEnabled,
     setRemoteOfficeSourceKind,
     setRemoteOfficeLabel,
@@ -3762,7 +3763,7 @@ export function OfficeScreen({
                       : `desk-hold-${agent.agentId}`),
               }
             : agent;
-      const officeAgent = mapAgentToOffice(effectiveAgent);
+      const officeAgent = mapAgentToOffice(effectiveAgent, agentStateMapping);
       nextCache.set(agent.agentId, {
         agent,
         deskHeld,
@@ -3786,6 +3787,7 @@ export function OfficeScreen({
     smsBoothHoldByAgentId,
     state.agents,
     workingUntilByAgentId,
+    agentStateMapping,
   ]);
   const streamingTextByAgentId = useMemo(() => {
     const map: Record<string, string | null> = {};
@@ -3838,9 +3840,9 @@ export function OfficeScreen({
   const remoteOfficeAgents = useMemo(
     () =>
       (remoteOfficeSnapshot?.agents ?? []).map((agent) =>
-        mapRemotePresenceAgentToOffice(agent)
+        mapRemotePresenceAgentToOffice(agent, agentStateMapping)
       ),
-    [remoteOfficeSnapshot]
+    [remoteOfficeSnapshot, agentStateMapping]
   );
   const chatRosterEntries = useMemo<ChatRosterEntry[]>(
     () => [
@@ -4255,6 +4257,7 @@ export function OfficeScreen({
           soundclawEnabled={soundclawReady}
           officeTitle={officeTitle}
           officeTitleLoaded={officeTitleLoaded}
+          agentStateMapping={agentStateMapping}
           remoteOfficeEnabled={remoteOfficeEnabled}
           remoteOfficeSourceKind={remoteOfficeSourceKind}
           remoteOfficeLabel={remoteOfficeLabel}
@@ -4268,6 +4271,7 @@ export function OfficeScreen({
           voiceRepliesSpeed={voiceRepliesSpeed}
           voiceRepliesLoaded={voiceRepliesLoaded}
           onOfficeTitleChange={setOfficeTitle}
+          onAgentStateMappingChange={setAgentStateMapping}
           onRemoteOfficeEnabledChange={setRemoteOfficeEnabled}
           onRemoteOfficeSourceKindChange={setRemoteOfficeSourceKind}
           onRemoteOfficeLabelChange={setRemoteOfficeLabel}

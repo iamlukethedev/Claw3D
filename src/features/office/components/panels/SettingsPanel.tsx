@@ -1,6 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import {
+  OFFICE_RENDERABLE_AGENT_STATUSES,
+  type OfficeAgentStateMapping,
+  type OfficeAgentStateMappingPatch,
+  type OfficeRenderableAgentStatus,
+} from "@/lib/office/agentStateMapping";
 import { CURATED_ELEVENLABS_VOICES } from "@/lib/voiceReply/catalog";
 import type { StudioGatewayAdapterType } from "@/lib/studio/settings";
 
@@ -19,6 +25,8 @@ type SettingsPanelProps = {
   officeTitle: string;
   officeTitleLoaded: boolean;
   onOfficeTitleChange: (title: string) => void;
+  agentStateMapping: OfficeAgentStateMapping;
+  onAgentStateMappingChange: (next: OfficeAgentStateMappingPatch) => void;
   remoteOfficeEnabled: boolean;
   remoteOfficeSourceKind: "presence_endpoint" | "openclaw_gateway";
   remoteOfficeLabel: string;
@@ -56,6 +64,8 @@ export function SettingsPanel({
   officeTitle,
   officeTitleLoaded,
   onOfficeTitleChange,
+  agentStateMapping,
+  onAgentStateMappingChange,
   remoteOfficeEnabled,
   remoteOfficeSourceKind,
   remoteOfficeLabel,
@@ -90,6 +100,36 @@ export function SettingsPanel({
     selectedAdapterType === "demo" ||
     selectedAdapterType === "custom";
   const [remoteOfficeTokenDraft, setRemoteOfficeTokenDraft] = useState("");
+  const renderableStateOptions = OFFICE_RENDERABLE_AGENT_STATUSES;
+
+  const renderMappingSelect = (
+    params: {
+      label: string;
+      value: OfficeRenderableAgentStatus;
+      onChange: (value: OfficeRenderableAgentStatus) => void;
+      description: string;
+    },
+  ) => (
+    <label className="grid gap-1">
+      <span className="text-[10px] uppercase tracking-[0.14em] text-cyan-100/65">
+        {params.label}
+      </span>
+      <select
+        value={params.value}
+        onChange={(event) =>
+          params.onChange(event.target.value as OfficeRenderableAgentStatus)
+        }
+        className="w-full rounded-md border border-cyan-500/10 bg-black/25 px-3 py-2 text-[11px] text-cyan-100 outline-none transition-colors focus:border-cyan-400/30"
+      >
+        {renderableStateOptions.map((status) => (
+          <option key={status} value={status}>
+            {status}
+          </option>
+        ))}
+      </select>
+      <span className="text-[10px] text-white/50">{params.description}</span>
+    </label>
+  );
 
   return (
     <div className="px-4 py-4">
@@ -400,6 +440,99 @@ export function SettingsPanel({
               </div>
             </>
           )}
+        </div>
+      </div>
+      <div className="mt-3 rounded-lg border border-cyan-500/10 bg-black/20 px-4 py-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-medium text-white">Office state mapping</div>
+            <div className="mt-1 text-[10px] text-white/75">
+              Decide how local runtime status and remote presence states appear in the
+              office.
+            </div>
+          </div>
+          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-200/70">
+            Config
+          </span>
+        </div>
+        <div className="mt-3 grid gap-4 md:grid-cols-2">
+          <div className="rounded-lg border border-cyan-500/10 bg-black/15 px-3 py-3">
+            <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-cyan-100/75">
+              Local agents
+            </div>
+            <div className="mt-3 grid gap-3">
+              {renderMappingSelect({
+                label: "Idle signal",
+                value: agentStateMapping.local.idle,
+                onChange: (value) =>
+                  onAgentStateMappingChange({
+                    local: { idle: value },
+                  }),
+                description: "Used when a local agent is idle and has no active run.",
+              })}
+              {renderMappingSelect({
+                label: "Running signal",
+                value: agentStateMapping.local.running,
+                onChange: (value) =>
+                  onAgentStateMappingChange({
+                    local: { running: value },
+                  }),
+                description: "Used when a local agent is running or latched as active.",
+              })}
+              {renderMappingSelect({
+                label: "Error signal",
+                value: agentStateMapping.local.error,
+                onChange: (value) =>
+                  onAgentStateMappingChange({
+                    local: { error: value },
+                  }),
+                description: "Used when a local agent reports an error.",
+              })}
+            </div>
+          </div>
+          <div className="rounded-lg border border-cyan-500/10 bg-black/15 px-3 py-3">
+            <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-cyan-100/75">
+              Remote office
+            </div>
+            <div className="mt-3 grid gap-3">
+              {renderMappingSelect({
+                label: "Idle state",
+                value: agentStateMapping.remote.idle,
+                onChange: (value) =>
+                  onAgentStateMappingChange({
+                    remote: { idle: value },
+                  }),
+                description: "Used when the remote office reports an idle agent.",
+              })}
+              {renderMappingSelect({
+                label: "Working state",
+                value: agentStateMapping.remote.working,
+                onChange: (value) =>
+                  onAgentStateMappingChange({
+                    remote: { working: value },
+                  }),
+                description: "Used when the remote office reports active work.",
+              })}
+              {renderMappingSelect({
+                label: "Meeting state",
+                value: agentStateMapping.remote.meeting,
+                onChange: (value) =>
+                  onAgentStateMappingChange({
+                    remote: { meeting: value },
+                  }),
+                description: "Used when the remote office reports meeting activity.",
+              })}
+              {renderMappingSelect({
+                label: "Error state",
+                value: agentStateMapping.remote.error,
+                onChange: (value) =>
+                  onAgentStateMappingChange({
+                    remote: { error: value },
+                  }),
+                description: "Used when the remote office reports an error state.",
+              })}
+            </div>
+          </div>
         </div>
       </div>
       <div className="mt-3 rounded-lg border border-cyan-500/10 bg-black/20 px-4 py-3">

@@ -192,6 +192,81 @@ describe("studio settings normalization", () => {
     );
   });
 
+
+
+  it("normalizes office agent state mappings per gateway", () => {
+    const normalized = normalizeStudioSettings({
+      office: {
+        " [REDACTED] ": {
+          agentStateMapping: {
+            local: { running: "idle" },
+            remote: { meeting: "error" },
+          },
+        },
+      },
+    });
+
+    expect(normalized.office["[REDACTED]"]).toEqual(
+      expect.objectContaining({
+        agentStateMapping: {
+          local: {
+            idle: "idle",
+            running: "idle",
+            error: "error",
+          },
+          remote: {
+            idle: "idle",
+            working: "working",
+            meeting: "error",
+            error: "error",
+          },
+        },
+      }),
+    );
+  });
+
+  it("merges office agent state mapping patches", () => {
+    const current = normalizeStudioSettings({
+      office: {
+        "[REDACTED]": {
+          agentStateMapping: {
+            local: { running: "working" },
+            remote: { meeting: "working" },
+          },
+        },
+      },
+    });
+
+    const merged = mergeStudioSettings(current, {
+      office: {
+        "[REDACTED]": {
+          agentStateMapping: {
+            local: { running: "idle" },
+            remote: { error: "working" },
+          },
+        },
+      },
+    });
+
+    expect(merged.office["[REDACTED]"]).toEqual(
+      expect.objectContaining({
+        agentStateMapping: {
+          local: {
+            idle: "idle",
+            running: "idle",
+            error: "error",
+          },
+          remote: {
+            idle: "idle",
+            working: "working",
+            meeting: "working",
+            error: "working",
+          },
+        },
+      }),
+    );
+  });
+
   it("normalizes task board cards per gateway", () => {
     const normalized = normalizeStudioSettings({
       taskBoard: {
