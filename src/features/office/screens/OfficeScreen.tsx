@@ -1117,7 +1117,9 @@ export function OfficeScreen({
     voiceId: voiceRepliesPreference.voiceId,
     speed: voiceRepliesPreference.speed,
   });
-  const showOnboardingWizard = showOnboarding || forceShowOnboarding;
+  const cityViewMode = true;
+  const showOnboardingWizard =
+    cityViewMode ? false : showOnboarding || forceShowOnboarding;
   const handleOpenOnboarding = useCallback(() => {
     resetOnboarding();
     setCompanyCreatedSignal(0);
@@ -4166,6 +4168,7 @@ export function OfficeScreen({
   }, [agentsLoaded, didAttemptGatewayConnect, shouldPromptForConnect, status]);
 
   const showGatewayLoadingOverlay =
+    !cityViewMode &&
     !agentsLoaded &&
     (!connectPromptReady ||
       (gatewayUrl.trim().length > 0 &&
@@ -4173,6 +4176,7 @@ export function OfficeScreen({
         ((!didAttemptGatewayConnect && showDelayedGatewayLoadingOverlay) ||
           (status === "connecting" && showDelayedGatewayLoadingOverlay))));
   const showGatewayConnectOverlay =
+    !cityViewMode &&
     connectPromptReady &&
     status === "disconnected" &&
     !agentsLoaded &&
