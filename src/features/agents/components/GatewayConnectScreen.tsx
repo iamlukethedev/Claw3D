@@ -137,6 +137,72 @@ export const GatewayConnectScreen = ({
     </div>
   );
 
+  const compactLocalGuidance = (
+    <div className="space-y-2 sm:hidden">
+      <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+        <p className="text-xs font-medium text-foreground">Demo office</p>
+        <p className="mt-1 text-xs leading-snug text-muted-foreground">
+          Run <span className="font-mono text-foreground">{localDemoCommand}</span>, then choose{" "}
+          <span className="font-mono text-foreground">Demo backend</span> and connect.
+        </p>
+      </div>
+      <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+        <p className="text-xs font-medium text-foreground">Other local runtimes</p>
+        <p className="mt-1 text-xs leading-snug text-muted-foreground">
+          Hermes: <span className="font-mono text-foreground">npm run hermes-adapter</span>. Custom: point the URL at your orchestrator, for example{" "}
+          <span className="font-mono text-foreground">http://localhost:7770</span>.
+        </p>
+      </div>
+      <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+        <p className="text-xs font-medium text-foreground">Opening Claw3D remotely</p>
+        <p className="mt-1 text-xs leading-snug text-muted-foreground">
+          Start Studio with <span className="font-mono text-foreground">HOST=0.0.0.0</span> and set{" "}
+          <span className="font-mono text-foreground">STUDIO_ACCESS_TOKEN</span>.
+        </p>
+      </div>
+    </div>
+  );
+
+  const expandedLocalGuidance = (
+    <div className="hidden space-y-3 sm:block">
+      <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+        <p className="text-xs font-medium text-foreground">Just want to see the office?</p>
+        <p className="mt-1 text-xs leading-snug text-muted-foreground">
+          Run <span className="font-mono text-foreground">{localDemoCommand}</span> to start a built-in mock gateway with demo agents.
+          Then choose <span className="font-mono text-foreground">Demo backend</span> and connect.
+        </p>
+      </div>
+      <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+        <p className="text-xs font-medium text-foreground">Using Hermes locally?</p>
+        <p className="mt-1 text-xs leading-snug text-muted-foreground">
+          Run <span className="font-mono text-foreground">npm run hermes-adapter</span>, then choose
+          <span className="font-mono text-foreground"> Hermes backend</span>. The default local URL is
+          <span className="font-mono text-foreground"> [REDACTED]</span>.
+        </p>
+      </div>
+      <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+        <p className="text-xs font-medium text-foreground">Using a custom runtime locally?</p>
+        <p className="mt-1 text-xs leading-snug text-muted-foreground">
+          Choose <span className="font-mono text-foreground">Custom backend</span> and point the URL
+          at your orchestrator or runtime boundary, for example
+          <span className="font-mono text-foreground"> http://localhost:7770</span>. Direct custom
+          runtime chat flows are not wired into Studio yet in this slice, but the provider seam and
+          metadata scaffold are now in place.
+        </p>
+      </div>
+      <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+        <p className="text-xs font-medium text-foreground">Opening Claw3D from another machine?</p>
+        <p className="mt-1 text-xs leading-snug text-muted-foreground">
+          Start Studio with <span className="font-mono text-foreground">HOST=0.0.0.0</span> (or a
+          specific LAN/Tailscale host) and set
+          <span className="font-mono text-foreground"> STUDIO_ACCESS_TOKEN</span> before exposing it
+          beyond localhost. Gateway settings are stored on the Studio host, but OpenClaw device approval
+          remains per browser/device.
+        </p>
+      </div>
+    </div>
+  );
+
   const remoteForm = (
     <div className="mt-2.5 flex flex-col gap-3">
       <label className="flex flex-col gap-1 text-[11px] font-medium text-foreground/90">
@@ -215,7 +281,7 @@ export const GatewayConnectScreen = ({
   );
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-[820px] flex-1 flex-col gap-5">
+    <div className="mx-auto flex min-h-0 max-h-full w-full max-w-[820px] flex-1 flex-col gap-4 overflow-y-auto overscroll-contain pr-1 sm:gap-5">
       <div className="ui-card px-4 py-2">
         <div className="flex items-center gap-2">
           {status === "connecting" ? (
@@ -229,7 +295,7 @@ export const GatewayConnectScreen = ({
         </div>
       </div>
 
-      <div className="ui-card px-4 py-5 sm:px-6">
+      <div className="ui-card px-4 py-4 sm:px-6 sm:py-5">
         <div>
           <p className="font-mono text-[10px] font-medium tracking-[0.06em] text-muted-foreground">
             Remote gateway (recommended)
@@ -243,31 +309,31 @@ export const GatewayConnectScreen = ({
           <p className="mt-1 text-xs text-muted-foreground">
             Each backend keeps its own saved URL and token.
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
             <button
               type="button"
-              className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+              className="ui-btn-secondary w-full px-3 py-2 text-[11px] font-semibold tracking-[0.05em] sm:w-auto sm:py-1.5"
               onClick={useDemoPreset}
             >
               Demo backend
             </button>
             <button
               type="button"
-              className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+              className="ui-btn-secondary w-full px-3 py-2 text-[11px] font-semibold tracking-[0.05em] sm:w-auto sm:py-1.5"
               onClick={useHermesPreset}
             >
               Hermes backend
             </button>
             <button
               type="button"
-              className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+              className="ui-btn-secondary w-full px-3 py-2 text-[11px] font-semibold tracking-[0.05em] sm:w-auto sm:py-1.5"
               onClick={useCustomPreset}
             >
               Custom backend
             </button>
             <button
               type="button"
-              className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+              className="ui-btn-secondary w-full px-3 py-2 text-[11px] font-semibold tracking-[0.05em] sm:w-auto sm:py-1.5"
               onClick={useOpenClawPreset}
             >
               OpenClaw backend
@@ -288,41 +354,9 @@ export const GatewayConnectScreen = ({
         </div>
         <div className="mt-3 space-y-3">
           {commandField}
-          <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
-            <p className="text-xs font-medium text-foreground">Just want to see the office?</p>
-            <p className="mt-1 text-xs leading-snug text-muted-foreground">
-              Run <span className="font-mono text-foreground">{localDemoCommand}</span> to start a built-in mock gateway with demo agents.
-              Then choose <span className="font-mono text-foreground">Demo backend</span> and connect.
-            </p>
-          </div>
-          <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
-            <p className="text-xs font-medium text-foreground">Using Hermes locally?</p>
-            <p className="mt-1 text-xs leading-snug text-muted-foreground">
-              Run <span className="font-mono text-foreground">npm run hermes-adapter</span>, then choose
-              <span className="font-mono text-foreground"> Hermes backend</span>. The default local URL is
-              <span className="font-mono text-foreground"> ws://localhost:18789</span>.
-            </p>
-          </div>
-          <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
-            <p className="text-xs font-medium text-foreground">Using a custom runtime locally?</p>
-            <p className="mt-1 text-xs leading-snug text-muted-foreground">
-              Choose <span className="font-mono text-foreground">Custom backend</span> and point the URL
-              at your orchestrator or runtime boundary, for example
-              <span className="font-mono text-foreground"> http://localhost:7770</span>. Direct custom
-              runtime chat flows are not wired into Studio yet in this slice, but the provider seam and
-              metadata scaffold are now in place.
-            </p>
-          </div>
-          <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
-            <p className="text-xs font-medium text-foreground">Opening Claw3D from another machine?</p>
-            <p className="mt-1 text-xs leading-snug text-muted-foreground">
-              Start Studio with <span className="font-mono text-foreground">HOST=0.0.0.0</span> (or a
-              specific LAN/Tailscale host) and set
-              <span className="font-mono text-foreground"> STUDIO_ACCESS_TOKEN</span> before exposing it
-              beyond localhost. Gateway settings are stored on the Studio host, but OpenClaw device approval
-              remains per browser/device.
-            </p>
-          </div>
+          {compactLocalGuidance}
+          {expandedLocalGuidance}
+
           {localGatewayDefaults ? (
             <div className="ui-input rounded-md px-3 py-3">
               <div className="space-y-2">

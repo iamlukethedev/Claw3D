@@ -90,15 +90,15 @@ export function TaskBoardView({
 }) {
   return (
     <section className="flex h-full min-h-0 flex-col bg-transparent text-white">
-      <div className="border-b border-cyan-500/10 bg-[#070b11]/22 px-4 py-3 backdrop-blur-[1px]">
-        <div className="flex items-start justify-between gap-3">
+      <div className="border-b border-cyan-500/10 bg-[#070b11]/22 px-3 py-3 backdrop-blur-[1px] sm:px-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan-200/80">
               {title}
             </div>
             <div className="mt-1 font-mono text-[11px] text-white/40">{subtitle}</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             <button
               type="button"
               onClick={onRefreshCronJobs}
@@ -166,9 +166,13 @@ export function TaskBoardView({
         ) : null}
       </div>
 
-      <div className={`grid min-h-0 flex-1 overflow-hidden ${selectedCard ? "grid-cols-[minmax(0,1fr)_300px]" : "grid-cols-1"}`}>
-        <div className="min-h-0 overflow-auto px-4 py-4">
-          <div className="grid min-w-[700px] grid-cols-5 gap-3">
+      <div
+        className={`grid min-h-0 flex-1 overflow-hidden ${
+          selectedCard ? "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px]" : "grid-cols-1"
+        }`}
+      >
+        <div className="min-h-0 overflow-auto px-3 py-4 sm:px-4">
+          <div className="grid min-w-[700px] grid-cols-5 gap-3 xl:min-w-0">
             {STATUS_ORDER.map((status) => {
               const cards = cardsByStatus[status];
               return (
@@ -259,8 +263,8 @@ export function TaskBoardView({
         </div>
 
         {selectedCard ? (
-          <aside className="flex min-h-0 flex-col border-l border-white/8 bg-black/25">
-            <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
+          <aside className="flex min-h-0 max-h-[45dvh] flex-col border-t border-white/8 bg-black/25 xl:max-h-none xl:border-t-0 xl:border-l">
+            <div className="flex items-center justify-between border-b border-white/8 px-3 py-3 sm:px-4">
               <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/45">
                 Task Details
               </div>
@@ -272,7 +276,7 @@ export function TaskBoardView({
                 Close
               </button>
             </div>
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 sm:px-4">
               <label className="flex flex-col gap-1">
                 <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
                   Title

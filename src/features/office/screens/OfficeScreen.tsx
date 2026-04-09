@@ -4216,8 +4216,8 @@ export function OfficeScreen({
         </div>
       ) : null}
       {showGatewayConnectOverlay ? (
-        <div className="pointer-events-auto absolute inset-0 z-50 flex items-start justify-center bg-[#120a05]/76 px-4 py-10">
-          <div className="w-full max-w-[860px] rounded-2xl border border-amber-900/55 bg-[#120a05]/98 p-3 shadow-2xl">
+        <div className="pointer-events-auto absolute inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#120a05]/76 px-3 py-4 safe-area-pad sm:px-4 sm:py-10">
+          <div className="w-full max-w-[860px] rounded-2xl border border-amber-900/55 bg-[#120a05]/98 p-3 shadow-2xl sm:p-4">
             <GatewayConnectScreen
               gatewayUrl={gatewayUrl}
               token={token}
@@ -4470,16 +4470,16 @@ export function OfficeScreen({
       </section>
 
       {showEmptyFleetBanner ? (
-        <div className="pointer-events-none fixed left-1/2 top-16 z-40 w-full max-w-xl -translate-x-1/2 px-4">
+        <div className="pointer-events-none fixed left-1/2 top-[max(4rem,calc(env(safe-area-inset-top)+1rem))] z-40 w-full max-w-xl -translate-x-1/2 px-3 sm:px-4">
           <div className="pointer-events-auto rounded-lg border border-amber-400/35 bg-black/80 px-4 py-3 shadow-2xl backdrop-blur">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-amber-200/80">
                   Office fleet status
                 </p>
                 <p className="mt-1 text-sm text-amber-50">{emptyFleetMessage}</p>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
                 <button
                   type="button"
                   className="ui-btn-secondary px-3 py-2 text-xs font-semibold tracking-[0.05em] text-foreground"
@@ -4650,10 +4650,10 @@ export function OfficeScreen({
       ) : null}
 
       {showOpenClawConsole ? (
-        <section className="pointer-events-auto fixed bottom-3 left-3 z-30 flex w-[520px] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded border border-cyan-500/25 bg-black/78 shadow-2xl backdrop-blur">
-          <div className="flex items-center justify-between border-b border-cyan-500/15 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-cyan-200/80">
+        <section className="pointer-events-auto fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-30 flex w-[min(520px,calc(100vw-max(1.5rem,calc(env(safe-area-inset-left)+env(safe-area-inset-right)+1.5rem))))] max-w-[calc(100vw-max(1.5rem,calc(env(safe-area-inset-left)+env(safe-area-inset-right)+1.5rem)))] flex-col overflow-hidden rounded border border-cyan-500/25 bg-black/78 shadow-2xl backdrop-blur">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cyan-500/15 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-cyan-200/80">
             <span>OpenClaw Event Console</span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <span className="text-[10px] text-cyan-100/45">
                 agents {state.agents.length} | events{" "}
                 {filteredOpenClawLogEntries.length}/{openClawLogEntries.length}
@@ -4697,7 +4697,7 @@ export function OfficeScreen({
             </div>
           </div>
           {!openClawConsoleCollapsed ? (
-            <div className="flex h-[320px] flex-col gap-3 overflow-y-auto bg-[#02090b]/96 px-3 py-2 font-mono text-[10px] leading-4">
+            <div className="flex h-[min(320px,42dvh)] flex-col gap-3 overflow-y-auto bg-[#02090b]/96 px-3 py-2 font-mono text-[10px] leading-4 sm:h-[320px]">
             <div className="rounded border border-cyan-500/10 bg-cyan-950/10 p-2">
               <div className="flex items-center gap-2">
                 <input
@@ -4862,16 +4862,15 @@ export function OfficeScreen({
       ) : null}
 
       <div
-        className={`fixed bottom-3 z-30 flex flex-col items-end gap-2 ${sidebarOpen ? "right-84" : "right-3"} ${
+        className={`fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 flex flex-col items-end gap-2 ${sidebarOpen ? "right-[max(0.75rem,env(safe-area-inset-right))] md:right-84" : "right-[max(0.75rem,env(safe-area-inset-right))]"} ${
           debugEnabled ? "hidden" : ""
         }`}
       >
         {chatOpen && (
           <div
-            className="flex overflow-hidden rounded border border-white/10 bg-[#0e0a04] shadow-2xl"
-            style={{ width: 560, height: 520 }}
+            className="flex h-[min(75dvh,520px)] w-[min(560px,calc(100vw-max(1.5rem,calc(env(safe-area-inset-left)+env(safe-area-inset-right)+1.5rem))))] max-w-[calc(100vw-max(1.5rem,calc(env(safe-area-inset-left)+env(safe-area-inset-right)+1.5rem)))] flex-col overflow-hidden rounded border border-white/10 bg-[#0e0a04] shadow-2xl sm:h-[520px] md:flex-row"
           >
-            <div className="flex w-44 shrink-0 flex-col border-r border-white/10">
+            <div className="flex max-h-40 shrink-0 flex-col border-b border-white/10 md:max-h-none md:w-44 md:border-b-0 md:border-r">
               <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
                 <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-white/60">
                   Agents
@@ -4880,13 +4879,14 @@ export function OfficeScreen({
                   {chatRosterEntries.length}
                 </span>
               </div>
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-x-auto overflow-y-auto md:overflow-y-auto">
                 {chatRosterEntries.length === 0 ? (
                   <div className="px-3 py-4 font-mono text-[11px] text-white/30">
                     No agents.
                   </div>
                 ) : (
-                  chatRosterEntries.map((agent) => {
+                  <div className="flex min-w-max flex-row md:min-w-0 md:flex-col">
+                    {chatRosterEntries.map((agent) => {
                     const isSelected = agent.id === selectedChatAgentId;
                     const isRunning = agent.isRunning;
                     return (
@@ -4894,7 +4894,7 @@ export function OfficeScreen({
                         key={agent.id}
                         type="button"
                         onClick={() => handleOpenAgentChat(agent.id)}
-                        className={`flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors ${
+                        className={`flex min-w-40 items-center gap-2 px-3 py-2.5 text-left transition-colors md:w-full md:min-w-0 ${
                           isSelected
                             ? "bg-white/10 text-white"
                             : "text-white/50 hover:bg-white/5 hover:text-white/80"
@@ -4916,7 +4916,8 @@ export function OfficeScreen({
                         </span>
                       </button>
                     );
-                  })
+                  })}
+                  </div>
                 )}
               </div>
             </div>
@@ -5014,7 +5015,7 @@ export function OfficeScreen({
         <button
           type="button"
           onClick={() => setChatOpen((prev) => !prev)}
-          className="flex items-center gap-1.5 rounded border border-amber-700/50 bg-[#0e0a04]/90 px-3 py-1.5 font-mono text-[11px] font-medium tracking-wider text-amber-500/80 shadow-lg backdrop-blur transition-colors hover:border-amber-600/70 hover:text-amber-400"
+          className="flex min-h-11 items-center gap-1.5 rounded border border-amber-700/50 bg-[#0e0a04]/90 px-3 py-2 font-mono text-[11px] font-medium tracking-wider text-amber-500/80 shadow-lg backdrop-blur transition-colors hover:border-amber-600/70 hover:text-amber-400"
         >
           {chatOpen ? (
             <>
@@ -5036,9 +5037,9 @@ export function OfficeScreen({
       </div>
 
       {mainVoiceState !== "idle" || mainVoiceError ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center">
+        <div className="pointer-events-none fixed inset-x-0 bottom-[max(4.5rem,calc(env(safe-area-inset-bottom)+4rem))] z-40 flex justify-center px-3 sm:bottom-6">
           <div
-            className={`flex min-w-[220px] items-center gap-3 rounded-full border px-4 py-3 font-mono text-[12px] shadow-2xl backdrop-blur ${
+            className={`flex w-full max-w-[min(420px,100%)] min-w-0 items-center gap-3 rounded-3xl border px-4 py-3 font-mono text-[12px] shadow-2xl backdrop-blur sm:min-w-[220px] sm:rounded-full ${
               mainVoiceError
                 ? "border-red-500/45 bg-red-950/75 text-red-100"
                 : "border-cyan-400/35 bg-black/70 text-white"
@@ -5078,7 +5079,7 @@ export function OfficeScreen({
       ) : null}
 
       {debugEnabled ? (
-        <section className="fixed bottom-3 right-3 z-50 max-h-[45vh] w-[560px] overflow-auto rounded border border-slate-700 bg-black/90 p-3 font-mono text-[11px] text-slate-100">
+        <section className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] z-50 max-h-[45vh] w-[min(560px,calc(100vw-max(1.5rem,calc(env(safe-area-inset-left)+env(safe-area-inset-right)+1.5rem))))] overflow-auto rounded border border-slate-700 bg-black/90 p-3 font-mono text-[11px] text-slate-100">
           <div className="mb-2 font-semibold text-cyan-300">office debug</div>
           <div className="mb-2 text-slate-400">
             status: {status} | agents: {state.agents.length}

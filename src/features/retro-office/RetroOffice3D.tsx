@@ -5230,7 +5230,7 @@ export function RetroOffice3D({
   }, [officeCenterSignal, overviewPreset]);
 
   return (
-    <div className="relative w-full h-full bg-[#1a1008] font-mono text-white overflow-hidden">
+    <div className="relative h-full w-full overflow-hidden bg-[#1a1008] font-mono text-white">
       {/* 3D Canvas — fills everything. */}
       <div
         className="absolute inset-0"
@@ -5904,8 +5904,8 @@ export function RetroOffice3D({
 
       {/* New Idea 2: Camera preset buttons — top left. */}
       {!readOnly && !immersiveOverlayActive ? (
-        <div className="absolute top-3 left-3 z-20 flex flex-col items-start gap-2">
-          <div className="flex items-center gap-1">
+        <div className="absolute left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-20 flex max-w-[calc(100vw-max(1.5rem,calc(env(safe-area-inset-left)+env(safe-area-inset-right)+1.5rem)))] flex-col items-start gap-2">
+          <div className="flex flex-wrap items-center gap-1">
             {(
               [
                 {
@@ -5931,7 +5931,7 @@ export function RetroOffice3D({
                 onClick={() => {
                   cameraPresetRef.current = CAMERA_PRESET_MAP[key];
                 }}
-                className="w-7 h-7 flex items-center justify-center rounded-md bg-[#1c1610]/80 text-amber-500/60 border border-amber-900/20 hover:bg-[#2a1e14] hover:text-amber-400 backdrop-blur-sm transition-colors"
+                className="flex h-9 w-9 items-center justify-center rounded-md border border-amber-900/20 bg-[#1c1610]/80 text-amber-500/60 backdrop-blur-sm transition-colors hover:bg-[#2a1e14] hover:text-amber-400 sm:h-7 sm:w-7"
               >
                 {icon}
               </button>
@@ -5941,7 +5941,7 @@ export function RetroOffice3D({
             <button
               type="button"
               onClick={() => setStandupBoardOpen(true)}
-              className="rounded-xl border border-emerald-500/20 bg-[#0b1410]/90 px-3 py-2 text-left shadow-lg backdrop-blur-sm transition-colors hover:border-emerald-400/35 hover:bg-[#102017]/95"
+              className="w-full max-w-[min(19rem,100%)] rounded-xl border border-emerald-500/20 bg-[#0b1410]/90 px-3 py-2 text-left shadow-lg backdrop-blur-sm transition-colors hover:border-emerald-400/35 hover:bg-[#102017]/95 sm:w-auto"
             >
               <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-emerald-200/80">
                 Standup
@@ -5963,7 +5963,7 @@ export function RetroOffice3D({
             <button
               type="button"
               onClick={() => openKanbanBoard(kanbanBoardItem)}
-              className="rounded-xl border border-cyan-500/22 bg-[#09111a]/90 px-3 py-2 text-left shadow-lg backdrop-blur-sm transition-colors hover:border-cyan-300/40 hover:bg-[#0d1b28]/95"
+              className="w-full max-w-[min(19rem,100%)] rounded-xl border border-cyan-500/22 bg-[#09111a]/90 px-3 py-2 text-left shadow-lg backdrop-blur-sm transition-colors hover:border-cyan-300/40 hover:bg-[#0d1b28]/95 sm:w-auto"
             >
               <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-200/80">
                 Kanban board
@@ -5975,21 +5975,21 @@ export function RetroOffice3D({
 
       {/* Title — top center overlay. */}
       {!immersiveOverlayActive ? (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none select-none z-10">
-          <div className="flex items-center gap-3">
-            <div className="h-px w-12 bg-gradient-to-r from-transparent to-amber-500/40" />
-            <span className="text-sm tracking-[0.3em] text-amber-300/80 font-bold uppercase">
+        <div className="pointer-events-none absolute left-1/2 top-[max(0.75rem,env(safe-area-inset-top))] z-10 flex w-[min(100%-3rem,24rem)] -translate-x-1/2 flex-col items-center gap-2 select-none sm:w-auto">
+          <div className="flex w-full items-center justify-center gap-2 sm:gap-3">
+            <div className="h-px w-6 bg-gradient-to-r from-transparent to-amber-500/40 sm:w-12" />
+            <span className="max-w-full truncate text-center text-xs font-bold uppercase tracking-[0.22em] text-amber-300/80 sm:text-sm sm:tracking-[0.3em]">
               {officeTitle}
             </span>
-            <div className="h-px w-12 bg-gradient-to-l from-transparent to-amber-500/40" />
+            <div className="h-px w-6 bg-gradient-to-l from-transparent to-amber-500/40 sm:w-12" />
           </div>
         </div>
       ) : null}
 
       {/* Agent roster — compact top summary with overflow panel. */}
       {!readOnly && !immersiveOverlayActive ? (
-        <div className="absolute top-10 left-1/2 z-20 -translate-x-1/2">
-          <div className="flex items-center gap-2 rounded-full border border-amber-900/25 bg-[#1c1610]/92 px-2 py-2 shadow-lg backdrop-blur-sm">
+        <div className="absolute left-1/2 top-[calc(max(0.75rem,env(safe-area-inset-top))+2.75rem)] z-20 w-[min(calc(100vw-max(1.5rem,calc(env(safe-area-inset-left)+env(safe-area-inset-right)+1.5rem))),28rem)] -translate-x-1/2 px-1 sm:w-auto sm:px-0">
+          <div className="flex items-center justify-between gap-2 rounded-full border border-amber-900/25 bg-[#1c1610]/92 px-2 py-2 shadow-lg backdrop-blur-sm">
             <div className="flex items-center -space-x-1.5">
               {compactRosterAgents.map((agent) => {
                 const status = agentStatusLookup[agent.id];
@@ -6015,7 +6015,7 @@ export function RetroOffice3D({
                         onAgentEdit?.(agent.id);
                       }
                     }}
-                    className={`relative flex h-8 w-8 items-center justify-center rounded-full border text-[9px] font-bold text-[#120e08] shadow transition-transform hover:-translate-y-0.5 ${
+                    className={`relative flex h-9 w-9 items-center justify-center rounded-full border text-[9px] font-bold text-[#120e08] shadow transition-transform hover:-translate-y-0.5 sm:h-8 sm:w-8 ${
                       spotlightAgentId === agent.id
                         ? "border-amber-200/80 ring-2 ring-amber-200/20"
                         : "border-[#120e08] hover:border-amber-200/50"
@@ -6045,7 +6045,7 @@ export function RetroOffice3D({
                 <button
                   type="button"
                   onClick={() => setAgentRosterOpen(true)}
-                  className="flex h-8 min-w-8 items-center justify-center rounded-full border border-amber-900/30 bg-[#120e08] px-2 text-[10px] font-semibold text-amber-200 transition-colors hover:border-amber-500/40 hover:text-white"
+                  className="flex h-9 min-w-9 items-center justify-center rounded-full border border-amber-900/30 bg-[#120e08] px-2 text-[10px] font-semibold text-amber-200 transition-colors hover:border-amber-500/40 hover:text-white sm:h-8 sm:min-w-8"
                 >
                   +{hiddenAgentCount}
                 </button>
@@ -6055,7 +6055,7 @@ export function RetroOffice3D({
             <button
               type="button"
               onClick={() => setAgentRosterOpen((prev) => !prev)}
-              className="inline-flex items-center gap-2 rounded-full border border-amber-900/25 bg-black/20 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-amber-100 transition-colors hover:border-amber-500/35 hover:text-white"
+              className="inline-flex min-h-9 items-center gap-2 rounded-full border border-amber-900/25 bg-black/20 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-amber-100 transition-colors hover:border-amber-500/35 hover:text-white sm:min-h-8"
             >
               <Users className="h-3.5 w-3.5" />
               <span>{agents.length}</span>
@@ -7028,7 +7028,7 @@ export function RetroOffice3D({
 
       {/* Toolbar — top right. */}
       {!readOnly && !immersiveOverlayActive ? (
-        <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
+        <div className="absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-20 flex max-w-[calc(100vw-max(1.5rem,calc(env(safe-area-inset-left)+env(safe-area-inset-right)+1.5rem)))] flex-wrap justify-end gap-2">
           {remoteOfficeEnabled &&
           (remoteOfficeSourceKind === "presence_endpoint"
             ? remoteOfficePresenceUrl.trim().length > 0
@@ -7036,7 +7036,7 @@ export function RetroOffice3D({
             <button
               onClick={() => setSettingsModalOpen(true)}
               title={remoteOfficeStatusText}
-              className="flex h-7 items-center justify-center gap-1 rounded-md border border-white/15 bg-[#120e08]/92 px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/75 transition-all backdrop-blur-sm hover:border-cyan-400/45 hover:text-cyan-100"
+              className="flex min-h-9 items-center justify-center gap-1 rounded-md border border-white/15 bg-[#120e08]/92 px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/75 transition-all backdrop-blur-sm hover:border-cyan-400/45 hover:text-cyan-100 sm:min-h-7"
             >
               <span>{remoteOfficeLabel}</span>
             </button>
@@ -7045,14 +7045,14 @@ export function RetroOffice3D({
             <button
               onClick={onAddAgent}
               title="Add agent"
-              className="flex h-7 items-center justify-center gap-1 rounded-md border border-cyan-500/35 bg-[#071018]/92 px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200 transition-all backdrop-blur-sm hover:border-cyan-400/55 hover:text-white"
+              className="flex min-h-9 items-center justify-center gap-1 rounded-md border border-cyan-500/35 bg-[#071018]/92 px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-200 transition-all backdrop-blur-sm hover:border-cyan-400/55 hover:text-white sm:min-h-7"
             >
               <UserPlus size={12} />
               <span>Add</span>
             </button>
           ) : null}
           <div
-            className={`flex h-7 items-center rounded-md border px-2 text-[10px] font-mono uppercase tracking-[0.12em] ${
+            className={`flex min-h-9 items-center rounded-md border px-2 text-[10px] font-mono uppercase tracking-[0.12em] sm:min-h-7 ${
               gatewayStatus === "connected"
                 ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-100"
                 : gatewayStatus === "connecting"
@@ -7067,14 +7067,14 @@ export function RetroOffice3D({
           <button
             onClick={() => setHeatmapMode((p) => !p)}
             title="Toggle heatmap"
-            className={`w-7 h-7 flex items-center justify-center rounded-md transition-all backdrop-blur-sm border ${heatmapMode ? "bg-amber-500/30 text-amber-300 border-amber-500/50" : "bg-[#1c1610]/80 text-amber-500/40 border-amber-900/20 hover:text-amber-400"}`}
+            className={`flex h-9 w-9 items-center justify-center rounded-md border transition-all backdrop-blur-sm sm:h-7 sm:w-7 ${heatmapMode ? "border-amber-500/50 bg-amber-500/30 text-amber-300" : "border-amber-900/20 bg-[#1c1610]/80 text-amber-500/40 hover:text-amber-400"}`}
           >
             <MapIcon size={12} />
           </button>
           <button
             onClick={() => setTrailMode((p) => !p)}
             title="Toggle trails"
-            className={`w-7 h-7 flex items-center justify-center rounded-md transition-all backdrop-blur-sm border ${trailMode ? "bg-amber-500/30 text-amber-300 border-amber-500/50" : "bg-[#1c1610]/80 text-amber-500/40 border-amber-900/20 hover:text-amber-400"}`}
+            className={`flex h-9 w-9 items-center justify-center rounded-md border transition-all backdrop-blur-sm sm:h-7 sm:w-7 ${trailMode ? "border-amber-500/50 bg-amber-500/30 text-amber-300" : "border-amber-900/20 bg-[#1c1610]/80 text-amber-500/40 hover:text-amber-400"}`}
           >
             <Maximize size={12} />
           </button>
@@ -7082,7 +7082,7 @@ export function RetroOffice3D({
           <button
             onClick={toggleEdit}
             title={editMode ? "Done editing" : "Edit office"}
-            className={`w-7 h-7 flex items-center justify-center rounded-md transition-all backdrop-blur-sm border ${editMode ? "bg-amber-500/30 text-amber-300 border-amber-500/50" : "bg-[#1c1610]/80 text-amber-500/40 border-amber-900/20 hover:text-amber-400"}`}
+            className={`flex h-9 w-9 items-center justify-center rounded-md border transition-all backdrop-blur-sm sm:h-7 sm:w-7 ${editMode ? "border-amber-500/50 bg-amber-500/30 text-amber-300" : "border-amber-900/20 bg-[#1c1610]/80 text-amber-500/40 hover:text-amber-400"}`}
           >
             {editMode ? (
               <Check size={12} strokeWidth={2.5} />
@@ -7093,7 +7093,7 @@ export function RetroOffice3D({
           <button
             onClick={() => setSettingsModalOpen(true)}
             title="Voice reply settings"
-            className={`w-7 h-7 flex items-center justify-center rounded-md transition-all backdrop-blur-sm border ${settingsModalOpen ? "bg-amber-500/30 text-amber-300 border-amber-500/50" : "bg-[#1c1610]/80 text-amber-500/40 border-amber-900/20 hover:text-amber-400"}`}
+            className={`flex h-9 w-9 items-center justify-center rounded-md border transition-all backdrop-blur-sm sm:h-7 sm:w-7 ${settingsModalOpen ? "border-amber-500/50 bg-amber-500/30 text-amber-300" : "border-amber-900/20 bg-[#1c1610]/80 text-amber-500/40 hover:text-amber-400"}`}
           >
             <Settings2 size={12} />
           </button>
@@ -7228,7 +7228,7 @@ export function RetroOffice3D({
       {!immersiveOverlayActive ? (
         <>
           {/* Ideas 3 + 6 + 8: Mini status bar — bottom left. */}
-          <div className="absolute bottom-3 left-3 flex flex-col items-start gap-1.5 z-10 pointer-events-none select-none">
+          <div className="safe-area-pad-x absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-0 z-10 flex max-w-full flex-col items-start gap-1.5 pointer-events-none select-none">
             {/* Idea 3: Activity feed entries — newest on bottom. */}
             {statusFeedEvents
               .slice(0, 4)
@@ -7236,14 +7236,14 @@ export function RetroOffice3D({
               .map((ev) => (
                 <div
                   key={`${ev.id}-${ev.ts}`}
-                  className="flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-[10px] font-mono"
+                  className="flex max-w-[min(100%,20rem)] items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-[10px] font-mono backdrop-blur-sm"
                 >
-                  <span className="text-amber-400/80 font-semibold">{ev.name}</span>
-                  <span className="text-amber-600/70">{ev.text}</span>
+                  <span className="shrink-0 font-semibold text-amber-400/80">{ev.name}</span>
+                  <span className="truncate text-amber-600/70">{ev.text}</span>
                 </div>
               ))}
             {/* Ideas 6 + 8: Gateway status, agent counts, vibe score. */}
-            <div className="flex items-center gap-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-[10px] font-mono">
+            <div className="flex max-w-[min(100%,24rem)] flex-wrap items-center gap-2 rounded-2xl bg-black/60 px-3 py-2 text-[10px] font-mono backdrop-blur-sm sm:rounded-full sm:py-1">
               <span className="text-amber-500/60">
                 {agents.filter((a) => a.status === "working").length} working
               </span>
@@ -7289,7 +7289,7 @@ export function RetroOffice3D({
               {!editMode && !spaceDown && (
                 <>
                   <span className="opacity-30">·</span>
-                  <span className="text-amber-400/40">
+                  <span className="hidden text-amber-400/40 sm:inline">
                     drag · scroll · space+drag · dbl-click
                   </span>
                 </>

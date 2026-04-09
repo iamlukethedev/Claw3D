@@ -84,17 +84,17 @@ export function KanbanImmersiveScreen({
       role="dialog"
       aria-modal="true"
       aria-label="Kanban Board"
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-3 py-3 safe-area-pad sm:px-6 sm:py-6"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative">
+      <div className="relative flex h-full w-full items-center justify-center">
         <button
           type="button"
           onClick={onClose}
           aria-label="Close Kanban Board"
-          className="absolute -right-5 -top-5 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-amber-400/20 bg-[#0e0b07]/90 text-amber-200/70 backdrop-blur-sm transition-colors hover:border-amber-400/40 hover:text-white"
+          className="absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-amber-400/20 bg-[#0e0b07]/90 text-amber-200/70 backdrop-blur-sm transition-colors hover:border-amber-400/40 hover:text-white sm:-right-5 sm:-top-5 sm:h-10 sm:w-10"
         >
           <X className="h-4 w-4" />
         </button>
@@ -102,7 +102,7 @@ export function KanbanImmersiveScreen({
         <div
           ref={dialogRef}
           tabIndex={-1}
-          className="flex h-[min(75vh,800px)] w-[min(80vw,1280px)] flex-col overflow-hidden rounded-2xl border border-amber-500/20 bg-[#0e0b07]/85 shadow-2xl outline-none backdrop-blur-md"
+          className="flex h-full max-h-[min(100%,860px)] w-full max-w-[1280px] flex-col overflow-hidden rounded-2xl border border-amber-500/20 bg-[#0e0b07]/85 shadow-2xl outline-none backdrop-blur-md sm:h-[min(82vh,860px)] sm:w-[min(94vw,1280px)]"
         >
           <div className="min-h-0 flex-1">
           <TaskBoardView

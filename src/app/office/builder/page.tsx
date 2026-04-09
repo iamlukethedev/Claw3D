@@ -14,7 +14,7 @@ export default function OfficeBuilderPage() {
   });
   const map = normalizeOfficeMap(getPublishedOfficeMap(WORKSPACE_ID), fallback);
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-background p-3">
+    <main className="relative h-dvh min-h-dvh w-full overflow-hidden bg-background p-2 safe-area-pad sm:p-3">
       <OfficeBuilderPanel initialMap={map} workspaceId={WORKSPACE_ID} officeId={OFFICE_ID} />
     </main>
   );
