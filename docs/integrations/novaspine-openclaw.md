@@ -17,18 +17,18 @@ From the user's point of view, they installed Claw3D and got NovaSpine memory in
 - OpenClaw already installed locally
 - a reachable local OpenClaw config, typically `~/.openclaw/openclaw.json`
 - Python 3.12+
-- Git
-- network access so Claw3D can fetch the NovaSpine repo cache and Python package
+- network access so Claw3D can install the pinned NovaSpine Python package
 
 ## What Claw3D Installs
 
 Claw3D does not bundle a second runtime. It upgrades the user's existing OpenClaw setup by:
 
-- fetching a NovaSpine source cache
-- installing the NovaSpine Python package
-- running the NovaSpine OpenClaw installer
+- installing a pinned NovaSpine Python package version
+- copying the bundled NovaSpine OpenClaw integration assets that ship with Claw3D
 - forcing the OpenClaw config onto NovaSpine's memory and context slots
 - validating the final config
+
+In the current Claw3D bundle, the OpenClaw-side assets are pinned to NovaSpine `0.3.0`.
 
 ## What This Enables
 

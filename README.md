@@ -96,9 +96,9 @@ If you already use OpenClaw, Claw3D can wire NovaSpine into that install for you
 What Claw3D does in that setup flow:
 
 - detects your local OpenClaw CLI and config
-- checks that Python 3.12+ and Git are available
-- fetches a local NovaSpine source cache
-- installs the NovaSpine Python package
+- checks that Python 3.12+ is available
+- installs a pinned NovaSpine Python package version
+- copies the bundled NovaSpine OpenClaw integration assets that ship with Claw3D
 - patches your OpenClaw config to use NovaSpine memory and context slots
 - validates the updated OpenClaw config
 

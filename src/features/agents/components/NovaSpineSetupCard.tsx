@@ -10,9 +10,10 @@ type NovaSpineIntegrationStatus = {
   pythonDetected: boolean;
   pythonVersion: string | null;
   pythonSupported: boolean;
-  gitDetected: boolean;
   novaspineModuleDetected: boolean;
   openclawConfigPath: string | null;
+  bundledVersion: string;
+  packageSpec: string;
   memorySlot: string | null;
   contextEngineSlot: string | null;
   consciousnessEnabled: boolean;
@@ -24,7 +25,7 @@ type NovaSpineIntegrationStatus = {
     | "missing-config"
     | "missing-python"
     | "unsupported-python"
-    | "missing-git";
+    | "missing-assets";
   messages: string[];
 };
 
@@ -41,7 +42,7 @@ const readinessCopy: Record<NovaSpineIntegrationStatus["readiness"], string> = {
   "missing-config": "OpenClaw is installed, but its config file was not found.",
   "missing-python": "Python 3 was not detected.",
   "unsupported-python": "Python 3.12+ is required for NovaSpine.",
-  "missing-git": "Git is required to fetch the bundled NovaSpine source cache.",
+  "missing-assets": "Claw3D is missing its bundled NovaSpine integration assets.",
 };
 
 const readJson = async <T,>(response: Response): Promise<T> => {
@@ -169,6 +170,12 @@ export const NovaSpineSetupCard = ({ compact = false }: { compact?: boolean }) =
             Slots:{" "}
             <span className="font-mono text-white">
               {status.memorySlot ?? "unset"} / {status.contextEngineSlot ?? "unset"}
+            </span>
+          </div>
+          <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-white/70">
+            NovaSpine:{" "}
+            <span className="font-mono text-white">
+              {status.packageSpec}
             </span>
           </div>
           <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-white/70">

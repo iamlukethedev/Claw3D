@@ -1,0 +1,79 @@
+{
+  "id": "novaspine-memory",
+  "name": "NovaSpine Memory",
+  "kind": "memory",
+  "description": "NovaSpine local-first memory plugin for OpenClaw with recall, provenance, current-fact tools, and reset-aware session capture.",
+  "uiHints": {
+    "baseUrl": {
+      "label": "NovaSpine Base URL",
+      "placeholder": "http://127.0.0.1:8420",
+      "help": "HTTP endpoint for the NovaSpine API service."
+    },
+    "apiToken": {
+      "label": "API Token",
+      "sensitive": true,
+      "placeholder": "Optional bearer token",
+      "help": "Only required when the NovaSpine service enforces bearer auth."
+    },
+    "autoRecall": {
+      "label": "Auto Recall",
+      "help": "Inject relevant NovaSpine memories before ordinary agent runs."
+    },
+    "sessionIngestOnReset": {
+      "label": "Ingest On Reset",
+      "help": "Best-effort ingest of the current session transcript when OpenClaw resets the session."
+    },
+    "sessionSnapshotOnReset": {
+      "label": "Snapshot On Reset",
+      "help": "Mirror a short session snapshot into workspace memory before reset/new-session boundaries."
+    },
+    "guidance": {
+      "label": "Prompt Guidance",
+      "help": "Inject static NovaSpine usage guidance so the model uses the right memory tools."
+    },
+    "recallTopK": {
+      "label": "Recall Top K",
+      "placeholder": "5"
+    },
+    "recallMinScore": {
+      "label": "Recall Min Score",
+      "placeholder": "0.005"
+    },
+    "captureCooldownMs": {
+      "label": "Reset Cooldown (ms)",
+      "placeholder": "300000",
+      "help": "Suppress duplicate reset/new-session captures inside this window."
+    },
+    "ticketsTtlMs": {
+      "label": "Resolution Ticket TTL (ms)",
+      "placeholder": "86400000",
+      "help": "How long fact-resolution tickets remain valid."
+    },
+    "timeoutMs": {
+      "label": "Timeout (ms)",
+      "placeholder": "12000"
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "baseUrl": { "type": "string" },
+      "apiToken": { "type": "string" },
+      "autoRecall": { "type": "boolean" },
+      "autoCapture": { "type": "boolean" },
+      "sessionIngestOnReset": { "type": "boolean" },
+      "sessionSnapshotOnReset": { "type": "boolean" },
+      "guidance": { "type": "boolean" },
+      "recallTopK": { "type": "number", "minimum": 1, "maximum": 20 },
+      "recallMinScore": { "type": "number", "minimum": 0, "maximum": 1 },
+      "recallFormat": { "type": "string", "enum": ["xml", "plain"] },
+      "captureMaxMessages": { "type": "number", "minimum": 1, "maximum": 10 },
+      "captureMinChars": { "type": "number", "minimum": 1, "maximum": 5000 },
+      "captureCooldownMs": { "type": "number", "minimum": 1000, "maximum": 86400000 },
+      "ticketsTtlMs": { "type": "number", "minimum": 60000, "maximum": 604800000 },
+      "roles": { "type": "array", "items": { "type": "string" } },
+      "timeoutMs": { "type": "number", "minimum": 1000, "maximum": 60000 }
+    }
+  }
+}

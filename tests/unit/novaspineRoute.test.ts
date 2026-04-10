@@ -32,12 +32,28 @@ const writeOpenClawConfig = (stateDir: string, payload: Record<string, unknown>)
 
 describe("/api/novaspine route", () => {
   let tempDir: string | null = null;
+  let assetDir: string | null = null;
+
+  const writeBundledAssets = (root: string) => {
+    fs.mkdirSync(path.join(root, "packages", "openclaw-memory-plugin"), { recursive: true });
+    fs.mkdirSync(path.join(root, "packages", "openclaw-context-engine"), { recursive: true });
+    fs.mkdirSync(path.join(root, "packages", "openclaw-consciousness"), { recursive: true });
+    fs.mkdirSync(path.join(root, "scripts"), { recursive: true });
+    fs.writeFileSync(path.join(root, "patch-openclaw-config.py"), "#!/usr/bin/env python3\n", "utf8");
+    fs.writeFileSync(path.join(root, "packages", "openclaw-memory-plugin", "package.json"), "{}", "utf8");
+    fs.writeFileSync(path.join(root, "packages", "openclaw-context-engine", "package.json"), "{}", "utf8");
+    fs.writeFileSync(path.join(root, "packages", "openclaw-consciousness", "package.json"), "{}", "utf8");
+    fs.writeFileSync(path.join(root, "scripts", "run-memory-maintenance.sh"), "#!/usr/bin/env bash\n", "utf8");
+  };
 
   beforeEach(() => {
     process.env = { ...ORIGINAL_ENV };
     mockedSpawnSync.mockReset();
     tempDir = makeTempDir("novaspine-route");
+    assetDir = makeTempDir("novaspine-assets");
     process.env.OPENCLAW_STATE_DIR = tempDir;
+    process.env.CLAW3D_NOVASPINE_ASSET_ROOT = assetDir;
+    writeBundledAssets(assetDir);
   });
 
   afterEach(() => {
@@ -45,6 +61,10 @@ describe("/api/novaspine route", () => {
     if (tempDir) {
       fs.rmSync(tempDir, { recursive: true, force: true });
       tempDir = null;
+    }
+    if (assetDir) {
+      fs.rmSync(assetDir, { recursive: true, force: true });
+      assetDir = null;
     }
   });
 
@@ -68,9 +88,6 @@ describe("/api/novaspine route", () => {
       }
       if (command === "python3" && (args as string[])[0] === "--version") {
         return { status: 0, stdout: "Python 3.12.4\n", stderr: "", error: undefined } as never;
-      }
-      if (command === "git" && (args as string[])[0] === "--version") {
-        return { status: 0, stdout: "git version 2.43.0\n", stderr: "", error: undefined } as never;
       }
       if (command === "python3" && (args as string[])[0] === "-c") {
         return { status: 0, stdout: "", stderr: "", error: undefined } as never;
@@ -108,23 +125,13 @@ describe("/api/novaspine route", () => {
       if (command === "python3" && argv[0] === "--version") {
         return { status: 0, stdout: "Python 3.12.4\n", stderr: "", error: undefined } as never;
       }
-      if (command === "git" && argv[0] === "--version") {
-        return { status: 0, stdout: "git version 2.43.0\n", stderr: "", error: undefined } as never;
-      }
       if (command === "python3" && argv[0] === "-c") {
         return { status: 0, stdout: "", stderr: "", error: undefined } as never;
-      }
-      if (command === "git" && argv[0] === "clone") {
-        const repoDir = argv[argv.length - 1];
-        fs.mkdirSync(path.join(repoDir, ".git"), { recursive: true });
-        fs.mkdirSync(path.join(repoDir, "scripts"), { recursive: true });
-        fs.writeFileSync(path.join(repoDir, "scripts", "install-openclaw.sh"), "#!/usr/bin/env bash\n", "utf8");
-        return { status: 0, stdout: "cloned", stderr: "", error: undefined } as never;
       }
       if (command === "python3" && argv[0] === "-m" && argv[1] === "pip") {
         return { status: 0, stdout: "installed", stderr: "", error: undefined } as never;
       }
-      if (command === "bash") {
+      if (command === "python3" && argv[0] === path.join(assetDir!, "patch-openclaw-config.py")) {
         writeOpenClawConfig(tempDir!, {
           gateway: { auth: { token: "token-123" } },
           plugins: {
@@ -171,9 +178,9 @@ describe("/api/novaspine route", () => {
     );
     expect(body.steps).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ name: "repo-sync", ok: true }),
         expect.objectContaining({ name: "python-package", ok: true }),
-        expect.objectContaining({ name: "openclaw-install", ok: true }),
+        expect.objectContaining({ name: "bundle-assets", ok: true }),
+        expect.objectContaining({ name: "openclaw-config-patch", ok: true }),
       ])
     );
 
