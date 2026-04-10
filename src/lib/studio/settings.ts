@@ -23,7 +23,12 @@ export type StudioGatewaySettings = {
   lastKnownGood?: StudioGatewayConnectionState;
 };
 
-export type StudioGatewayAdapterType = "openclaw" | "hermes" | "demo" | "custom";
+export type StudioGatewayAdapterType =
+  | "openclaw"
+  | "hermes"
+  | "demo"
+  | "paperclip"
+  | "custom";
 
 export type StudioGatewayProfile = {
   url: string;
@@ -709,7 +714,7 @@ const normalizeGatewayProfiles = (
 ): Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> | undefined => {
   if (!isRecord(value)) return undefined;
   const profiles: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> = {};
-  for (const adapterType of ["openclaw", "hermes", "demo", "custom"] as const) {
+  for (const adapterType of ["openclaw", "hermes", "demo", "paperclip", "custom"] as const) {
     const normalized = normalizeGatewayProfile(value[adapterType]);
     if (normalized) {
       profiles[adapterType] = normalized;
@@ -769,7 +774,7 @@ const mergeGatewayProfiles = (
   const next: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> = {
     ...(current ?? {}),
   };
-  for (const adapterType of ["openclaw", "hermes", "demo", "custom"] as const) {
+  for (const adapterType of ["openclaw", "hermes", "demo", "paperclip", "custom"] as const) {
     const profilePatch = patch[adapterType];
     if (profilePatch === undefined) continue;
     if (profilePatch === null) {
@@ -822,6 +827,7 @@ const normalizeGatewayAdapterType = (
   if (
     adapterType === "demo" ||
     adapterType === "hermes" ||
+    adapterType === "paperclip" ||
     adapterType === "openclaw" ||
     adapterType === "custom"
   ) {

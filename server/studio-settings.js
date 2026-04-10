@@ -61,6 +61,20 @@ const OPENCLAW_CONFIG_FILENAME = "openclaw.json";
 
 const isRecord = (value) => Boolean(value && typeof value === "object");
 
+const normalizeAdapterType = (value) => {
+  const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (
+    normalized === "openclaw" ||
+    normalized === "hermes" ||
+    normalized === "demo" ||
+    normalized === "paperclip" ||
+    normalized === "custom"
+  ) {
+    return normalized;
+  }
+  return "openclaw";
+};
+
 const readOpenclawGatewayDefaults = (env = process.env) => {
   try {
     const stateDir = resolveStateDir(env);
@@ -88,10 +102,7 @@ const loadUpstreamGatewaySettings = (env = process.env) => {
   const gateway = parsed && typeof parsed === "object" ? parsed.gateway : null;
   const url = typeof gateway?.url === "string" ? gateway.url.trim() : "";
   const token = typeof gateway?.token === "string" ? gateway.token.trim() : "";
-  const adapterType =
-    typeof gateway?.adapterType === "string" && gateway.adapterType.trim()
-      ? gateway.adapterType.trim()
-      : "openclaw";
+  const adapterType = normalizeAdapterType(gateway?.adapterType);
   if (!token && adapterType === "openclaw") {
     const defaults = readOpenclawGatewayDefaults(env);
     if (defaults) {

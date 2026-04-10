@@ -142,6 +142,7 @@ export const resolveInitialGatewayAutoConnectDelayMs = (
   switch (adapterType) {
     case "hermes":
     case "demo":
+    case "paperclip":
       return INITIAL_AUTO_CONNECT_DELAY_MS;
     default:
       return 0;
@@ -155,6 +156,7 @@ export const resolveInitialGatewayConnectAttemptCount = (
   switch (adapterType) {
     case "hermes":
     case "demo":
+    case "paperclip":
       return 2;
     default:
       if (hasConnectedOnce) return 1;
@@ -169,6 +171,8 @@ const resolveDefaultGatewayProfile = (
   switch (adapterType) {
     case "custom":
       return { url: DEFAULT_CUSTOM_RUNTIME_URL, token: "" };
+    case "paperclip":
+      return { url: "ws://localhost:18791", token: "" };
     case "demo":
     case "hermes":
       return { url: "ws://localhost:18789", token: "" };
@@ -201,6 +205,7 @@ const normalizeLocalGatewayDefaults = (value: unknown): StudioGatewaySettings | 
     raw.adapterType === "demo" ||
     raw.adapterType === "hermes" ||
     raw.adapterType === "openclaw" ||
+    raw.adapterType === "paperclip" ||
     raw.adapterType === "custom"
       ? raw.adapterType
       : "openclaw";
@@ -224,7 +229,7 @@ const normalizeGatewayProfilesPublic = (
   if (!value || typeof value !== "object") return undefined;
   const raw = value as Partial<Record<StudioGatewayAdapterType, StudioGatewayProfilePublic>>;
   const profiles: Partial<Record<StudioGatewayAdapterType, { url: string; token: string }>> = {};
-  for (const adapterType of ["openclaw", "hermes", "demo", "custom"] as const) {
+  for (const adapterType of ["openclaw", "hermes", "demo", "paperclip", "custom"] as const) {
     const profile = normalizeGatewayProfilePublic(raw[adapterType]);
     if (profile) {
       profiles[adapterType] = profile;
@@ -775,6 +780,7 @@ export const useGatewayConnection = (
                   gateway.lastKnownGood.adapterType === "demo" ||
                   gateway.lastKnownGood.adapterType === "hermes" ||
                   gateway.lastKnownGood.adapterType === "openclaw" ||
+                  gateway.lastKnownGood.adapterType === "paperclip" ||
                   gateway.lastKnownGood.adapterType === "custom"
                     ? gateway.lastKnownGood.adapterType
                     : "openclaw",
@@ -782,7 +788,7 @@ export const useGatewayConnection = (
             : null;
         // When the user has no saved gateway URL, prefer the runtime
         // localGatewayDefaults (from openclaw.json, CLAW3D_GATEWAY_URL,
-        // or detected local Hermes/demo adapter ports)
+        // or detected local Hermes/demo/paperclip adapter ports)
         // over the build-time NEXT_PUBLIC_GATEWAY_URL which may be stale
         // or empty if the operator forgot to rebuild after .env changes.
         const hasSavedUrl = Boolean(gateway?.url?.trim());
@@ -791,6 +797,7 @@ export const useGatewayConnection = (
             ? ((gateway.adapterType === "demo" ||
                 gateway.adapterType === "hermes" ||
                 gateway.adapterType === "openclaw" ||
+                gateway.adapterType === "paperclip" ||
                 gateway.adapterType === "custom"
                 ? gateway.adapterType
                 : "openclaw") as StudioGatewayAdapterType)
@@ -986,6 +993,7 @@ export const useGatewayConnection = (
         hello?.adapterType === "demo" ||
         hello?.adapterType === "hermes" ||
         hello?.adapterType === "openclaw" ||
+        hello?.adapterType === "paperclip" ||
         hello?.adapterType === "custom"
           ? hello.adapterType
           : "openclaw";

@@ -41,12 +41,16 @@ export const ConnectionPanel = ({
   const tokenOptional =
     selectedAdapterType === "hermes" ||
     selectedAdapterType === "demo" ||
+    selectedAdapterType === "paperclip" ||
     selectedAdapterType === "custom";
   const applyDemoPreset = () => {
     onAdapterTypeChange("demo");
   };
   const applyHermesPreset = () => {
     onAdapterTypeChange("hermes");
+  };
+  const applyPaperclipPreset = () => {
+    onAdapterTypeChange("paperclip");
   };
   const applyCustomPreset = () => {
     onAdapterTypeChange("custom");
@@ -95,7 +99,13 @@ export const ConnectionPanel = ({
             type="text"
             value={gatewayUrl}
             onChange={(event) => onGatewayUrlChange(event.target.value)}
-            placeholder="ws://localhost:18789"
+            placeholder={
+              selectedAdapterType === "custom"
+                ? "http://localhost:7770"
+                : selectedAdapterType === "paperclip"
+                  ? "ws://localhost:18791"
+                  : "[REDACTED]"
+            }
             spellCheck={false}
           />
         </label>
@@ -130,6 +140,13 @@ export const ConnectionPanel = ({
           onClick={applyHermesPreset}
         >
           Hermes backend
+        </button>
+        <button
+          className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+          type="button"
+          onClick={applyPaperclipPreset}
+        >
+          Paperclip backend
         </button>
         <button
           className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"

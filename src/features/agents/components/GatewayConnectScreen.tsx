@@ -50,6 +50,7 @@ export const GatewayConnectScreen = ({
   const tokenOptional =
     selectedAdapterType === "hermes" ||
     selectedAdapterType === "demo" ||
+    selectedAdapterType === "paperclip" ||
     selectedAdapterType === "custom";
   const isLocal = useMemo(() => isLocalGatewayUrl(gatewayUrl), [gatewayUrl]);
   const localPort = useMemo(() => resolveLocalGatewayPort(gatewayUrl), [gatewayUrl]);
@@ -73,6 +74,9 @@ export const GatewayConnectScreen = ({
   };
   const useOpenClawPreset = () => {
     onAdapterTypeChange("openclaw");
+  };
+  const usePaperclipPreset = () => {
+    onAdapterTypeChange("paperclip");
   };
   const useCustomPreset = () => {
     onAdapterTypeChange("custom");
@@ -146,7 +150,13 @@ export const GatewayConnectScreen = ({
           type="text"
           value={gatewayUrl}
           onChange={(event) => onGatewayUrlChange(event.target.value)}
-          placeholder="wss://your-gateway.example.com"
+          placeholder={
+            selectedAdapterType === "custom"
+              ? "http://localhost:7770"
+              : selectedAdapterType === "paperclip"
+                ? "ws://localhost:18791"
+                : "wss://your-gateway.example.com"
+          }
           spellCheck={false}
         />
       </label>
@@ -261,6 +271,13 @@ export const GatewayConnectScreen = ({
             <button
               type="button"
               className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+              onClick={usePaperclipPreset}
+            >
+              Paperclip backend
+            </button>
+            <button
+              type="button"
+              className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
               onClick={useCustomPreset}
             >
               Custom backend
@@ -301,6 +318,14 @@ export const GatewayConnectScreen = ({
               Run <span className="font-mono text-foreground">npm run hermes-adapter</span>, then choose
               <span className="font-mono text-foreground"> Hermes backend</span>. The default local URL is
               <span className="font-mono text-foreground"> ws://localhost:18789</span>.
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+            <p className="text-xs font-medium text-foreground">Using Paperclip locally?</p>
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">
+              Run <span className="font-mono text-foreground">npm run paperclip-adapter</span>, then choose
+              <span className="font-mono text-foreground"> Paperclip backend</span>. The default local URL is
+              <span className="font-mono text-foreground"> ws://localhost:18791</span>.
             </p>
           </div>
           <div className="rounded-md border border-border bg-muted/30 px-3 py-3">

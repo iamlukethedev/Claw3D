@@ -94,6 +94,25 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
     });
   });
 
+  it("uses CLAW3D_GATEWAY_ADAPTER_TYPE for Paperclip env defaults", async () => {
+    process.env.CLAW3D_GATEWAY_URL = "ws://my-paperclip:18791";
+    process.env.CLAW3D_GATEWAY_ADAPTER_TYPE = "paperclip";
+    delete process.env.CLAW3D_GATEWAY_TOKEN;
+    process.env.OPENCLAW_STATE_DIR = "/tmp/claw3d-test-nonexistent-" + Date.now();
+    const { loadLocalGatewayDefaults } = await import(
+      "../../src/lib/studio/settings-store"
+    );
+    const result = loadLocalGatewayDefaults();
+    expect(result).toEqual({
+      url: "ws://my-paperclip:18791",
+      token: "",
+      adapterType: "paperclip",
+      profiles: {
+        paperclip: { url: "ws://my-paperclip:18791", token: "" },
+      },
+    });
+  });
+
   it("exposes local Hermes adapter defaults when only HERMES_ADAPTER_PORT is set", async () => {
     delete process.env.CLAW3D_GATEWAY_URL;
     delete process.env.CLAW3D_GATEWAY_TOKEN;
@@ -109,6 +128,25 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
       adapterType: "hermes",
       profiles: {
         hermes: { url: "ws://localhost:19444", token: "" },
+      },
+    });
+  });
+
+  it("exposes local Paperclip adapter defaults when only PAPERCLIP_ADAPTER_PORT is set", async () => {
+    delete process.env.CLAW3D_GATEWAY_URL;
+    delete process.env.CLAW3D_GATEWAY_TOKEN;
+    process.env.PAPERCLIP_ADAPTER_PORT = "18791";
+    process.env.OPENCLAW_STATE_DIR = "/tmp/claw3d-test-nonexistent-" + Date.now();
+    const { loadLocalGatewayDefaults } = await import(
+      "../../src/lib/studio/settings-store"
+    );
+    const result = loadLocalGatewayDefaults();
+    expect(result).toEqual({
+      url: "ws://localhost:18791",
+      token: "",
+      adapterType: "paperclip",
+      profiles: {
+        paperclip: { url: "ws://localhost:18791", token: "" },
       },
     });
   });

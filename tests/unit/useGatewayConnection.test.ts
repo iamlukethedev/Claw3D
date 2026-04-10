@@ -80,17 +80,17 @@ const setupAndImportHook = async (gatewayUrl: string | null) => {
     }) => {
       gatewayUrl: string;
       token: string;
-      selectedAdapterType: "openclaw" | "hermes" | "demo" | "custom";
-      detectedAdapterType: "openclaw" | "hermes" | "demo" | "custom" | null;
-      activeAdapterType: "openclaw" | "hermes" | "demo" | "custom";
+      selectedAdapterType: "openclaw" | "hermes" | "demo" | "paperclip" | "custom";
+      detectedAdapterType: "openclaw" | "hermes" | "demo" | "paperclip" | "custom" | null;
+      activeAdapterType: "openclaw" | "hermes" | "demo" | "paperclip" | "custom";
       localGatewayDefaults: {
         url: string;
         token: string;
-        adapterType: "openclaw" | "hermes" | "demo" | "custom";
+        adapterType: "openclaw" | "hermes" | "demo" | "paperclip" | "custom";
       } | null;
       shouldPromptForConnect: boolean;
       useLocalGatewayDefaults: () => void;
-      setSelectedAdapterType: (value: "openclaw" | "hermes" | "demo" | "custom") => void;
+      setSelectedAdapterType: (value: "openclaw" | "hermes" | "demo" | "paperclip" | "custom") => void;
       connect: () => Promise<void>;
     },
     captured,
@@ -344,6 +344,7 @@ describe("useGatewayConnection", () => {
     expect(mod.resolveInitialGatewayAutoConnectDelayMs("custom")).toBe(0);
     expect(mod.resolveInitialGatewayAutoConnectDelayMs("hermes")).toBe(900);
     expect(mod.resolveInitialGatewayAutoConnectDelayMs("demo")).toBe(900);
+    expect(mod.resolveInitialGatewayAutoConnectDelayMs("paperclip")).toBe(900);
   });
 
   it("retries_only_the_first_connect_for_hermes_and_demo", async () => {
@@ -352,8 +353,10 @@ describe("useGatewayConnection", () => {
     expect(mod.resolveInitialGatewayConnectAttemptCount("custom", false)).toBe(1);
     expect(mod.resolveInitialGatewayConnectAttemptCount("hermes", false)).toBe(2);
     expect(mod.resolveInitialGatewayConnectAttemptCount("demo", false)).toBe(2);
+    expect(mod.resolveInitialGatewayConnectAttemptCount("paperclip", false)).toBe(2);
     expect(mod.resolveInitialGatewayConnectAttemptCount("hermes", true)).toBe(2);
     expect(mod.resolveInitialGatewayConnectAttemptCount("demo", true)).toBe(2);
+    expect(mod.resolveInitialGatewayConnectAttemptCount("paperclip", true)).toBe(2);
     expect(mod.resolveInitialGatewayConnectAttemptCount("openclaw", true)).toBe(1);
   });
 
@@ -847,4 +850,68 @@ describe("useGatewayConnection", () => {
       expect(screen.getByTestId("gatewayUrl")).toHaveTextContent("http://127.0.0.1:7770");
     });
   });
+
+
+  it("restores_paperclip_profile_when_switching_adapter_type", async () => {
+    const { useGatewayConnection } = await setupAndImportHook(null);
+    const coordinator = {
+      loadSettingsEnvelope: async () => ({
+        settings: {
+          version: 1,
+          gateway: {
+            url: "[REDACTED]",
+            token: "",
+            adapterType: "hermes",
+            profiles: {
+              hermes: { url: "[REDACTED]", token: "" },
+              paperclip: { url: "ws://localhost:18791", token: "" },
+            },
+          },
+          focused: {},
+          avatars: {},
+          analytics: {},
+          voiceReplies: {},
+          office: {},
+          deskAssignments: {},
+          standup: {},
+          taskBoard: {},
+        },
+        localGatewayDefaults: null,
+      }),
+      loadSettings: async () => null,
+      schedulePatch: () => {},
+      flushPending: async () => {},
+    };
+
+    const Probe = () => {
+      const state = useGatewayConnection(coordinator);
+      return createElement(
+        "div",
+        null,
+        createElement("div", { "data-testid": "gatewayUrl" }, state.gatewayUrl),
+        createElement(
+          "button",
+          {
+            type: "button",
+            "data-testid": "switch-paperclip",
+            onClick: () => state.setSelectedAdapterType("paperclip"),
+          },
+          "paperclip"
+        )
+      );
+    };
+
+    render(createElement(Probe));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("gatewayUrl")).toHaveTextContent("[REDACTED]");
+    });
+
+    fireEvent.click(screen.getByTestId("switch-paperclip"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("gatewayUrl")).toHaveTextContent("ws://localhost:18791");
+    });
+  });
+
 });

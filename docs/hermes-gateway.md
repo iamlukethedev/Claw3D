@@ -121,6 +121,8 @@ This branch does not replace the adapter with ACP yet. The current
 production-ready path uses the adapter because it works with the existing
 Claw3D gateway contract today and is ready for upstream testing now.
 
+For the Paperclip adapter path, see [`docs/paperclip-gateway.md`](./paperclip-gateway.md).
+
 The runtime seam added in Studio is what makes an ACP-backed Hermes
 provider feasible as a follow-up without reworking the whole UI again.
 

@@ -33,6 +33,25 @@ describe("studio settings normalization", () => {
     expect(normalized.gateway?.url).toBe("ws://localhost:18789");
   });
 
+  it("preserves paperclip adapter profiles", () => {
+    const normalized = normalizeStudioSettings({
+      gateway: {
+        url: "ws://localhost:18791",
+        token: "",
+        adapterType: "paperclip",
+        profiles: {
+          paperclip: { url: "ws://localhost:18791", token: "" },
+        },
+      },
+    });
+
+    expect(normalized.gateway?.adapterType).toBe("paperclip");
+    expect(normalized.gateway?.profiles?.paperclip).toEqual({
+      url: "ws://localhost:18791",
+      token: "",
+    });
+  });
+
   it("normalizes_dual_mode_preferences", () => {
     const normalized = normalizeStudioSettings({
       focused: {

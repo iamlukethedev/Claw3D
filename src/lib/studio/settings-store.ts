@@ -71,15 +71,21 @@ const readOpenclawGatewayDefaults = (): StudioGatewaySettings | null => {
 
 const normalizeAdapterType = (value: string | undefined): StudioGatewayAdapterType | null => {
   const normalized = value?.trim().toLowerCase();
-  if (normalized === "openclaw" || normalized === "hermes" || normalized === "demo" || normalized === "custom") {
+  if (
+    normalized === "openclaw" ||
+    normalized === "hermes" ||
+    normalized === "demo" ||
+    normalized === "paperclip" ||
+    normalized === "custom"
+  ) {
     return normalized;
   }
   return null;
 };
 
 const readPortBasedGatewayProfile = (
-  adapterType: Extract<StudioGatewayAdapterType, "hermes" | "demo">,
-  envKey: "HERMES_ADAPTER_PORT" | "DEMO_ADAPTER_PORT"
+  adapterType: Extract<StudioGatewayAdapterType, "hermes" | "demo" | "paperclip">,
+  envKey: "HERMES_ADAPTER_PORT" | "DEMO_ADAPTER_PORT" | "PAPERCLIP_ADAPTER_PORT"
 ): StudioGatewayProfile | null => {
   const rawPort = process.env[envKey]?.trim();
   if (!rawPort) return null;
@@ -96,10 +102,12 @@ const buildEnvGatewayDefaults = (): StudioGatewaySettings | null => {
 
   const hermesProfile = readPortBasedGatewayProfile("hermes", "HERMES_ADAPTER_PORT");
   const demoProfile = readPortBasedGatewayProfile("demo", "DEMO_ADAPTER_PORT");
+  const paperclipProfile = readPortBasedGatewayProfile("paperclip", "PAPERCLIP_ADAPTER_PORT");
 
   const profiles: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> = {};
   if (hermesProfile) profiles.hermes = hermesProfile;
   if (demoProfile) profiles.demo = demoProfile;
+  if (paperclipProfile) profiles.paperclip = paperclipProfile;
 
   if (envUrl) {
     profiles[envAdapterType] = buildLocalProfile(envUrl, envToken);
@@ -111,9 +119,13 @@ const buildEnvGatewayDefaults = (): StudioGatewaySettings | null => {
     });
   }
 
-  const fallbackProfile = profiles.hermes ?? profiles.demo ?? null;
+  const fallbackProfile = profiles.hermes ?? profiles.demo ?? profiles.paperclip ?? null;
   if (!fallbackProfile) return null;
-  const fallbackAdapterType = profiles.hermes ? "hermes" : "demo";
+  const fallbackAdapterType = profiles.hermes
+    ? "hermes"
+    : profiles.demo
+      ? "demo"
+      : "paperclip";
   return buildGatewaySettings({
     adapterType: fallbackAdapterType,
     url: fallbackProfile.url,
@@ -154,7 +166,7 @@ export const loadLocalGatewayDefaults = (): StudioGatewaySettings | null => {
   }
   // Fall back to env vars so operators can configure the gateway URL at
   // runtime without openclaw.json and without a rebuild. If no explicit
-  // URL is provided, also expose local Hermes/Demo adapter ports when set.
+  // URL is provided, also expose local Hermes/Demo/Paperclip adapter ports when set.
   return fromEnv;
 };
 

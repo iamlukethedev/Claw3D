@@ -88,6 +88,7 @@ export function SettingsPanel({
   const tokenOptional =
     selectedAdapterType === "hermes" ||
     selectedAdapterType === "demo" ||
+    selectedAdapterType === "paperclip" ||
     selectedAdapterType === "custom";
   const [remoteOfficeTokenDraft, setRemoteOfficeTokenDraft] = useState("");
 
@@ -135,6 +136,7 @@ export function SettingsPanel({
             [
               ["demo", "Demo"],
               ["hermes", "Hermes"],
+              ["paperclip", "Paperclip"],
               ["custom", "Custom"],
               ["openclaw", "OpenClaw"],
             ] as const
@@ -168,7 +170,9 @@ export function SettingsPanel({
               placeholder={
                 selectedAdapterType === "custom"
                   ? "http://localhost:7770"
-                  : "ws://localhost:18789"
+                  : selectedAdapterType === "paperclip"
+                    ? "ws://localhost:18791"
+                    : "[REDACTED]"
               }
               className="w-full rounded-md border border-cyan-500/10 bg-black/25 px-3 py-2 font-mono text-[11px] text-cyan-100 outline-none transition-colors placeholder:text-cyan-100/30 focus:border-cyan-400/30"
             />

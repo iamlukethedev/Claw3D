@@ -35,6 +35,7 @@ Today it can sit on top of:
 
 - OpenClaw through the existing gateway flow
 - Hermes through the bundled WebSocket adapter
+- Paperclip through the bundled WebSocket adapter
 - a direct HTTP `custom` runtime provider for orchestrator-backed stacks
 - a built-in demo gateway for office exploration without a real agent framework
 
@@ -100,7 +101,7 @@ npm run dev
 ```
 
 Then open `http://localhost:3000` and configure the gateway URL and token in Studio.
-Studio now also persists the selected backend mode (`OpenClaw`, `Hermes`, `Demo`, or `Custom`) and
+Studio now also persists the selected backend mode (`OpenClaw`, `Hermes`, `Paperclip`, `Demo`, or `Custom`) and
 shows the active backend reported by the connected gateway.
 
 ### Custom runtime mode
@@ -167,6 +168,25 @@ ws://localhost:18789
 ```
 
 In the connect screen, choose `Hermes backend`, then connect.
+
+### Paperclip adapter
+
+If you want to use Paperclip instead of OpenClaw:
+
+```bash
+npm run paperclip-adapter
+npm run dev
+```
+
+For a local adapter on the same machine, the default upstream URL is:
+
+```text
+ws://localhost:18791
+```
+
+In the connect screen, choose `Paperclip backend`, then connect.
+
+See [`docs/paperclip-gateway.md`](docs/paperclip-gateway.md) for setup details and adapter scope.
 
 ## How It Connects
 
@@ -242,8 +262,8 @@ Common environment variables:
 - `CUSTOM_RUNTIME_ALLOWLIST` restricts which hosts `/api/runtime/custom` may fetch. If unset, it falls back to `UPSTREAM_ALLOWLIST`.
 - `NEXT_PUBLIC_GATEWAY_URL` provides the default upstream gateway URL when Studio settings are empty. **Note:** this is a build-time variable — changes require `npm run build` to take effect.
 - `CLAW3D_GATEWAY_URL` and `CLAW3D_GATEWAY_TOKEN` provide a runtime alternative to `NEXT_PUBLIC_GATEWAY_URL` that takes effect on server restart without a rebuild.
-- `CLAW3D_GATEWAY_ADAPTER_TYPE` can pair with `CLAW3D_GATEWAY_URL` to mark those runtime defaults as `openclaw`, `hermes`, `demo`, or `custom`.
-- If `CLAW3D_GATEWAY_URL` is not set, Studio can still surface local Hermes or demo adapter defaults from `HERMES_ADAPTER_PORT` / `DEMO_ADAPTER_PORT`.
+- `CLAW3D_GATEWAY_ADAPTER_TYPE` can pair with `CLAW3D_GATEWAY_URL` to mark those runtime defaults as `openclaw`, `hermes`, `paperclip`, `demo`, or `custom`.
+- If `CLAW3D_GATEWAY_URL` is not set, Studio can still surface local Hermes, Paperclip, or demo adapter defaults from `HERMES_ADAPTER_PORT` / `PAPERCLIP_ADAPTER_PORT` / `DEMO_ADAPTER_PORT`.
 - OpenClaw file defaults still come from `~/.openclaw/openclaw.json` when present.
 - `OPENCLAW_STATE_DIR` and `OPENCLAW_CONFIG_PATH` override the default OpenClaw paths.
 - `OPENCLAW_GATEWAY_SSH_TARGET`, `OPENCLAW_GATEWAY_SSH_USER`, `OPENCLAW_GATEWAY_SSH_PORT`, and `OPENCLAW_GATEWAY_SSH_STRICT_HOST_KEY_CHECKING` support advanced gateway-host operations over SSH when needed.
@@ -255,6 +275,7 @@ See [`.env.example`](.env.example) for the full local development template.
 
 - `npm run dev` starts the Studio dev server.
 - `npm run hermes-adapter` starts the Hermes WebSocket adapter.
+- `npm run paperclip-adapter` starts the Paperclip WebSocket adapter.
 - `npm run demo-gateway` starts the built-in mock gateway for demo mode.
 - `npm run build` builds the production Next.js app.
 - `npm run start` starts the production server.
@@ -278,6 +299,7 @@ See [`.env.example`](.env.example) for the full local development template.
 - [`docs/pi-chat-streaming.md`](docs/pi-chat-streaming.md): gateway runtime streaming and transcript rendering.
 - [`docs/permissions-sandboxing.md`](docs/permissions-sandboxing.md): Studio permissions and OpenClaw behavior.
 - [`docs/hermes-gateway.md`](docs/hermes-gateway.md): Hermes adapter setup, capabilities, and current limitations.
+- [`docs/paperclip-gateway.md`](docs/paperclip-gateway.md): Paperclip adapter setup, event mapping, and current limitations.
 
 ## Current Limitations
 
@@ -291,7 +313,7 @@ If the UI loads but Connect fails, the problem is usually on the Studio -> Gatew
 
 - Confirm the upstream URL and token in Studio settings.
 - `EPROTO` or `wrong version number` usually means `wss://` was used against a non-TLS endpoint.
-- `INVALID_REQUEST` errors mentioning `minProtocol` or `maxProtocol` usually mean the gateway is too old for Claw3D protocol v3. Upgrade OpenClaw, use the Hermes adapter, or run `npm run demo-gateway`.
+- `INVALID_REQUEST` errors mentioning `minProtocol` or `maxProtocol` usually mean the gateway is too old for Claw3D protocol v3. Upgrade OpenClaw, use the Hermes/Paperclip adapters, or run `npm run demo-gateway`.
 - `401 Studio access token required` usually means `STUDIO_ACCESS_TOKEN` is enabled and the request is missing the expected `studio_access` cookie.
 - If `/api/runtime/custom` returns a blocked-host error in production, set `CUSTOM_RUNTIME_ALLOWLIST` or include the runtime host in `UPSTREAM_ALLOWLIST`.
 - Helpful proxy error codes include `studio.gateway_url_missing`, `studio.gateway_token_missing`, `studio.upstream_error`, and `studio.upstream_closed`.
