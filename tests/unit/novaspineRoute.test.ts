@@ -84,7 +84,7 @@ describe("/api/novaspine route", () => {
 
     mockedSpawnSync.mockImplementation((command, args) => {
       if (command === "openclaw" && (args as string[])[0] === "--version") {
-        return { status: 0, stdout: "2026.4.9\n", stderr: "", error: undefined } as never;
+        return { status: 0, stdout: "2026.4.10\n", stderr: "", error: undefined } as never;
       }
       if (command === "python3" && (args as string[])[0] === "--version") {
         return { status: 0, stdout: "Python 3.12.4\n", stderr: "", error: undefined } as never;
@@ -103,7 +103,7 @@ describe("/api/novaspine route", () => {
       expect.objectContaining({
         integrationEnabled: true,
         readiness: "integrated",
-        openclawVersion: "2026.4.9",
+        openclawVersion: "2026.4.10",
         memorySlot: "novaspine-memory",
         contextEngineSlot: "novaspine-context",
       })
@@ -120,7 +120,7 @@ describe("/api/novaspine route", () => {
     mockedSpawnSync.mockImplementation((command, args) => {
       const argv = args as string[];
       if (command === "openclaw" && argv[0] === "--version") {
-        return { status: 0, stdout: "2026.4.9\n", stderr: "", error: undefined } as never;
+        return { status: 0, stdout: "2026.4.10\n", stderr: "", error: undefined } as never;
       }
       if (command === "python3" && argv[0] === "--version") {
         return { status: 0, stdout: "Python 3.12.4\n", stderr: "", error: undefined } as never;

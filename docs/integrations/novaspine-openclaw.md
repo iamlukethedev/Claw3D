@@ -28,7 +28,7 @@ Claw3D does not bundle a second runtime. It upgrades the user's existing OpenCla
 - forcing the OpenClaw config onto NovaSpine's memory and context slots
 - validating the final config
 
-In the current Claw3D bundle, the OpenClaw-side assets are pinned to NovaSpine `0.3.0`.
+In the current Claw3D bundle, the OpenClaw-side assets are pinned to NovaSpine `0.3.0` and include the OpenClaw `2026.4.10` Active Memory-compatible plugin snapshot.
 
 ## What This Enables
 

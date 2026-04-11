@@ -52,6 +52,10 @@
     "timeoutMs": {
       "label": "Timeout (ms)",
       "placeholder": "12000"
+    },
+    "activeMemory": {
+      "label": "Active Memory",
+      "help": "Optional pre-reply NovaSpine Active Memory pass modeled after OpenClaw 4.10 Active Memory."
     }
   },
   "configSchema": {
@@ -73,7 +77,33 @@
       "captureCooldownMs": { "type": "number", "minimum": 1000, "maximum": 86400000 },
       "ticketsTtlMs": { "type": "number", "minimum": 60000, "maximum": 604800000 },
       "roles": { "type": "array", "items": { "type": "string" } },
-      "timeoutMs": { "type": "number", "minimum": 1000, "maximum": 60000 }
+      "timeoutMs": { "type": "number", "minimum": 1000, "maximum": 60000 },
+      "activeMemory": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "agents": { "type": "array", "items": { "type": "string" } },
+          "allowedChatTypes": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["direct", "group", "channel"] }
+          },
+          "queryMode": { "type": "string", "enum": ["message", "recent", "full"] },
+          "promptStyle": {
+            "type": "string",
+            "enum": ["balanced", "strict", "contextual", "recall-heavy", "precision-heavy", "preference-only"]
+          },
+          "timeoutMs": { "type": "number", "minimum": 250, "maximum": 60000 },
+          "maxSummaryChars": { "type": "number", "minimum": 40, "maximum": 1000 },
+          "recentUserTurns": { "type": "number", "minimum": 0, "maximum": 4 },
+          "recentAssistantTurns": { "type": "number", "minimum": 0, "maximum": 3 },
+          "recentUserChars": { "type": "number", "minimum": 40, "maximum": 1000 },
+          "recentAssistantChars": { "type": "number", "minimum": 40, "maximum": 1000 },
+          "logging": { "type": "boolean" },
+          "persistTranscripts": { "type": "boolean" },
+          "transcriptDir": { "type": "string" }
+        }
+      }
     }
   }
 }
