@@ -703,6 +703,32 @@ function buildActiveMemoryMetadata(
   ].join("\n");
 }
 
+async function applyLegacyRecall(
+  api: OpenClawPluginApi,
+  cfg: NovaSpinePluginConfig,
+  prompt: string,
+  logCooldowns: Map<string, number>,
+  result: { prependContext?: string; prependSystemContext?: string; appendSystemContext?: string },
+): Promise<void> {
+  try {
+    const response = await requestJson<AugmentResponse>(cfg, "/api/v1/memory/augment", {
+      method: "POST",
+      body: {
+        query: prompt,
+        top_k: cfg.recallTopK,
+        min_score: cfg.recallMinScore,
+        format: cfg.recallFormat,
+        roles: cfg.roles,
+      },
+    });
+    if (response.count > 0 && response.context.trim()) {
+      result.prependContext = `[NovaSpine Recall]\n${response.context}\n`;
+    }
+  } catch (error) {
+    logWarnOnce(api.logger, logCooldowns, "novaspine-memory.inject", `novaspine-memory: recall failed: ${String(error)}`);
+  }
+}
+
 async function persistActiveMemoryTranscript(
   api: OpenClawPluginApi,
   activeMemory: NovaSpineActiveMemoryConfig,
@@ -2105,6 +2131,9 @@ const novaspineMemoryPlugin = {
       }
 
       const activeMemory = cfg.activeMemory;
+      const activeMemoryConfigured = Boolean(activeMemory);
+      let activeMemoryEligible = false;
+      let activeMemoryFailed = false;
       if (activeMemory) {
         const sessionDisabled = await isActiveMemorySessionDisabled(api, {
           sessionKey: ctx.sessionKey,
@@ -2128,6 +2157,7 @@ const novaspineMemoryPlugin = {
           Boolean(ctx.sessionKey || ctx.sessionId) &&
           agentAllowed &&
           chatAllowed;
+        activeMemoryEligible = eligible;
 
         if (eligible) {
           const turns = extractRecentTurns(event.messages);
@@ -2184,6 +2214,7 @@ const novaspineMemoryPlugin = {
               );
             }
           } catch (error) {
+            activeMemoryFailed = true;
             logWarnOnce(
               api.logger,
               logCooldowns,
@@ -2212,24 +2243,12 @@ const novaspineMemoryPlugin = {
             }
           }
         }
-      } else if (cfg.autoRecall) {
-        try {
-          const response = await requestJson<AugmentResponse>(cfg, "/api/v1/memory/augment", {
-            method: "POST",
-            body: {
-              query: prompt,
-              top_k: cfg.recallTopK,
-              min_score: cfg.recallMinScore,
-              format: cfg.recallFormat,
-              roles: cfg.roles,
-            },
-          });
-          if (response.count > 0 && response.context.trim()) {
-            result.prependContext = `[NovaSpine Recall]\n${response.context}\n`;
-          }
-        } catch (error) {
-          logWarnOnce(api.logger, logCooldowns, "novaspine-memory.inject", `novaspine-memory: recall failed: ${String(error)}`);
-        }
+      }
+
+      const shouldFallbackRecall =
+        cfg.autoRecall && !storeRequest && (!activeMemoryConfigured || !activeMemoryEligible || activeMemoryFailed);
+      if (shouldFallbackRecall) {
+        await applyLegacyRecall(api, cfg, prompt, logCooldowns, result);
       }
 
       if (systemSections.length) result.prependSystemContext = systemSections.join("\n\n");

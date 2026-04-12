@@ -9,6 +9,7 @@ from pathlib import Path
 
 
 PLUGIN_IDS = ("novaspine-memory", "novaspine-context", "nova-consciousness")
+COMMON_ACTIVE_MEMORY_AGENTS = ("main", "main-lab", "discord-private", "discord-shared")
 
 
 def _merge_missing(target: dict, defaults: dict) -> None:
@@ -23,7 +24,46 @@ def _merge_missing(target: dict, defaults: dict) -> None:
         target.setdefault(key, deepcopy(value))
 
 
-def _default_plugin_entries(base_url: str, consciousness_base_url: str) -> dict:
+def _recommended_active_memory_agents(config_data: dict) -> list[str]:
+    agents = config_data.get("agents")
+    listed: list[str] = []
+    if isinstance(agents, dict):
+        entries = agents.get("list")
+        if isinstance(entries, list):
+            for item in entries:
+                if not isinstance(item, dict):
+                    continue
+                agent_id = item.get("id") or item.get("name")
+                if isinstance(agent_id, str) and agent_id and agent_id not in listed:
+                    listed.append(agent_id)
+
+    if not listed:
+        return ["main"]
+
+    common = [agent_id for agent_id in COMMON_ACTIVE_MEMORY_AGENTS if agent_id in listed]
+    if common:
+        return common
+
+    return [listed[0]]
+
+
+def _default_plugin_entries(base_url: str, consciousness_base_url: str, active_memory_agents: list[str]) -> dict:
+    active_memory_config = {
+        "enabled": True,
+        "agents": active_memory_agents,
+        "allowedChatTypes": ["direct", "group"],
+        "queryMode": "recent",
+        "promptStyle": "balanced",
+        "timeoutMs": 12000,
+        "maxSummaryChars": 220,
+        "recentUserTurns": 2,
+        "recentAssistantTurns": 1,
+        "recentUserChars": 220,
+        "recentAssistantChars": 180,
+        "logging": False,
+        "persistTranscripts": False,
+        "transcriptDir": "active-memory",
+    }
     return {
         "novaspine-memory": {
             "enabled": True,
@@ -40,21 +80,7 @@ def _default_plugin_entries(base_url: str, consciousness_base_url: str) -> dict:
                 "timeoutMs": 20000,
                 "captureCooldownMs": 300000,
                 "ticketsTtlMs": 86400000,
-                "activeMemory": {
-                    "enabled": True,
-                    "allowedChatTypes": ["direct", "group", "channel"],
-                    "queryMode": "recent",
-                    "promptStyle": "balanced",
-                    "timeoutMs": 12000,
-                    "maxSummaryChars": 220,
-                    "recentUserTurns": 2,
-                    "recentAssistantTurns": 1,
-                    "recentUserChars": 220,
-                    "recentAssistantChars": 180,
-                    "logging": False,
-                    "persistTranscripts": False,
-                    "transcriptDir": "active-memory",
-                },
+                "activeMemory": active_memory_config,
             },
         },
         "novaspine-context": {
@@ -188,20 +214,28 @@ def main() -> int:
 
     _merge_plugin_entries(
         plugins,
-        _default_plugin_entries(args.base_url, args.consciousness_base_url),
+        _default_plugin_entries(
+            args.base_url,
+            args.consciousness_base_url,
+            _recommended_active_memory_agents(data),
+        ),
     )
 
-    if not args.no_backup:
+    rendered = json.dumps(data, indent=2) + "\n"
+    changed = rendered != original_text
+
+    if changed and not args.no_backup:
         stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
         backup_path = config_path.with_name(f"{config_path.name}.bak.{stamp}")
         backup_path.write_text(original_text)
 
-    config_path.write_text(json.dumps(data, indent=2) + "\n")
+    if changed:
+        config_path.write_text(rendered)
 
     print(
         json.dumps(
             {
-                "status": "ok",
+                "status": "ok" if changed else "unchanged",
                 "config": str(config_path),
                 "install_root": str(install_root),
                 "plugins_enabled": list(PLUGIN_IDS),
