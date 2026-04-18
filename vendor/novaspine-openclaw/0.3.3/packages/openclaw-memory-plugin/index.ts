@@ -291,6 +291,8 @@ const CHANGE_ANSWER_CONTRACT = [
   "If NovaSpine memory includes previous/historical and current values, include both exact values in the final answer.",
   "Do not collapse old values into generic wording such as shifted, changed, updated, or previous value.",
 ].join(" ");
+const CHANGE_RECALL_HINT =
+  "Change-history recall hint: previous historical old current new changed replaced moved from to before now. Prefer structured facts containing previous/historical and current values.";
 const ACTIVE_MEMORY_PLUGIN_TAG = "novaspine-active-memory";
 const ACTIVE_MEMORY_GUIDANCE = [
   `When <${ACTIVE_MEMORY_PLUGIN_TAG}>...</${ACTIVE_MEMORY_PLUGIN_TAG}> appears, it is NovaSpine's Active Memory summary.`,
@@ -605,6 +607,7 @@ function stripInjectedMemoryNoise(text: string): string {
       return !/^nova\s*spine active memory:/i.test(line);
     })
     .join(" ")
+    .replace(/\bConsciousness continuity context:\s*[\s\S]*?(?=(?:User\s+\w+\s+(?:previous\/historical|current:))|$)/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -678,6 +681,12 @@ function buildActiveMemoryQuery(
 
 function isChangeQuestion(value: string): boolean {
   return CHANGE_QUERY_PATTERN.test(value);
+}
+
+function buildRecallQuery(prompt: string, changeQuestion = isChangeQuestion(prompt)): string {
+  const normalized = prompt.trim();
+  if (!changeQuestion) return normalized;
+  return `${normalized}\n${CHANGE_RECALL_HINT}`;
 }
 
 function extractChangeFacts(memories: RecallMemory[], maxFacts: number): string[] {
@@ -795,7 +804,7 @@ async function applyLegacyRecall(
     const response = await requestJson<AugmentResponse>(cfg, "/api/v1/memory/augment", {
       method: "POST",
       body: {
-        query: prompt,
+        query: buildRecallQuery(prompt),
         top_k: cfg.recallTopK,
         min_score: cfg.recallMinScore,
         format: cfg.recallFormat,
@@ -2280,7 +2289,7 @@ const novaspineMemoryPlugin = {
 
         if (eligible) {
           const turns = extractRecentTurns(event.messages);
-          const query = buildActiveMemoryQuery(prompt, turns, activeMemory);
+          const query = buildRecallQuery(buildActiveMemoryQuery(prompt, turns, activeMemory), changeQuestion);
           try {
             const response = await requestJson<AugmentResponse>(
               { ...cfg, timeoutMs: activeMemory.timeoutMs },

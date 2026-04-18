@@ -70,6 +70,8 @@ const CHANGE_ANSWER_CONTRACT = [
   "If NovaSpine memory includes previous/historical and current values, include both exact values in the final answer.",
   "Do not collapse old values into generic wording such as shifted, changed, updated, or previous value.",
 ].join(" ");
+const CHANGE_RECALL_HINT =
+  "Change-history recall hint: previous historical old current new changed replaced moved from to before now. Prefer structured facts containing previous/historical and current values.";
 
 const configSchema = {
   type: "object",
@@ -216,6 +218,12 @@ function escapeXml(value: string): string {
 
 function isChangeQuestion(value: string): boolean {
   return CHANGE_QUERY_PATTERN.test(value);
+}
+
+function buildRecallQuery(objective: string, changeQuestion = isChangeQuestion(objective)): string {
+  const normalized = objective.trim();
+  if (!changeQuestion) return normalized;
+  return `${normalized}\n${CHANGE_RECALL_HINT}`;
 }
 
 function extractChangeFacts(memories: RecallMemory[], maxFacts = 8): string[] {
@@ -516,7 +524,7 @@ function createNovaSpineContextEngine(
         try {
           const response = await requestJson<RecallResponse>(cfg, "/api/v1/memory/recall", {
             method: "POST",
-            body: { query: objective, top_k: cfg.recallTopK },
+            body: { query: buildRecallQuery(objective), top_k: cfg.recallTopK },
           });
           memories = filterMemoryHits(response.memories || [], cfg.recallMinScore);
         } catch (error) {
