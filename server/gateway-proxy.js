@@ -71,7 +71,15 @@ const createFrameRateLimiter = (
 const isUpstreamAllowed = (url) => {
   const allowlist = (process.env.UPSTREAM_ALLOWLIST || "").trim();
   if (!allowlist) {
-    return process.env.NODE_ENV !== "production";
+    if (process.env.NODE_ENV === "production") {
+      console.warn(
+        "[gateway-proxy] refusing upstream connection: UPSTREAM_ALLOWLIST is " +
+          "empty in production. Set UPSTREAM_ALLOWLIST=host1,host2 (comma-" +
+          "separated hostnames) to allow specific upstream hosts."
+      );
+      return false;
+    }
+    return true;
   }
   try {
     const parsed = new URL(url);
@@ -79,8 +87,22 @@ const isUpstreamAllowed = (url) => {
       .split(",")
       .map((h) => h.trim().toLowerCase())
       .filter(Boolean);
-    return allowed.includes(parsed.hostname.toLowerCase());
-  } catch {
+    const hostname = parsed.hostname.toLowerCase();
+    if (!allowed.includes(hostname)) {
+      console.warn(
+        `[gateway-proxy] refusing upstream connection to "${hostname}": host ` +
+          `not in UPSTREAM_ALLOWLIST (${allowlist}). Add the host to the ` +
+          `allowlist if you trust it.`
+      );
+      return false;
+    }
+    return true;
+  } catch (err) {
+    const reason = err && typeof err === "object" && "message" in err ? err.message : "invalid URL";
+    console.warn(
+      `[gateway-proxy] refusing upstream connection: could not parse URL ` +
+        `"${url}" (${reason}).`
+    );
     return false;
   }
 };
