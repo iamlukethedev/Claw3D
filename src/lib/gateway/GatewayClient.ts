@@ -558,6 +558,23 @@ const requiresDeviceIdentityHint =
 
 const isGatewayProtocolMismatchError = (error: GatewayResponseError) => {
   if (error.code.trim().toUpperCase() !== "INVALID_REQUEST") return false;
+  // The gateway may provide a structured details.code alongside the
+  // generic INVALID_REQUEST. Known non-protocol rejection codes must
+  // not surface the "possible protocol mismatch" hint, since it
+  // misleads operators whose real problem is origin allowlist, missing
+  // device identity, or upstream policy.
+  const details = error.details;
+  if (details && typeof details === "object") {
+    const code = (details as { code?: unknown }).code;
+    if (typeof code === "string") {
+      const NON_PROTOCOL_DETAIL_CODES = new Set([
+        "CONTROL_UI_ORIGIN_NOT_ALLOWED",
+        "CONTROL_UI_DEVICE_IDENTITY_REQUIRED",
+        "UPSTREAM_NOT_ALLOWED",
+      ]);
+      if (NON_PROTOCOL_DETAIL_CODES.has(code)) return false;
+    }
+  }
   const message = error.message.trim();
   if (!message) return false;
   return /minProtocol|maxProtocol/i.test(message);
