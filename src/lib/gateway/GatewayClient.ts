@@ -604,7 +604,12 @@ const formatGatewayError = (error: unknown) => {
   }
   if (error instanceof Error) {
     if (/timed out connecting to the gateway/i.test(error.message)) {
-      return `${error.message} If you are testing locally, an older OpenClaw build may be speaking an incompatible protocol. Try upgrading OpenClaw, using the Hermes adapter, or running \`npm run demo-gateway\`.`;
+      // A local timeout carries no information about why the upstream did
+      // not respond. Suggest the directions the operator can actually check,
+      // without biasing toward a protocol mismatch — that is only one of
+      // several possible root causes (network, origin allowlist, upstream
+      // policy, credentials, nginx idle timeout, ...).
+      return `${error.message} Verify that the gateway is reachable at the configured URL, that origin and credentials meet the gateway's requirements, and (if testing locally with a self-built gateway) consider \`npm run demo-gateway\` to isolate the problem.`;
     }
     return error.message;
   }
