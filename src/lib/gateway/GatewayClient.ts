@@ -722,7 +722,7 @@ export const useGatewayConnection = (
       setSelectedAdapterTypeState(value);
       const profile =
         adapterProfiles[value] ?? resolveDefaultStudioGatewayProfile(value, localGatewayDefaults);
-      setGatewayUrl(profile.url);
+      setGatewayUrl(profile.url ?? "");
       // Prefer the token from the initial private settings load when the in-memory
       // profile has an empty token (e.g. the profile was populated from the sanitized
       // public API response which strips real token values).
@@ -771,8 +771,8 @@ export const useGatewayConnection = (
         const selectedProfile =
           resolvedGatewayProfiles.activeProfile ??
           resolveDefaultStudioGatewayProfile(nextAdapterType, normalizedDefaults);
-        const nextGatewayUrl = selectedProfile.url;
-        const nextToken = selectedProfile.token;
+        const nextGatewayUrl = selectedProfile.url ?? "";
+        const nextToken = selectedProfile.token ?? "";
         loadedGatewaySettings.current = {
           gatewayUrl: nextGatewayUrl.trim(),
           token: nextToken,
@@ -1109,13 +1109,13 @@ export const useGatewayConnection = (
     if (!localGatewayDefaults) {
       return;
     }
-    setGatewayUrl(localGatewayDefaults.url);
-    setToken(localGatewayDefaults.token);
+    setGatewayUrl(localGatewayDefaults.url ?? "");
+    setToken(localGatewayDefaults.token ?? "");
     setAdapterProfiles((current) => ({
       ...current,
       [localGatewayDefaults.adapterType]: {
-        url: localGatewayDefaults.url,
-        token: localGatewayDefaults.token,
+        url: localGatewayDefaults.url ?? "",
+        token: localGatewayDefaults.token ?? "",
       },
     }));
     setSelectedAdapterTypeState(localGatewayDefaults.adapterType);
@@ -1165,8 +1165,8 @@ export const useGatewayConnection = (
       selectedAdapterType === "local" ||
       selectedAdapterType === "claw3d" ||
       !hasLastKnownGoodState ||
-      !gatewayUrl.trim() ||
-      (selectedAdapterType === "openclaw" && !token.trim()) ||
+      !(gatewayUrl ?? "").trim() ||
+      (selectedAdapterType === "openclaw" && !(token ?? "").trim()) ||
       wasManualDisconnectRef.current ||
       Boolean(error));
 

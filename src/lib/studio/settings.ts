@@ -956,14 +956,14 @@ export const resolveDefaultStudioGatewayProfile = (
   if (explicitProfile?.url) {
     return {
       url: explicitProfile.url,
-      token: explicitProfile.token,
+      token: explicitProfile.token ?? "",
     };
   }
 
-  if (localDefaults?.adapterType === adapterType && localDefaults.url.trim()) {
+  if (localDefaults?.adapterType === adapterType && localDefaults.url?.trim()) {
     return {
       url: localDefaults.url,
-      token: localDefaults.token,
+      token: localDefaults.token ?? "",
     };
   }
 
@@ -1004,7 +1004,7 @@ export const resolveStudioGatewayProfiles = ({
   if (gateway?.url?.trim()) {
     profiles[selectedAdapterType] = {
       url: gateway.url,
-      token: gateway.token,
+      token: gateway.token ?? "",
     };
   }
 
@@ -1014,7 +1014,7 @@ export const resolveStudioGatewayProfiles = ({
   if (!profiles[selectedAdapterType] && lastKnownGoodForSelected?.url) {
     profiles[selectedAdapterType] = {
       url: lastKnownGoodForSelected.url,
-      token: lastKnownGoodForSelected.token,
+      token: lastKnownGoodForSelected.token ?? "",
     };
   }
 
