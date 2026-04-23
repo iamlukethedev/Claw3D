@@ -505,7 +505,7 @@ export class GatewayBrowserClient {
       isSecureContext,
     });
 
-    const scopes = ["operator.admin", "operator.approvals", "operator.pairing"];
+    const scopes = ["operator.read", "operator.admin", "operator.approvals", "operator.pairing"];
     const role = "operator";
     const authScopeKey = normalizeAuthScope(this.opts.authScopeKey ?? this.opts.url);
     let deviceIdentity: Awaited<ReturnType<typeof loadOrCreateDeviceIdentity>> | null = null;
@@ -703,9 +703,10 @@ export class GatewayBrowserClient {
     this.connectNonce = null;
     this.connectSent = false;
     if (this.connectTimer !== null) window.clearTimeout(this.connectTimer);
-    gatewayBrowserDebugLog("queue-connect", { delayMs: 750 });
+    const SOCKET_OPEN_CONNECT_DELAY_MS = 75;
+    gatewayBrowserDebugLog("queue-connect", { delayMs: SOCKET_OPEN_CONNECT_DELAY_MS });
     this.connectTimer = window.setTimeout(() => {
       void this.sendConnect();
-    }, 750);
+    }, SOCKET_OPEN_CONNECT_DELAY_MS);
   }
 }

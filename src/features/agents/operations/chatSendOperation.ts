@@ -11,6 +11,7 @@ import {
 import type { AgentState } from "@/features/agents/state/store";
 import { randomUUID } from "@/lib/uuid";
 import type { TranscriptAppendMeta } from "@/features/agents/state/transcript";
+import type { RuntimeAttachment } from "@/lib/runtime/types";
 
 type SendDispatchAction =
   | { type: "updateAgent"; agentId: string; patch: Partial<AgentState> }
@@ -86,13 +87,15 @@ export async function sendChatMessageViaStudio(params: {
   agentId: string;
   sessionKey: string;
   message: string;
+  attachments?: RuntimeAttachment[];
   clearRunTracking?: (runId: string) => void;
   echoUserMessage?: boolean;
   now?: () => number;
   generateRunId?: () => string;
 }): Promise<void> {
   const trimmed = params.message.trim();
-  if (!trimmed) return;
+  const attachments = params.attachments ?? [];
+  if (!trimmed && attachments.length === 0) return;
   const echoUserMessage = params.echoUserMessage !== false;
 
   const generateRunId = params.generateRunId ?? (() => randomUUID());
@@ -206,6 +209,7 @@ export async function sendChatMessageViaStudio(params: {
     const sendResult = await params.client.call("chat.send", {
       sessionKey: params.sessionKey,
       message: buildAgentInstruction({ message: trimmed }),
+      ...(attachments.length > 0 ? { attachments } : {}),
       deliver: false,
       idempotencyKey: runId,
     });

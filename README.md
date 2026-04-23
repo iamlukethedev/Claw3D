@@ -100,26 +100,31 @@ npm run dev
 ```
 
 Then open `http://localhost:3000` and configure the gateway URL and token in Studio.
-Studio now also persists the selected backend mode (`OpenClaw`, `Hermes`, `Demo`, or `Custom`) and
+Studio now also persists the selected backend mode (`OpenClaw`, `Hermes`, `Demo`, `Local`, `Claw3D`, or `Custom`) and
 shows the active backend reported by the connected gateway.
 
-### Custom runtime mode
+### Runtime profiles
 
-If you are integrating an orchestrator-backed runtime through the `custom`
-provider seam, start your runtime first, then start Claw3D:
+If you are integrating an orchestrator-backed runtime through the direct
+HTTP runtime seam, start your runtime first, then start Claw3D:
 
 ```bash
 npm run dev
 ```
 
-Then open `http://localhost:3000`, choose `Custom backend`, and point the
-upstream URL at your runtime boundary, for example:
+Then open `http://localhost:3000`, choose `Local runtime`, `Claw3D runtime`,
+or `Custom backend`, and point the upstream URL at your runtime boundary.
+Typical examples:
 
 ```text
 http://127.0.0.1:7770
 ```
 
-Current `custom` runtime expectations:
+```text
+http://localhost:3000/api/runtime/custom
+```
+
+Current direct-runtime expectations:
 
 - `GET /health`
 - `GET /state`
@@ -242,7 +247,7 @@ Common environment variables:
 - `CUSTOM_RUNTIME_ALLOWLIST` restricts which hosts `/api/runtime/custom` may fetch. If unset, it falls back to `UPSTREAM_ALLOWLIST`.
 - `NEXT_PUBLIC_GATEWAY_URL` provides the default upstream gateway URL when Studio settings are empty. **Note:** this is a build-time variable — changes require `npm run build` to take effect.
 - `CLAW3D_GATEWAY_URL` and `CLAW3D_GATEWAY_TOKEN` provide a runtime alternative to `NEXT_PUBLIC_GATEWAY_URL` that takes effect on server restart without a rebuild.
-- `CLAW3D_GATEWAY_ADAPTER_TYPE` can pair with `CLAW3D_GATEWAY_URL` to mark those runtime defaults as `openclaw`, `hermes`, `demo`, or `custom`.
+- `CLAW3D_GATEWAY_ADAPTER_TYPE` can pair with `CLAW3D_GATEWAY_URL` to mark those runtime defaults as `openclaw`, `hermes`, `demo`, `local`, `claw3d`, or `custom`.
 - If `CLAW3D_GATEWAY_URL` is not set, Studio can still surface local Hermes or demo adapter defaults from `HERMES_ADAPTER_PORT` / `DEMO_ADAPTER_PORT`.
 - OpenClaw file defaults still come from `~/.openclaw/openclaw.json` when present.
 - `OPENCLAW_STATE_DIR` and `OPENCLAW_CONFIG_PATH` override the default OpenClaw paths.
@@ -270,7 +275,8 @@ See [`.env.example`](.env.example) for the full local development template.
 - [`VISION.md`](VISION.md): project direction and long-term guardrails.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md): system boundaries, data flow, and major trade-offs.
 - [`TUTORIAL.md`](TUTORIAL.md): detailed step-by-step setup for OpenClaw + Tailscale + Claw3D.
-- [`MULTI_AGENT_BETA.md`](MULTI_AGENT_BETA.md): remote office beta setup, connection modes, and limitations.
+- [`docs/multi-agent-beta.md`](docs/multi-agent-beta.md): remote office beta setup, connection modes, and limitations.
+- [`docs/runtime-profiles.md`](docs/runtime-profiles.md): saved backend/runtime profiles and the current HTTP runtime seam.
 - [`CODE_DOCUMENTATION.md`](CODE_DOCUMENTATION.md): practical code map, extension points, and contributor onboarding order.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): local workflow, testing, and PR expectations.
 - [`SUPPORT.md`](SUPPORT.md): where to ask for help and how to route reports.

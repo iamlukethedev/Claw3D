@@ -221,12 +221,36 @@ function createGatewayProxy(options) {
         return;
       }
 
-      const connectFrame = browserHasAuth
+      const baseConnectFrame = browserHasAuth
         ? frame
         : {
             ...frame,
             params: injectAuthToken(frame.params, upstreamToken),
           };
+
+      const connectParams = isObject(baseConnectFrame.params)
+        ? { ...baseConnectFrame.params }
+        : {};
+      const hasDeviceAuth = hasCompleteDeviceAuth(connectParams);
+      const client = isObject(connectParams.client) ? { ...connectParams.client } : {};
+      const clientId = typeof client.id === "string" ? client.id.trim() : "";
+
+      if (
+        upstreamAdapterType === "openclaw" &&
+        clientId === "openclaw-control-ui" &&
+        !hasDeviceAuth
+      ) {
+        client.id = "webchat-ui";
+        connectParams.client = client;
+        if (isObject(connectParams.device) && !hasCompleteDeviceAuth(connectParams)) {
+          delete connectParams.device;
+        }
+      }
+
+      const connectFrame = {
+        ...baseConnectFrame,
+        params: connectParams,
+      };
       upstreamWs.send(JSON.stringify(connectFrame));
     };
 

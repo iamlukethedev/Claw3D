@@ -61,6 +61,24 @@ const createRateLimiter = (maxAttempts = 10, windowMs = 60_000) => {
   };
 };
 
+/**
+ * Resolve client IP for rate limiting.
+ * When TRUSTED_PROXY=1 is set, the first value of X-Forwarded-For is used.
+ * Only set TRUSTED_PROXY=1 when this server sits behind a reverse proxy that
+ * you control (nginx, Caddy, Vercel edge). Without it, X-Forwarded-For is
+ * ignored to prevent spoofing by direct clients.
+ */
+const resolveClientIp = (req) => {
+  if (process.env.TRUSTED_PROXY === "1") {
+    const forwarded = req.headers?.["x-forwarded-for"];
+    if (typeof forwarded === "string") {
+      const first = forwarded.split(",")[0]?.trim();
+      if (first) return first;
+    }
+  }
+  return req.socket?.remoteAddress || "unknown";
+};
+
 function createAccessGate(options) {
   const token = String(options?.token ?? "").trim();
   const cookieName = String(options?.cookieName ?? "studio_access").trim() || "studio_access";
@@ -70,7 +88,7 @@ function createAccessGate(options) {
 
   const getAuthState = (req) => {
     if (!enabled) return { authorized: true, limited: false };
-    const ip = req.socket?.remoteAddress || "unknown";
+    const ip = resolveClientIp(req);
     const cookieHeader = req.headers?.cookie;
     const cookies = parseCookies(cookieHeader);
     const authorized = safeCompare(cookies[cookieName] || "", token);

@@ -71,7 +71,8 @@ const parseIdentityNameFromContent = (content: string): string | null => {
     const match = /^name\s*:\s*(.+)$/i.exec(normalized);
     if (!match) continue;
     const value = match[1]?.trim().replace(/^[*_]+|[*_]+$/g, "").trim() ?? "";
-    if (value) return value;
+    if (!value || isTemporarySkillAgentName(value)) continue;
+    return value;
   }
   return null;
 };
@@ -192,8 +193,25 @@ export async function hydrateAgentFleetFromGateway(params: {
       agentsResult.agents.map(async (agent) => {
         const identityName =
           typeof agent.identity?.name === "string" ? agent.identity.name.trim() : "";
-        if (identityName) {
+        const listedName = typeof agent.name === "string" ? agent.name.trim() : "";
+        const hasStableIdentityName =
+          Boolean(identityName) && !isTemporarySkillAgentName(identityName);
+        const needsIdentityRecovery =
+          !identityName ||
+          isTemporarySkillAgentName(identityName) ||
+          isTemporarySkillAgentName(listedName);
+        if (!needsIdentityRecovery) {
           return agent;
+        }
+        if (isTemporarySkillAgentName(listedName) && hasStableIdentityName) {
+          return {
+            ...agent,
+            name: identityName,
+            identity: {
+              ...(agent.identity ?? {}),
+              name: identityName,
+            },
+          };
         }
         try {
           const result = (await params.client.call("agents.files.get", {
@@ -207,11 +225,12 @@ export async function hydrateAgentFleetFromGateway(params: {
             return agent;
           }
           const recoveredName = parseIdentityNameFromContent(record.content);
-          if (!recoveredName) {
+          if (!recoveredName || isTemporarySkillAgentName(recoveredName)) {
             return agent;
           }
           return {
             ...agent,
+            name: recoveredName,
             identity: {
               ...(agent.identity ?? {}),
               name: recoveredName,

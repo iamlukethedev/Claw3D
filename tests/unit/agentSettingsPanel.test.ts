@@ -1189,6 +1189,29 @@ describe("AgentSettingsPanel", () => {
     expect(screen.queryByRole("button", { name: "Open Full Control UI" })).not.toBeInTheDocument();
   });
 
+  it("keeps_delete_agent_action_for_hermes_in_advanced_mode", () => {
+    render(
+      createElement(AgentSettingsPanel, {
+        agent: createAgent(),
+        mode: "advanced",
+        onClose: vi.fn(),
+        onDelete: vi.fn(),
+        onToolCallingToggle: vi.fn(),
+        onThinkingTracesToggle: vi.fn(),
+        cronJobs: [],
+        cronLoading: false,
+        cronError: null,
+        cronRunBusyJobId: null,
+        cronDeleteBusyJobId: null,
+        onRunCronJob: vi.fn(),
+        onDeleteCronJob: vi.fn(),
+        adapterType: "hermes",
+      })
+    );
+
+    expect(screen.getByRole("button", { name: "Delete agent" })).toBeInTheDocument();
+  });
+
   it("renders_enabled_control_ui_link_when_available", () => {
     render(
       createElement(AgentSettingsPanel, {

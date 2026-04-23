@@ -128,7 +128,7 @@ describe("TaskBoardView", () => {
 
     expect(onCreateCard).toHaveBeenCalledTimes(1);
     expect(onRefreshCronJobs).toHaveBeenCalledTimes(1);
-    expect(onSelectCard).toHaveBeenCalledWith("task-1");
+    expect(onSelectCard).toHaveBeenCalledWith(null);
     expect(onUpdateCard).toHaveBeenCalledWith("task-1", { title: "Create marketing website" });
     expect(onMoveCard).toHaveBeenCalledWith("task-1", "in_progress");
     expect(onUpdateCard).toHaveBeenCalledWith("task-1", { assignedAgentId: "agent-1" });

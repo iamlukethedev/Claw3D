@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MessageSquare, ChevronDown, Mic } from "lucide-react";
+import { MessageSquare, ChevronDown, ChevronLeft, ChevronRight, Mic } from "lucide-react";
 import { RetroOffice3D } from "@/features/retro-office/RetroOffice3D";
 import type { OfficeAgent } from "@/features/retro-office/core/types";
 import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
@@ -30,6 +30,10 @@ import {
 import {
   resolveDeskAssignments,
   resolveOfficePreferencePublic,
+  resolveStudioActiveFloorId,
+  resolveStudioGatewayProfiles,
+  type StudioGatewayAdapterType,
+  type StudioGatewaySettings,
 } from "@/lib/studio/settings";
 import {
   createGatewayAgent,
@@ -57,11 +61,27 @@ import {
   stripUiMetadata,
 } from "@/lib/text/message-extract";
 import { resolveOfficeIntentSnapshot } from "@/lib/office/deskDirectives";
+import { OfficeFloorNav } from "@/features/office/components/OfficeFloorNav";
 import { AgentChatPanel } from "@/features/agents/components/AgentChatPanel";
 import {
   RemoteAgentChatPanel,
   type RemoteAgentChatMessage,
 } from "@/features/office/components/RemoteAgentChatPanel";
+import { useOfficeFloorRuntimePersistence } from "@/features/office/hooks/useOfficeFloorRuntimePersistence";
+import {
+  type RuntimeAgentMessageMode,
+} from "@/lib/runtime/agentMessaging";
+import {
+  buildFloorRosterState,
+  createFloorRosterCache,
+} from "@/lib/office/floorRoster";
+import {
+  getOfficeFloor,
+  listOfficeFloorsForProvider,
+  resolveActiveOfficeFloorId,
+  type FloorId,
+  type FloorProvider,
+} from "@/lib/office/floors";
 import {
   AgentEditorModal,
   type AgentEditorSection,
@@ -212,6 +232,36 @@ const ITEMS = [
 ];
 const GYM_WORKOUT_LATCH_MS = 60_000;
 const MAIN_AGENT_ID = "main";
+const DEMO_MAIN_SESSION_KEY = buildAgentMainSessionKey(MAIN_AGENT_ID, "main");
+const createDemoMainAgentSeed = (): {
+  agentId: string;
+  name: string;
+  runtimeName: string;
+  identityName: string;
+  sessionDisplayName: string;
+  role: string;
+  sessionKey: string;
+  avatarSeed: string;
+  avatarProfile: AgentAvatarProfile;
+  model: string;
+  thinkingLevel: string;
+  toolCallingEnabled: boolean;
+  showThinkingTraces: boolean;
+} => ({
+  agentId: MAIN_AGENT_ID,
+  name: "Main",
+  runtimeName: "Claw3D Demo",
+  identityName: "Main",
+  sessionDisplayName: "Main",
+  role: "assistant",
+  sessionKey: DEMO_MAIN_SESSION_KEY,
+  avatarSeed: MAIN_AGENT_ID,
+  avatarProfile: createDefaultAgentAvatarProfile(MAIN_AGENT_ID),
+  model: "demo/main",
+  thinkingLevel: "medium",
+  toolCallingEnabled: false,
+  showThinkingTraces: false,
+});
 const MAX_OPENCLAW_LOG_ENTRIES = 200;
 const MAX_OPENCLAW_AGENT_OUTPUT_LINES = 12;
 const OFFICE_DANCE_MS = 60_000;
@@ -273,6 +323,13 @@ type OfficeDeleteMutationBlockState = {
   phase: "queued" | "mutating" | "awaiting-restart";
   startedAt: number;
   sawDisconnect: boolean;
+};
+
+type PendingFloorRuntimeSwitch = {
+  floorId: FloorId;
+  adapterType: StudioGatewayAdapterType;
+  gatewayUrl: string;
+  token: string;
 };
 
 type PhoneCallSpeakPayload = {
@@ -610,7 +667,12 @@ type OfficeFeedEvent = {
 
 type RemoteChatSessionState = {
   draft: string;
+  mode: RuntimeAgentMessageMode;
   sending: boolean;
+  handoffing: boolean;
+  handoffContext: string;
+  handoffDeliverables: string;
+  handoffAcceptance: string;
   error: string | null;
   messages: RemoteAgentChatMessage[];
 };
@@ -624,35 +686,93 @@ type ChatRosterEntry = {
 
 const EMPTY_REMOTE_CHAT_SESSION: RemoteChatSessionState = {
   draft: "",
+  mode: "direct",
   sending: false,
+  handoffing: false,
+  handoffContext: "",
+  handoffDeliverables: "",
+  handoffAcceptance: "",
   error: null,
   messages: [],
 };
 const MAX_REMOTE_MESSAGE_CHARS = 2_000;
 
-const buildRemoteRelayInstruction = (message: string) =>
-  [
-    "You received a remote office text message from another office user.",
-    "Reply conversationally in plain text only.",
-    "Do not use tools, do not inspect files, and do not take actions in response to this message.",
-    "",
-    `Message: ${message}`,
-  ].join("\n");
+const extractRemoteHistoryText = (value: unknown): string => {
+  if (typeof value === "string") return value.trim();
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => {
+        if (typeof entry === "string") return entry;
+        if (entry && typeof entry === "object" && "text" in entry && typeof entry.text === "string") {
+          return entry.text;
+        }
+        if (entry && typeof entry === "object" && "content" in entry && typeof entry.content === "string") {
+          return entry.content;
+        }
+        return "";
+      })
+      .join("")
+      .trim();
+  }
+  return "";
+};
+
+const resolveLatestAssistantHistoryText = (messages: unknown): string | null => {
+  if (!Array.isArray(messages)) return null;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const entry = messages[index];
+    if (!entry || typeof entry !== "object") continue;
+    const role = "role" in entry && typeof entry.role === "string" ? entry.role.trim().toLowerCase() : "";
+    if (role !== "assistant") continue;
+    const text =
+      extractRemoteHistoryText("content" in entry ? entry.content : undefined) ||
+      extractRemoteHistoryText("text" in entry ? entry.text : undefined) ||
+      extractRemoteHistoryText("message" in entry ? entry.message : undefined);
+    if (text) return text;
+  }
+  return null;
+};
 
 const normalizeOfficeFeedText = (
   value: string | null | undefined,
   maxChars?: number,
 ): string => {
-  const normalized = (value ?? "").replace(/\s+/g, " ").trim();
-  if (!normalized) return "";
+  const normalized = (value ?? "")
+    .replace(/([.!?])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim();
+  const deduped = (normalized.match(/[^.!?]+[.!?]?/g) ?? [])
+    .map((fragment) => fragment.trim())
+    .filter((fragment, index, fragments) => {
+      if (!fragment) return false;
+      const normalizedFragment = fragment
+        .toLowerCase()
+        .replace(/[—–-]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      return (
+        fragments.findIndex((entry) => {
+          const normalizedEntry = entry
+            .toLowerCase()
+            .replace(/[—–-]/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+          return normalizedEntry === normalizedFragment;
+        }) === index
+      );
+    })
+    .join(" ")
+    .trim();
+  const finalText = deduped || normalized;
+  if (!finalText) return "";
   if (
     typeof maxChars !== "number" ||
     !Number.isFinite(maxChars) ||
     maxChars <= 0
   ) {
-    return normalized;
+    return finalText;
   }
-  if (normalized.length <= maxChars) return normalized;
+  if (finalText.length <= maxChars) return finalText;
   return `${normalized.slice(0, Math.max(0, maxChars - 1)).trimEnd()}…`;
 };
 
@@ -847,7 +967,9 @@ export function OfficeScreen({
     gatewayUrl,
     token,
     selectedAdapterType,
+    detectedAdapterType,
     activeAdapterType,
+    adapterProfiles,
     localGatewayDefaults,
     error: gatewayError,
     connect,
@@ -938,6 +1060,7 @@ export function OfficeScreen({
   const historyInFlightRef = useRef<Set<string>>(new Set());
   const lastTransportHistoryRefreshKeyRef = useRef<Record<string, string>>({});
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatRosterCollapsed, setChatRosterCollapsed] = useState(false);
   const [selectedChatAgentId, setSelectedChatAgentId] = useState<string | null>(
     null,
   );
@@ -984,6 +1107,18 @@ export function OfficeScreen({
   const [deskAssignmentByDeskUid, setDeskAssignmentByDeskUid] = useState<
     Record<string, string>
   >({});
+  const [activeFloorId, setActiveFloorId] = useState<FloorId>("lobby");
+  const [pendingFloorRuntimeSwitch, setPendingFloorRuntimeSwitch] =
+    useState<PendingFloorRuntimeSwitch | null>(null);
+  const previousGatewayStatusRef = useRef<"disconnected" | "connecting" | "connected">(
+    "disconnected",
+  );
+  const didAutoNavigateFromLobbyRef = useRef(false);
+  const [floorRosterCache, setFloorRosterCache] = useState(() =>
+    createFloorRosterCache(),
+  );
+  const activeFloorIdRef = useRef<FloorId>("lobby");
+  const floorRosterCacheRef = useRef(floorRosterCache);
   const [gatewayModels, setGatewayModels] = useState<GatewayModelChoice[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
@@ -1018,6 +1153,128 @@ export function OfficeScreen({
   const { showOnboarding, completeOnboarding, resetOnboarding } =
     useOnboardingState();
   const [forceShowOnboarding, setForceShowOnboarding] = useState(false);
+  const activeFloor = useMemo(
+    () => getOfficeFloor(resolveActiveOfficeFloorId(activeFloorId)),
+    [activeFloorId],
+  );
+
+  useEffect(() => {
+    activeFloorIdRef.current = activeFloorId;
+  }, [activeFloorId]);
+
+  useEffect(() => {
+    floorRosterCacheRef.current = floorRosterCache;
+  }, [floorRosterCache]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const settings = await settingsCoordinator.loadSettings({ maxAgeMs: 30_000 });
+        if (!settings || cancelled) return;
+        setActiveFloorId(resolveStudioActiveFloorId(settings));
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load active floor preference.", error);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [settingsCoordinator]);
+
+  // Reset auto-navigate flag when disconnected so the next connection can navigate again.
+  useEffect(() => {
+    if (status !== "connected" && status !== "connecting") {
+      didAutoNavigateFromLobbyRef.current = false;
+    }
+  }, [status]);
+
+  // Auto-navigate away from lobby when a real adapter connects.
+  // Uses a ref flag instead of previousGatewayStatusRef so the effect can
+  // re-run when detectedAdapterType arrives in a later render (after status
+  // already flipped to "connected").
+  useEffect(() => {
+    if (status !== "connected") return;
+    if (didAutoNavigateFromLobbyRef.current) return;
+    if (activeFloor.kind !== "lobby" || activeFloor.provider !== "demo") return;
+
+    const connectedProvider =
+      detectedAdapterType && detectedAdapterType !== "demo"
+        ? detectedAdapterType
+        : selectedAdapterType !== "demo"
+          ? selectedAdapterType
+          : null;
+    if (!connectedProvider) return;
+
+    const targetFloor =
+      listOfficeFloorsForProvider(connectedProvider).find(
+        (floor) => floor.enabled && floor.kind === "runtime",
+      ) ?? null;
+    if (!targetFloor || targetFloor.id === activeFloor.id) return;
+
+    didAutoNavigateFromLobbyRef.current = true;
+    setActiveFloorId(targetFloor.id);
+    setSelectedAdapterType(targetFloor.provider as StudioGatewayAdapterType);
+    settingsCoordinator.schedulePatch({ activeFloorId: targetFloor.id }, 0);
+  }, [
+    activeFloor.id,
+    activeFloor.kind,
+    activeFloor.provider,
+    detectedAdapterType,
+    selectedAdapterType,
+    setSelectedAdapterType,
+    settingsCoordinator,
+    status,
+  ]);
+
+  useEffect(() => {
+    if (!pendingFloorRuntimeSwitch) return;
+    const targetSelectedAdapter = selectedAdapterType === pendingFloorRuntimeSwitch.adapterType;
+    const targetGatewayUrl = gatewayUrl.trim() === pendingFloorRuntimeSwitch.gatewayUrl;
+    const targetToken = token === pendingFloorRuntimeSwitch.token;
+    if (!targetSelectedAdapter || !targetGatewayUrl || !targetToken) {
+      return;
+    }
+    if (status === "connected" || status === "connecting") {
+      const runtimeMatchesTarget =
+        activeAdapterType === pendingFloorRuntimeSwitch.adapterType &&
+        gatewayUrl.trim() === pendingFloorRuntimeSwitch.gatewayUrl &&
+        token === pendingFloorRuntimeSwitch.token;
+      if (runtimeMatchesTarget) {
+        setPendingFloorRuntimeSwitch(null);
+        return;
+      }
+      disconnect();
+      return;
+    }
+    void connect()
+      .catch((error) => {
+        console.error("Failed to connect floor runtime.", error);
+      })
+      .finally(() => {
+        setPendingFloorRuntimeSwitch((current) =>
+          current &&
+          current.floorId === pendingFloorRuntimeSwitch.floorId &&
+          current.adapterType === pendingFloorRuntimeSwitch.adapterType &&
+          current.gatewayUrl === pendingFloorRuntimeSwitch.gatewayUrl &&
+          current.token === pendingFloorRuntimeSwitch.token
+            ? null
+            : current,
+        );
+      });
+  }, [
+    activeAdapterType,
+    connect,
+    disconnect,
+    gatewayUrl,
+    pendingFloorRuntimeSwitch,
+    selectedAdapterType,
+    status,
+    token,
+  ]);
+
   useEffect(() => {
     initJukeboxStore();
   }, [initJukeboxStore]);
@@ -1078,6 +1335,13 @@ export function OfficeScreen({
     setRemoteOfficeToken,
   } = useStudioOfficePreference({
     gatewayUrl,
+    settingsCoordinator,
+  });
+  useOfficeFloorRuntimePersistence({
+    activeFloorId,
+    gatewayUrl,
+    status,
+    gatewayError,
     settingsCoordinator,
   });
   const {
@@ -1149,14 +1413,113 @@ export function OfficeScreen({
     [dispatch, gatewayUrl, settingsCoordinator],
   );
   const focusLocalAgent = useCallback(
-    (agentId: string, options?: { openChat?: boolean }) => {
+    (
+      agentId: string,
+      options?: { openChat?: boolean; persistFloorId?: FloorId; selectStore?: boolean },
+    ) => {
       setSelectedChatAgentId(agentId);
       if (options?.openChat !== false) {
         setChatOpen(true);
       }
-      dispatch({ type: "selectAgent", agentId });
+      if (options?.selectStore !== false) {
+        dispatch({ type: "selectAgent", agentId });
+      }
+      setFloorRosterCache((prev) => {
+        const targetFloorId = options?.persistFloorId ?? activeFloorIdRef.current;
+        const current = prev[targetFloorId];
+        if (!current || current.selectedAgentId === agentId) return prev;
+        return {
+          ...prev,
+          [targetFloorId]: { ...current, selectedAgentId: agentId },
+        };
+      });
     },
     [dispatch],
+  );
+  const handleSelectFloor = useCallback(
+    async (floorId: FloorId) => {
+      const resolved = resolveActiveOfficeFloorId(floorId);
+      const floor = getOfficeFloor(resolved);
+      const targetRosterState = floorRosterCacheRef.current[resolved];
+      setAgentsLoaded(false);
+      setActiveFloorId(resolved);
+      settingsCoordinator.schedulePatch({ activeFloorId: resolved }, 0);
+      setOfficeCameraCenterSignal((current) => current + 1);
+
+      const adapterType = floor.provider as StudioGatewayAdapterType;
+      let nextGatewayUrl = gatewayUrl.trim();
+      let nextToken = token;
+
+      try {
+        const envelope =
+          typeof settingsCoordinator.loadSettingsEnvelope === "function"
+            ? await settingsCoordinator.loadSettingsEnvelope({ maxAgeMs: 30_000 })
+            : {
+                settings: await settingsCoordinator.loadSettings({ maxAgeMs: 30_000 }),
+                localGatewayDefaults: null,
+              };
+        const settings = envelope.settings ?? null;
+        // gatewayPrivate is not in the API response — use sanitized public settings + in-memory
+        // adapterProfiles (which may carry a URL from a previous successful connection).
+        const gatewaySettings: StudioGatewaySettings | null =
+          adapterProfiles && Object.keys(adapterProfiles).length > 0
+            ? ({ profiles: adapterProfiles } as StudioGatewaySettings)
+            : null;
+        const { profiles } = resolveStudioGatewayProfiles({
+          gateway: gatewaySettings,
+          localDefaults: localGatewayDefaults,
+        });
+        const floorRuntime = settings?.officeFloors?.[resolved];
+        nextGatewayUrl =
+          floorRuntime?.gatewayUrl?.trim() || profiles[adapterType]?.url?.trim() || nextGatewayUrl;
+        // Token is intentionally empty — the Studio proxy injects the server-side token.
+        nextToken = "";
+      } catch (error) {
+        console.error("Failed to resolve floor runtime profile.", error);
+      }
+
+      // Guard: if this is a runtime floor and there's no gateway URL to connect to,
+      // bail back to lobby rather than entering a connect-hang limbo state.
+      if (floor.kind === "runtime" && !nextGatewayUrl.trim()) {
+        setActiveFloorId("lobby");
+        settingsCoordinator.schedulePatch({ activeFloorId: "lobby" }, 0);
+        setAgentsLoaded(true);
+        return;
+      }
+
+      setSelectedAdapterType(adapterType);
+      setGatewayUrl(nextGatewayUrl);
+      setToken(nextToken);
+      setPendingFloorRuntimeSwitch({
+        floorId: resolved,
+        adapterType,
+        gatewayUrl: nextGatewayUrl,
+        token: nextToken,
+      });
+
+      const preferredAgentId =
+        targetRosterState?.selectedAgentId ??
+        targetRosterState?.entries[0]?.agentId ??
+        null;
+      if (preferredAgentId) {
+        focusLocalAgent(preferredAgentId, {
+          openChat: false,
+          persistFloorId: resolved,
+          selectStore: false,
+        });
+      }
+    },
+    [
+      adapterProfiles,
+      focusLocalAgent,
+      gatewayUrl,
+      localGatewayDefaults,
+      setGatewayUrl,
+      setToken,
+      setSelectedAdapterType,
+      settingsCoordinator,
+      token,
+    ],
   );
   const focusChatTarget = useCallback(
     (agentId: string) => {
@@ -1176,6 +1539,25 @@ export function OfficeScreen({
     },
     [focusLocalAgent],
   );
+  useEffect(() => {
+    if (!agentsLoaded) {
+      return;
+    }
+    if (pendingFloorRuntimeSwitch?.floorId === activeFloor.id) {
+      return;
+    }
+    setFloorRosterCache((previous) => ({
+      ...previous,
+      [activeFloor.id]: buildFloorRosterState({
+        floorId: activeFloor.id,
+        hydratedAt: Date.now(),
+        result: {
+          seeds: state.agents,
+          suggestedSelectedAgentId: state.selectedAgentId ?? previous[activeFloor.id]?.selectedAgentId ?? null,
+        },
+      }),
+    }));
+  }, [activeFloor.id, agentsLoaded, pendingFloorRuntimeSwitch, state.agents, state.selectedAgentId]);
 
   const handleDeskAssignmentChange = useCallback(
     (deskUid: string, agentId: string | null) => {
@@ -2368,8 +2750,13 @@ export function OfficeScreen({
       lastLoadAgentsStartedAtRef.current = 0;
       setLoading(false);
       if (stateRef.current.agents.length === 0) {
-        setAgentsLoaded(false);
-        hydrateAgents([]);
+        if (selectedAdapterType === "demo") {
+          hydrateAgents([createDemoMainAgentSeed()], MAIN_AGENT_ID);
+          setAgentsLoaded(true);
+        } else {
+          setAgentsLoaded(false);
+          hydrateAgents([]);
+        }
       }
       setFeedEvents([]);
       setDebugRows([]);
@@ -2378,7 +2765,15 @@ export function OfficeScreen({
       prevAssistantPreviewRef.current = {};
       lastGatewayActivityAtRef.current = 0;
     }
-  }, [hydrateAgents, setLoading, status]);
+  }, [hydrateAgents, selectedAdapterType, setLoading, status]);
+
+  useEffect(() => {
+    if (selectedAdapterType !== "demo") return;
+    if (status !== "disconnected") return;
+    if (state.agents.length > 0) return;
+    hydrateAgents([createDemoMainAgentSeed()], MAIN_AGENT_ID);
+    setAgentsLoaded(true);
+  }, [hydrateAgents, selectedAdapterType, state.agents.length, status]);
 
   useEffect(() => {
     if (!agentsLoaded) return;
@@ -2388,7 +2783,7 @@ export function OfficeScreen({
 
     for (const agent of state.agents) {
       const previewText = normalizeOfficeFeedText(
-        agent.lastResult ?? agent.latestPreview,
+        agent.latestPreview ?? agent.lastResult,
       );
       const previewTs = agent.lastAssistantMessageAt ?? 0;
       if (!previewText || previewTs <= 0) continue;
@@ -3297,6 +3692,7 @@ export function OfficeScreen({
         ...session,
         draft: "",
         sending: true,
+        handoffing: false,
         error: null,
         messages: [
           ...session.messages,
@@ -3308,34 +3704,31 @@ export function OfficeScreen({
           },
         ],
       }));
-      const remoteClient = new GatewayClient();
       try {
-        await remoteClient.connect({
-          gatewayUrl: remoteOfficeGatewayUrl,
+        const deliveryMode =
+          (remoteChatByAgentId[agentId]?.mode ?? EMPTY_REMOTE_CHAT_SESSION.mode) === "interval"
+            ? "interval"
+            : "direct";
+        const response = await fetch("/api/office/remote-message", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            agentId: remoteAgentId,
+            message: trimmed,
+            mode: deliveryMode,
+          }),
         });
-        const agentsResult = (await remoteClient.call("agents.list", {})) as {
-          mainKey?: string;
-          agents?: Array<{ id?: string; name?: string }>;
+        const payload = (await response.json()) as {
+          error?: string;
+          assistantText?: string | null;
         };
-        const remoteAgents = Array.isArray(agentsResult.agents)
-          ? agentsResult.agents
-          : [];
-        if (remoteAgents.length === 0) {
-          throw new Error("Remote agent list is unavailable right now.");
+        if (!response.ok) {
+          throw new Error(payload.error || "Failed to deliver the remote office message.");
         }
-        if (!remoteAgents.some((entry) => (entry.id?.trim() ?? "") === remoteAgentId)) {
-          throw new Error("Remote agent is no longer available.");
-        }
-        const sessionKey = buildAgentMainSessionKey(
-          remoteAgentId,
-          agentsResult.mainKey?.trim() || "main",
-        );
-        await remoteClient.call("chat.send", {
-          sessionKey,
-          message: buildRemoteRelayInstruction(trimmed),
-          deliver: false,
-          idempotencyKey: randomUUID(),
-        });
+        const assistantText =
+          typeof payload.assistantText === "string" ? payload.assistantText.trim() : "";
         updateRemoteChatSession(agentId, (session) => ({
           ...session,
           sending: false,
@@ -3348,6 +3741,16 @@ export function OfficeScreen({
               text: "Delivered to the remote agent.",
               timestampMs: Date.now(),
             },
+            ...(assistantText
+              ? [
+                  {
+                    id: randomUUID(),
+                    role: "assistant" as const,
+                    text: assistantText,
+                    timestampMs: Date.now(),
+                  },
+                ]
+              : []),
           ],
         }));
       } catch (error) {
@@ -3369,11 +3772,113 @@ export function OfficeScreen({
             },
           ],
         }));
-      } finally {
-        remoteClient.disconnect();
       }
     },
-    [remoteOfficeGatewayUrl, updateRemoteChatSession],
+    [remoteChatByAgentId, updateRemoteChatSession],
+  );
+
+  const handleRemoteAgentHandoff = useCallback(
+    async (agentId: string, task: string) => {
+      const trimmed = task.trim();
+      if (!trimmed) return;
+      if (trimmed.length > MAX_REMOTE_MESSAGE_CHARS) {
+        updateRemoteChatSession(agentId, (session) => ({
+          ...session,
+          handoffing: false,
+          error: `Remote handoff must be ${MAX_REMOTE_MESSAGE_CHARS} characters or fewer.`,
+        }));
+        return;
+      }
+      const remoteAgentId = isRemoteOfficeAgentId(agentId)
+        ? agentId.slice("remote:".length)
+        : agentId;
+      const sessionSnapshot = remoteChatByAgentId[agentId] ?? EMPTY_REMOTE_CHAT_SESSION;
+      const sentAt = Date.now();
+      updateRemoteChatSession(agentId, (session) => ({
+        ...session,
+        draft: "",
+        sending: false,
+        handoffing: true,
+        error: null,
+        messages: [
+          ...session.messages,
+          {
+            id: randomUUID(),
+            role: "system",
+            text: `Handoff queued: ${trimmed}`,
+            timestampMs: sentAt,
+          },
+        ],
+      }));
+      try {
+        const historyContext = (
+          sessionSnapshot.messages ?? []
+        )
+          .slice(-6)
+          .map((entry) => `${entry.role}: ${entry.text}`)
+          .join("\n");
+        const response = await fetch("/api/office/remote-handoff", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            agentId: remoteAgentId,
+            task: trimmed,
+            context: sessionSnapshot.handoffContext.trim() || historyContext || undefined,
+            deliverables:
+              sessionSnapshot.handoffDeliverables
+                .split(",")
+                .map((entry) => entry.trim())
+                .filter(Boolean).length > 0
+                ? sessionSnapshot.handoffDeliverables
+                    .split(",")
+                    .map((entry) => entry.trim())
+                    .filter(Boolean)
+                : ["Acknowledge ownership", "Send the next checkpoint or blocking question"],
+            acceptanceCriteria:
+              sessionSnapshot.handoffAcceptance.trim() ||
+              "Respond with an acknowledgement or the next concrete update.",
+          }),
+        });
+        const payload = (await response.json()) as { error?: string };
+        if (!response.ok) {
+          throw new Error(payload.error || "Failed to deliver the remote handoff.");
+        }
+        updateRemoteChatSession(agentId, (session) => ({
+          ...session,
+          handoffing: false,
+          error: null,
+          messages: [
+            ...session.messages,
+            {
+              id: randomUUID(),
+              role: "system",
+              text: "Handoff delivered to the remote agent.",
+              timestampMs: Date.now(),
+            },
+          ],
+        }));
+      } catch (error) {
+        const messageText =
+          error instanceof Error ? error.message : "Failed to deliver the remote handoff.";
+        updateRemoteChatSession(agentId, (session) => ({
+          ...session,
+          handoffing: false,
+          error: messageText,
+          messages: [
+            ...session.messages,
+            {
+              id: randomUUID(),
+              role: "system",
+              text: `Handoff failed: ${messageText}`,
+              timestampMs: Date.now(),
+            },
+          ],
+        }));
+      }
+    },
+    [remoteChatByAgentId, updateRemoteChatSession],
   );
 
   const lastStandupTriggerKeyRef = useRef<string | null>(null);
@@ -4236,9 +4741,20 @@ export function OfficeScreen({
           </div>
         </div>
       ) : null}
+      <OfficeFloorNav
+        activeFloorId={activeFloor.id}
+        floorRosterCache={floorRosterCache}
+        onSelectFloor={(floorId) => {
+          void handleSelectFloor(floorId);
+        }}
+        activeAdapterType={(selectedAdapterType as FloorProvider) ?? null}
+      />
       <section className="relative h-full min-h-0 min-w-0 overflow-hidden">
         <RetroOffice3D
+          key={activeFloor.id}
           agents={allVisibleAgents}
+          storageNamespace={activeFloor.id}
+          layoutPreset={activeFloor.kind === "lobby" ? "lobby" : "office"}
           officeCenterSignal={officeCameraCenterSignal}
           animationState={officeAnimationState}
           deskAssignmentByDeskUid={deskAssignmentByDeskUid}
@@ -4652,7 +5168,7 @@ export function OfficeScreen({
       {showOpenClawConsole ? (
         <section className="pointer-events-auto fixed bottom-3 left-3 z-30 flex w-[520px] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded border border-cyan-500/25 bg-black/78 shadow-2xl backdrop-blur">
           <div className="flex items-center justify-between border-b border-cyan-500/15 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-cyan-200/80">
-            <span>OpenClaw Event Console</span>
+            <span>Agent Event Console</span>
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-cyan-100/45">
                 agents {state.agents.length} | events{" "}
@@ -4869,19 +5385,70 @@ export function OfficeScreen({
         {chatOpen && (
           <div
             className="flex overflow-hidden rounded border border-white/10 bg-[#0e0a04] shadow-2xl"
-            style={{ width: 560, height: 520 }}
+            style={{
+              width: chatRosterCollapsed
+                ? "min(680px, calc(100vw - 1.5rem))"
+                : "min(780px, calc(100vw - 1.5rem))",
+              height: "min(560px, calc(100vh - 5.5rem))",
+            }}
           >
-            <div className="flex w-44 shrink-0 flex-col border-r border-white/10">
+            <div
+              className={`flex shrink-0 flex-col border-r border-white/10 transition-[width] ${
+                chatRosterCollapsed ? "w-12" : "w-52"
+              }`}
+            >
               <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
-                <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-white/60">
-                  Agents
-                </span>
-                <span className="font-mono text-[10px] text-white/40">
-                  {chatRosterEntries.length}
-                </span>
+                {!chatRosterCollapsed ? (
+                  <>
+                    <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-white/60">
+                      Agents
+                    </span>
+                    <span className="font-mono text-[10px] text-white/40">
+                      {chatRosterEntries.length}
+                    </span>
+                  </>
+                ) : (
+                  <span className="mx-auto font-mono text-[10px] text-white/45">
+                    {chatRosterEntries.length}
+                  </span>
+                )}
               </div>
+              <button
+                type="button"
+                onClick={() => setChatRosterCollapsed((current) => !current)}
+                className="mx-2 mt-2 inline-flex items-center justify-center rounded border border-white/10 bg-white/5 px-2 py-2 text-white/65 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
+                aria-label={chatRosterCollapsed ? "Expand agent list" : "Collapse agent list"}
+                title={chatRosterCollapsed ? "Expand agent list" : "Collapse agent list"}
+              >
+                {chatRosterCollapsed ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <ChevronLeft className="h-4 w-4" />
+                )}
+              </button>
               <div className="flex-1 overflow-y-auto">
-                {chatRosterEntries.length === 0 ? (
+                {chatRosterCollapsed ? (
+                  <div className="flex flex-col items-center gap-2 px-1 py-2">
+                    {chatRosterEntries.map((agent) => {
+                      const isSelected = agent.id === selectedChatAgentId;
+                      return (
+                        <button
+                          key={agent.id}
+                          type="button"
+                          onClick={() => handleOpenAgentChat(agent.id)}
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded border font-mono text-[10px] transition ${
+                            isSelected
+                              ? "border-cyan-400/45 bg-cyan-950/50 text-cyan-100"
+                              : "border-white/10 bg-white/5 text-white/55 hover:border-white/20 hover:bg-white/10 hover:text-white/80"
+                          }`}
+                          title={agent.name}
+                        >
+                          {agent.name.slice(0, 1).toUpperCase()}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : chatRosterEntries.length === 0 ? (
                   <div className="px-3 py-4 font-mono text-[11px] text-white/30">
                     No agents.
                   </div>
@@ -4987,7 +5554,12 @@ export function OfficeScreen({
                   agentName={focusedRemoteChatTarget.name}
                   canSend={remoteMessagingAvailable}
                   sending={focusedRemoteChatState.sending}
+                  handoffing={focusedRemoteChatState.handoffing}
                   draft={focusedRemoteChatState.draft}
+                  mode={focusedRemoteChatState.mode}
+                  handoffContext={focusedRemoteChatState.handoffContext}
+                  handoffDeliverables={focusedRemoteChatState.handoffDeliverables}
+                  handoffAcceptance={focusedRemoteChatState.handoffAcceptance}
                   error={focusedRemoteChatState.error}
                   messages={focusedRemoteChatState.messages}
                   disabledReason={remoteMessagingDisabledReason}
@@ -4998,8 +5570,36 @@ export function OfficeScreen({
                       error: null,
                     }));
                   }}
+                  onModeChange={(value) => {
+                    updateRemoteChatSession(focusedRemoteChatTarget.id, (session) => ({
+                      ...session,
+                      mode: value,
+                      error: null,
+                    }));
+                  }}
+                  onHandoffContextChange={(value) => {
+                    updateRemoteChatSession(focusedRemoteChatTarget.id, (session) => ({
+                      ...session,
+                      handoffContext: value,
+                    }));
+                  }}
+                  onHandoffDeliverablesChange={(value) => {
+                    updateRemoteChatSession(focusedRemoteChatTarget.id, (session) => ({
+                      ...session,
+                      handoffDeliverables: value,
+                    }));
+                  }}
+                  onHandoffAcceptanceChange={(value) => {
+                    updateRemoteChatSession(focusedRemoteChatTarget.id, (session) => ({
+                      ...session,
+                      handoffAcceptance: value,
+                    }));
+                  }}
                   onSend={(message) => {
-                    void handleChatSend(focusedRemoteChatTarget.id, "", message);
+                    void handleRemoteAgentChatSend(focusedRemoteChatTarget.id, message);
+                  }}
+                  onHandoff={(message) => {
+                    void handleRemoteAgentHandoff(focusedRemoteChatTarget.id, message);
                   }}
                 />
               ) : (

@@ -91,17 +91,28 @@ function agentListPayload() {
 
 function buildDemoReply(agent, message) {
   const normalized = message.trim();
+  const compactMessage = normalized.replace(/\s+/g, " ").trim();
+  const greetingOnly = /^(hi|hello|hey|yo|sup|what'?s up|how are you)[!.? ]*$/i.test(compactMessage);
   const opening =
     agent.role === "Orchestrator"
       ? `${agent.name} here. Demo office is live and the team is synced.`
-      : `${agent.name} reporting in from the ${agent.role.toLowerCase()} desk.`;
+      : `${agent.name} checking in from the ${agent.role.toLowerCase()} desk.`;
+  if (greetingOnly) {
+    return agent.role === "Orchestrator"
+      ? `${opening} I can coordinate the room, sketch a plan, or hand work to Research and Builder.`
+      : `${opening} Give me a concrete task and I will respond in-character with a focused next step.`;
+  }
+  const focusLine =
+    compactMessage.length > 160
+      ? `${compactMessage.slice(0, 160).trimEnd()}...`
+      : compactMessage;
   const action =
     agent.role === "Research"
-      ? "I would break this down into sources, constraints, and next questions."
+      ? "I would turn this into source checks, constraints, and follow-up questions."
       : agent.role === "Builder"
-        ? "I would turn that into concrete implementation steps and validation."
-        : "I can coordinate the team, route work, and summarize progress.";
-  return `${opening} You said: "${normalized}". ${action}`;
+        ? "I would translate this into implementation steps, edge cases, and validation."
+        : "I would route the work, keep the team aligned, and summarize the next move.";
+  return `${opening} Focus: ${focusLine}. ${action}`;
 }
 
 async function handleMethod(method, params, id, sendEvent) {

@@ -43,6 +43,102 @@ The office should feel like a real place where work happens, not only a dashboar
 - Build useful features first, then layer on simulation and style.
 - Preserve backend neutrality so these systems work across OpenClaw, Hermes, Vera, and future providers.
 
+## External Validation
+
+Recent production-user feedback strongly reinforces the current direction.
+
+What that feedback confirms:
+
+- multi-agent visibility is the core differentiator
+- agent state to animation mapping should become config/schema driven
+- mobile-first support matters for real demos and daily use
+- subtle sound design and event cues add operational value, not just polish
+- enterprise auth and reverse-proxy compatibility matter for adoption
+- external event webhooks fit naturally into the office as world reactions
+
+This means the roadmap should not treat those as side quests. They are
+adoption-critical support for the office-as-operations-center model.
+
+## Current Post-Merge Sequence
+
+After the recent hardening and runtime work, the next sequence should be:
+
+1. runtime profile architecture
+2. `claw3doctor`
+3. `OfficeScreen` modularization
+4. floor schema and builder plan
+5. admin floor builder
+
+That sequence keeps the base stable before adding more office complexity.
+
+## Supporting Product Lanes
+
+### Mobile-First Office
+
+The office should work well on phones and tablets, not just scale down.
+
+Implications:
+
+- floor navigation and shell chrome must collapse cleanly
+- touch navigation should be intentional
+- control surfaces should avoid desktop-only assumptions
+
+### State-To-Animation Mapping
+
+Agent operational state should not be locked in source code.
+
+Target direction:
+
+- state -> animation mapping should be data driven
+- operator-facing config should define mappings like:
+  - idle
+  - writing
+  - executing
+  - syncing
+  - error
+
+This will matter for adoption across teams with different runtime semantics.
+
+### Sound And Event Cues
+
+Office audio should be treated as operational feedback, not decoration.
+
+Good first examples:
+
+- subtle office ambience
+- start/finish cues
+- warning/alarm cues for failures
+- event-based celebratory cues
+
+### Auth And Enterprise Adoption
+
+Enterprise deployments will often sit behind:
+
+- `oauth2-proxy`
+- Entra / OIDC
+- reverse proxies
+- HTTPS termination
+
+That means Claw3D should continue improving:
+
+- documented auth integration patterns
+- public-host hardening
+- secure-context guidance
+- proxy compatibility
+
+### Event Ingress / Webhooks
+
+External systems should be able to push state into the office.
+
+Examples:
+
+- CI failure -> alarm in the server room
+- new customer onboarded -> front-desk cue
+- CRM event -> bulletin board or celebration event
+
+This fits naturally with the office model and should become a first-class
+integration surface later.
+
 ## V1: Useful Office Systems
 
 These should be the first systems because they add product value immediately and fit the existing office concept naturally.
@@ -312,6 +408,18 @@ Recommended sequence:
 8. Culture / sim systems
 9. Theme skins
 
+## Platform Prerequisites
+
+These platform lanes should keep moving in parallel with the office feature
+roadmap because they directly affect adoption and maintainability:
+
+1. runtime profile architecture
+2. `claw3doctor`
+3. `OfficeScreen` modularization
+4. mobile shell work
+5. auth/proxy deployment guidance
+6. event ingress/webhook planning
+
 ## Theme / Skin Strategy
 
 Skins should come after the office has enough systems worth skinning.
@@ -335,12 +443,42 @@ Examples:
 
 If this roadmap is used for implementation planning, the best next concrete docs/tasks are:
 
-1. Bulletin board system spec
-2. Whiteboard interaction spec
-3. Meeting room workflow spec
-4. QA department workflow spec
+1. Runtime profile architecture doc
+2. `claw3doctor` implementation
+3. `OfficeScreen` modularization plan and extraction work
+4. Floor schema and builder plan
+5. Bulletin board system spec
+6. Whiteboard interaction spec
+7. Meeting room workflow spec
+8. QA department workflow spec
 
-Those four would create the strongest foundation for future hierarchy, progression, and simulation layers.
+Those create the strongest foundation for future hierarchy, progression,
+simulation layers, and enterprise-ready adoption.
+
+## Diagnostics Roadmap Split
+
+To keep diagnostics aligned with the platform work without turning them into
+an unbounded tooling branch, treat `claw3doctor` in two phases:
+
+### `claw3doctor` v1
+
+- first-pass deployment diagnostics
+- runtime profile awareness
+- grouped terminal output
+- JSON output
+- OpenClaw / Hermes / demo / custom provider checks
+- tunnel, auth, and close-code remediation
+
+### `claw3doctor` v2
+
+- deeper OpenClaw pairing/device heuristics
+- stronger Cloudflare / Tailscale / reverse-proxy fingerprints
+- richer export and issue-bundle workflows
+- in-app diagnostics surface later
+- floor-to-profile and multi-runtime diagnostics once runtime binding matures
+
+This keeps the current branch reviewable while preserving the next layer of
+operator-focused work.
 
 ## Summary
 

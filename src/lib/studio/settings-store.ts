@@ -71,7 +71,14 @@ const readOpenclawGatewayDefaults = (): StudioGatewaySettings | null => {
 
 const normalizeAdapterType = (value: string | undefined): StudioGatewayAdapterType | null => {
   const normalized = value?.trim().toLowerCase();
-  if (normalized === "openclaw" || normalized === "hermes" || normalized === "demo" || normalized === "custom") {
+  if (
+    normalized === "openclaw" ||
+    normalized === "hermes" ||
+    normalized === "demo" ||
+    normalized === "local" ||
+    normalized === "claw3d" ||
+    normalized === "custom"
+  ) {
     return normalized;
   }
   return null;
@@ -149,13 +156,14 @@ const mergeGatewayProfiles = (
 export const loadLocalGatewayDefaults = (): StudioGatewaySettings | null => {
   const fromFile = readOpenclawGatewayDefaults();
   const fromEnv = buildEnvGatewayDefaults();
-  if (fromFile) {
-    return mergeGatewayProfiles(fromFile, fromEnv);
+  if (fromEnv) {
+    return mergeGatewayProfiles(fromEnv, fromFile);
   }
-  // Fall back to env vars so operators can configure the gateway URL at
-  // runtime without openclaw.json and without a rebuild. If no explicit
-  // URL is provided, also expose local Hermes/Demo adapter ports when set.
-  return fromEnv;
+  if (fromFile) {
+    return fromFile;
+  }
+  // No local defaults exist in either source.
+  return null;
 };
 
 export const loadStudioSettings = (): StudioSettings => {

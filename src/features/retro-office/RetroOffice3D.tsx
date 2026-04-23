@@ -90,6 +90,7 @@ import {
   ensureOfficeServerRoom,
   isRetiredPingPongLamp,
   materializeDefaults,
+  type OfficeLayoutPreset,
 } from "@/features/retro-office/core/furnitureDefaults";
 import {
   clampPointToZone,
@@ -2309,12 +2310,37 @@ const getAgentInitials = (name: string | null | undefined): string => {
     .join("");
 };
 
+const buildInitialFurnitureLayout = (
+  storageNamespace: string,
+  layoutPreset: OfficeLayoutPreset,
+): FurnitureItem[] =>
+  ensureOfficeKanbanBoard(
+    ensureOfficeJukebox(
+      ensureOfficeQaLab(
+        ensureOfficeGymRoom(
+          ensureOfficeServerRoom(
+            ensureOfficePhoneBooth(
+              ensureOfficeSmsBooth(
+                ensureOfficeAtm(
+                  ensureOfficePingPongTable(
+                    loadFurniture(storageNamespace) ?? materializeDefaults(layoutPreset),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
 export function RetroOffice3D({
   agents,
   officeCenterSignal = 0,
   animationState = null,
   readOnly = false,
   storageNamespace = "default",
+  layoutPreset = "office",
   deskAssignmentByDeskUid = EMPTY_STRING_RECORD,
   cleaningCues = EMPTY_CLEANING_CUES,
   deskHoldByAgentId = EMPTY_BOOLEAN_RECORD,
@@ -2428,6 +2454,7 @@ export function RetroOffice3D({
   > | null;
   readOnly?: boolean;
   storageNamespace?: string;
+  layoutPreset?: OfficeLayoutPreset;
   deskAssignmentByDeskUid?: Record<string, string>;
   cleaningCues?: OfficeCleaningCue[];
   deskHoldByAgentId?: Record<string, boolean>;
@@ -2568,26 +2595,8 @@ export function RetroOffice3D({
   );
 
   const [furniture, setFurniture] = useState<FurnitureItem[]>(() =>
-    ensureOfficeKanbanBoard(
-      ensureOfficeJukebox(
-        ensureOfficeQaLab(
-          ensureOfficeGymRoom(
-            ensureOfficeServerRoom(
-              ensureOfficePhoneBooth(
-                ensureOfficeSmsBooth(
-                  ensureOfficeAtm(
-                    ensureOfficePingPongTable(
-                      (
-                        loadFurniture(storageNamespace) ?? materializeDefaults()
-                      ).filter((item) => !isRetiredPingPongLamp(item)),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+    buildInitialFurnitureLayout(storageNamespace, layoutPreset).filter(
+      (item) => !isRetiredPingPongLamp(item),
     ),
   );
   const defaultRemoteLayoutFurniture = useMemo(
@@ -2614,6 +2623,19 @@ export function RetroOffice3D({
           : defaultRemoteLayoutFurniture,
     [defaultRemoteLayoutFurniture, remoteLayoutSnapshot, remoteOfficeEnabled],
   );
+  useEffect(() => {
+    setFurniture(
+      buildInitialFurnitureLayout(storageNamespace, layoutPreset).filter(
+        (item) => !isRetiredPingPongLamp(item),
+      ),
+    );
+    setSelectedUid(null);
+    setDeskActionUid(null);
+    setDeskAssignPickerOpen(false);
+    setDrag({ kind: "idle" });
+    setGhostPos(null);
+    setWallDrawStart(null);
+  }, [layoutPreset, storageNamespace]);
   const [editMode, setEditMode] = useState(false);
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
   const [hoverUid, setHoverUid] = useState<string | null>(null);
@@ -4984,7 +5006,7 @@ export function RetroOffice3D({
         .filter((item) => item.type === "desk_cubicle")
         .map((item) => item._uid),
     );
-    setFurniture(materializeDefaults());
+    setFurniture(materializeDefaults(layoutPreset));
     setSelectedUid(null);
     setDrag({ kind: "idle" });
     setGhostPos(null);
