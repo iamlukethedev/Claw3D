@@ -15,6 +15,8 @@ import type {
 import { AgentModelProps } from "@/features/retro-office/objects/types";
 
 const MAX_NAMEPLATE_TEXT_LENGTH = 10;
+const MAX_SPEECH_BUBBLE_TEXT_LENGTH = 180;
+const MAX_SPEECH_BUBBLE_LINES = 4;
 
 const formatAgentNameplateText = (value: string): string => {
   const normalized = value.replace(/\s+/g, " ").trim();
@@ -24,9 +26,31 @@ const formatAgentNameplateText = (value: string): string => {
   return firstName || normalized;
 };
 
+const flattenSpeechBubbleMarkdown = (value: string) =>
+  value
+    .replace(/```[\s\S]*?```/g, " [code] ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^>\s*/gm, "")
+    .replace(/^[-*+]\s+/gm, "")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/[*_~]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const clampSpeechBubbleText = (value: string) => {
+  if (value.length <= MAX_SPEECH_BUBBLE_TEXT_LENGTH) {
+    return { text: value, truncated: false };
+  }
+  const slice = value.slice(0, MAX_SPEECH_BUBBLE_TEXT_LENGTH - 1).trimEnd();
+  return { text: `${slice}…`, truncated: true };
+};
+
 export const AgentModel = memo(function AgentModel({
   agentId,
   name,
+  subtitle,
   status,
   color,
   appearance,
@@ -592,9 +616,13 @@ export const AgentModel = memo(function AgentModel({
         : "...";
   const activeSpeechBubble = showSpeech && Boolean(speechText?.trim());
   const normalizedSpeechBubbleText = activeSpeechBubble
-    ? resolvedSpeechText.replace(/\s+/g, " ").trim()
+    ? flattenSpeechBubbleMarkdown(resolvedSpeechText)
     : resolvedSpeechText;
-  const speechBubbleDisplayText = normalizedSpeechBubbleText;
+  const speechBubblePreview = activeSpeechBubble
+    ? clampSpeechBubbleText(normalizedSpeechBubbleText)
+    : { text: normalizedSpeechBubbleText, truncated: false };
+  const speechBubbleDisplayText = speechBubblePreview.text;
+  const speechBubbleWasTruncated = speechBubblePreview.truncated;
   const speechBubbleTextLength = speechBubbleDisplayText.length;
   const speechBubbleWidth = activeSpeechBubble
     ? Math.min(4.6, Math.max(1.8, 1.55 + speechBubbleTextLength * 0.018))
@@ -611,7 +639,10 @@ export const AgentModel = memo(function AgentModel({
   const estimatedSpeechLines = activeSpeechBubble
     ? Math.max(
         1,
-        Math.ceil(speechBubbleTextLength / estimatedSpeechCharsPerLine),
+        Math.min(
+          MAX_SPEECH_BUBBLE_LINES,
+          Math.ceil(speechBubbleTextLength / estimatedSpeechCharsPerLine),
+        ),
       )
     : 1;
   const speechBubbleHeight = activeSpeechBubble
@@ -640,6 +671,7 @@ export const AgentModel = memo(function AgentModel({
     : "transparent";
   const speechBubbleBorderInset = activeSpeechBubble ? 0.03 : 0;
   const nameplateText = name ? formatAgentNameplateText(name) : "";
+  const subtitleText = typeof subtitle === "string" ? subtitle.trim() : "";
   const nameplateFontSize =
     nameplateText.length > 9 ? 0.118 : nameplateText.length > 7 ? 0.13 : 0.144;
 
@@ -1070,19 +1102,19 @@ export const AgentModel = memo(function AgentModel({
       {!activeSpeechBubble && nameplateText ? (
         <Billboard position={[0, 1.05, 0]}>
           <mesh position={[0, 0, -0.001]}>
-            <planeGeometry args={[0.82, 0.24]} />
+            <planeGeometry args={[0.82, subtitleText ? 0.34 : 0.24]} />
             <meshBasicMaterial color="#080c14" transparent opacity={0.9} />
           </mesh>
           <mesh position={[-0.392, 0, 0]}>
-            <planeGeometry args={[0.028, 0.24]} />
+            <planeGeometry args={[0.028, subtitleText ? 0.34 : 0.24]} />
             <meshBasicMaterial color={color} />
           </mesh>
-          <mesh position={[0.355, 0, 0]}>
+          <mesh position={[0.355, subtitleText ? 0.05 : 0, 0]}>
             <circleGeometry args={[0.052, 14]} />
             <meshBasicMaterial ref={statusDotMatRef} color="#ef4444" />
           </mesh>
           <Text
-            position={[-0.02, 0, 0.001]}
+            position={[-0.02, subtitleText ? 0.05 : 0, 0.001]}
             fontSize={nameplateFontSize}
             color="#e8dfc0"
             anchorX="center"
@@ -1092,6 +1124,19 @@ export const AgentModel = memo(function AgentModel({
           >
             {nameplateText}
           </Text>
+          {subtitleText ? (
+            <Text
+              position={[-0.02, -0.085, 0.001]}
+              fontSize={0.082}
+              color="#8ab4ff"
+              anchorX="center"
+              anchorY="middle"
+              maxWidth={0.68}
+              font={undefined}
+            >
+              {subtitleText}
+            </Text>
+          ) : null}
         </Billboard>
       ) : null}
       <group ref={awayBubbleRef} visible={false}>
@@ -1113,6 +1158,22 @@ export const AgentModel = memo(function AgentModel({
       </group>
       <group ref={speechBubbleRef} visible={false}>
         <Billboard position={[0, 1.45, 0]}>
+          {activeSpeechBubble ? (
+            <mesh
+              position={[-speechBubbleWidth * 0.18, -speechBubbleHeight * 0.53, -0.0005]}
+              rotation={[0, 0, Math.PI / 4]}
+              renderOrder={99997}
+            >
+              <planeGeometry args={[0.22, 0.22]} />
+              <meshBasicMaterial
+                color="#1a2030"
+                transparent
+                opacity={0.82}
+                depthTest={false}
+                depthWrite={false}
+              />
+            </mesh>
+          ) : null}
           {activeSpeechBubble ? (
             <mesh position={[0, 0, -0.0015]} renderOrder={99998}>
               <planeGeometry
@@ -1161,6 +1222,23 @@ export const AgentModel = memo(function AgentModel({
           >
             {speechBubbleDisplayText}
           </Text>
+          {activeSpeechBubble && speechBubbleWasTruncated ? (
+            <Text
+              position={[0, -speechBubbleHeight * 0.34, 0.001]}
+              fontSize={0.09}
+              color="#8ab4ff"
+              anchorX="center"
+              anchorY="middle"
+              maxWidth={speechBubbleMaxWidth}
+              textAlign="center"
+              renderOrder={100001}
+              depthOffset={-10}
+              material-depthTest={false}
+              material-depthWrite={false}
+            >
+              click for full chat
+            </Text>
+          ) : null}
         </Billboard>
       </group>
     </group>

@@ -67,10 +67,12 @@ const createMockClient = () => {
         const agentId = typeof record.agentId === "string" ? record.agentId : "";
         const name = typeof record.name === "string" ? record.name : "";
         const content = filesByAgent[agentId]?.[name];
+        const workspace = `/workspace/${agentId}`;
+        const path = `${workspace}/${name}`;
         if (typeof content !== "string") {
-          return { file: { name, missing: true } };
+          return { workspace, file: { name, path, missing: true } };
         }
-        return { file: { name, missing: false, content } };
+        return { workspace, file: { name, path, missing: false, content } };
       }
       if (method === "agents.files.set") {
         const record = params && typeof params === "object" ? (params as Record<string, unknown>) : {};
@@ -117,6 +119,8 @@ describe("AgentBrainPanel", () => {
     expect(screen.getByRole("heading", { name: "AGENTS.md" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "USER.md" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "IDENTITY.md" })).toBeInTheDocument();
+    expect(screen.getAllByText("Workspace:").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/workspace/agent-1").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("AGENTS.md")).toHaveValue("alpha agents");
     expect(screen.getByLabelText("SOUL.md")).toHaveValue(
       "# SOUL.md - Who You Are\n\n## Core Truths\n\nBe useful."
@@ -216,5 +220,53 @@ describe("AgentBrainPanel", () => {
     });
     expect(screen.queryByLabelText("Agent name")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Update Name" })).not.toBeInTheDocument();
+  });
+
+  it("shows_missing_file_state_instead_of_generic_placeholder_content", async () => {
+    const { client } = createMockClient();
+    const agents = [createAgent("agent-2", "Beta", "session-2")];
+
+    render(
+      createElement(AgentBrainPanel, {
+        client,
+        agents,
+        selectedAgentId: "agent-2",
+        activeSection: "SOUL.md",
+      })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("This agent does not have a custom SOUL.md yet. Saving here will create the real workspace file.")).toBeInTheDocument();
+    });
+
+    expect(screen.getByLabelText("SOUL.md")).toHaveValue("");
+    expect(screen.getByLabelText("SOUL.md")).toHaveAttribute("placeholder", "No SOUL.md yet.");
+    expect(screen.getByText("/workspace/agent-2/SOUL.md")).toBeInTheDocument();
+  });
+
+  it("can_initialize_missing_personality_files_for_an_agent", async () => {
+    const { client, filesByAgent } = createMockClient();
+    const agents = [createAgent("agent-2", "Beta", "session-2")];
+
+    render(
+      createElement(AgentBrainPanel, {
+        client,
+        agents,
+        selectedAgentId: "agent-2",
+      })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Initialize missing files" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Initialize missing files" }));
+
+    await waitFor(() => {
+      expect(filesByAgent["agent-2"]["SOUL.md"]).toContain("# SOUL.md - Who You Are");
+    });
+
+    expect(filesByAgent["agent-2"]["IDENTITY.md"]).toContain("- Name: Beta");
+    expect(filesByAgent["agent-2"]["USER.md"]).toContain("# USER.md - About Your Human");
   });
 });

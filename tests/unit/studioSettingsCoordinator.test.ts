@@ -50,6 +50,117 @@ describe("StudioSettingsCoordinator", () => {
     coordinator.dispose();
   });
 
+  it("merges queued gateway patches field-by-field before flushing", async () => {
+    const fetchSettings = vi.fn(async () => createResponse());
+    const updateSettings = vi.fn(async () => createResponse());
+    const coordinator = new StudioSettingsCoordinator({ fetchSettings, updateSettings }, 300);
+
+    coordinator.schedulePatch(
+      {
+        gateway: {
+          lastKnownGood: {
+            url: "ws://localhost:18789",
+            token: undefined,
+            adapterType: "openclaw",
+          },
+        },
+      },
+      300,
+    );
+    coordinator.schedulePatch(
+      {
+        gateway: {
+          url: "http://localhost:7770",
+          adapterType: "local",
+          profiles: {
+            local: {
+              url: "http://localhost:7770",
+              token: undefined,
+            },
+          },
+        },
+      },
+      300,
+    );
+
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(updateSettings).toHaveBeenCalledTimes(1);
+    expect(updateSettings).toHaveBeenCalledWith({
+      gateway: {
+        url: "http://localhost:7770",
+        adapterType: "local",
+        profiles: {
+          local: {
+            url: "http://localhost:7770",
+            token: undefined,
+          },
+        },
+        lastKnownGood: {
+          url: "ws://localhost:18789",
+          token: undefined,
+          adapterType: "openclaw",
+        },
+      },
+    });
+
+    coordinator.dispose();
+  });
+
+  it("merges queued gateway profile and last-known-good subpatches", async () => {
+    const fetchSettings = vi.fn(async () => createResponse());
+    const updateSettings = vi.fn(async () => createResponse());
+    const coordinator = new StudioSettingsCoordinator({ fetchSettings, updateSettings }, 300);
+
+    coordinator.schedulePatch({
+      gateway: {
+        profiles: {
+          hermes: {
+            url: "ws://localhost:18888",
+            token: undefined,
+          },
+        },
+        lastKnownGood: {
+          url: "ws://localhost:18789",
+          token: "stored-token",
+        },
+      },
+    });
+    coordinator.schedulePatch({
+      gateway: {
+        profiles: {
+          hermes: {
+            token: "new-token",
+          },
+        },
+        lastKnownGood: {
+          adapterType: "openclaw",
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(updateSettings).toHaveBeenCalledTimes(1);
+    expect(updateSettings).toHaveBeenCalledWith({
+      gateway: {
+        profiles: {
+          hermes: {
+            url: "ws://localhost:18888",
+            token: "new-token",
+          },
+        },
+        lastKnownGood: {
+          url: "ws://localhost:18789",
+          token: "stored-token",
+          adapterType: "openclaw",
+        },
+      },
+    });
+
+    coordinator.dispose();
+  });
+
   it("flushPending persists queued patch immediately", async () => {
     const fetchSettings = vi.fn(async () => createResponse());
     const updateSettings = vi.fn(async () => createResponse());

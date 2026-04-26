@@ -24,6 +24,8 @@ import type {
   FurnitureSeed,
 } from "@/features/retro-office/core/types";
 
+export type OfficeLayoutPreset = "office" | "lobby";
+
 const DEFAULT_PINGPONG_TABLE: FurnitureSeed = {
   type: "pingpong",
   x: 950,
@@ -418,6 +420,39 @@ const DEFAULT_ART_ROOM_ITEMS: FurnitureSeed[] = [
   { type: "plant", x: 280, y: 240 },
 ];
 
+const DEFAULT_LOBBY_FURNITURE: FurnitureSeed[] = [
+  { type: "round_table", x: 120, y: 110, r: 72 },
+  { type: "chair", x: 182, y: 110, facing: 0 },
+  { type: "chair", x: 160, y: 168, facing: 220 },
+  { type: "chair", x: 92, y: 170, facing: 140 },
+  { type: "chair", x: 58, y: 112, facing: 90 },
+  { type: "chair", x: 92, y: 52, facing: 40 },
+  { type: "bookshelf", x: 248, y: 32, w: 78, h: 118 },
+  { type: "couch", x: 332, y: 92, w: 44, h: 112, vertical: true, facing: 180 },
+  { type: "couch", x: 430, y: 92, w: 44, h: 112, vertical: true, facing: 180 },
+  { type: "table_rect", x: 382, y: 138, w: 72, h: 34 },
+  { type: "beanbag", x: 332, y: 210, color: "#1565c0", facing: 135 },
+  { type: "beanbag", x: 436, y: 216, color: "#7c3aed", facing: 225 },
+  { type: "whiteboard", x: 36, y: 214, w: 10, h: 64 },
+  { type: "clock", x: 566, y: 6 },
+  { type: "table_rect", x: 874, y: 102, w: 124, h: 34, facing: 0 },
+  { type: "chair", x: 934, y: 176, facing: 180 },
+  { type: "vending", x: 788, y: 10 },
+  { type: "trash", x: 826, y: 20 },
+  { type: "couch", x: 982, y: 382, w: 112, h: 42, facing: 90 },
+  { type: "couch", x: 392, y: 634, w: 112, h: 42 },
+  { type: "table_rect", x: 980, y: 380, w: 60, h: 30, facing: 270 },
+  { type: "plant", x: 40, y: 40 },
+  { type: "plant", x: 662, y: 32 },
+  { type: "plant", x: 340, y: 700 },
+  { type: "plant", x: 1088, y: 312 },
+  { type: "plant", x: 530, y: 700 },
+  ...DEFAULT_SERVER_ROOM_ITEMS,
+  ...DEFAULT_GYM_ITEMS,
+  ...DEFAULT_QA_LAB_ITEMS,
+  ...DEFAULT_ART_ROOM_ITEMS,
+];
+
 const DEFAULT_FURNITURE: FurnitureSeed[] = [
   { type: "round_table", x: 50, y: 50, r: 90 },
   { type: "chair", x: 130, y: 50, facing: 0 },
@@ -522,10 +557,12 @@ const DEFAULT_FURNITURE: FurnitureSeed[] = [
   { type: "chair", x: 100, y: 200, facing: 180 },
 ];
 
-export const materializeDefaults = (): FurnitureItem[] =>
-  DEFAULT_FURNITURE.map((item, index) => ({
+export const materializeDefaults = (
+  preset: OfficeLayoutPreset = "office",
+): FurnitureItem[] =>
+  (preset === "lobby" ? DEFAULT_LOBBY_FURNITURE : DEFAULT_FURNITURE).map((item, index) => ({
     ...item,
-    _uid: `default_${index}`,
+    _uid: `${preset}_${index}`,
   }));
 
 export const isRetiredPingPongLamp = (item: FurnitureItem) =>

@@ -502,7 +502,12 @@ export function SkillsMarketplacePanel({
                               <button
                                 type="button"
                                 onClick={primaryAction.run}
-                                disabled={marketplace.busySkillKey === entry.skill.skillKey}
+                                disabled={
+                                  marketplace.busySkillKey === entry.skill.skillKey ||
+                                  (packageOnly && !marketplace.selectedAgentId) ||
+                                  (primaryAction.label === "Open settings" &&
+                                    !marketplace.selectedAgentId)
+                                }
                                 className="inline-flex items-center gap-1 rounded border border-cyan-500/25 bg-cyan-500/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-100 transition-colors hover:border-cyan-400/40 disabled:cursor-not-allowed disabled:opacity-45"
                               >
                                 <PrimaryIcon className="h-3.5 w-3.5" />

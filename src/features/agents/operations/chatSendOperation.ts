@@ -11,6 +11,7 @@ import {
 import type { AgentState } from "@/features/agents/state/store";
 import { randomUUID } from "@/lib/uuid";
 import type { TranscriptAppendMeta } from "@/features/agents/state/transcript";
+import type { RuntimeAttachment } from "@/lib/runtime/types";
 
 type SendDispatchAction =
   | { type: "updateAgent"; agentId: string; patch: Partial<AgentState> }
@@ -20,6 +21,25 @@ type SendDispatch = (action: SendDispatchAction) => void;
 
 type GatewayClientLike = {
   call: (method: string, params: unknown) => Promise<unknown>;
+};
+
+const extractImmediateAssistantText = (payload: unknown): string | null => {
+  if (!payload || typeof payload !== "object") return null;
+  const value = payload as {
+    text?: unknown;
+    content?: unknown;
+    message?: unknown;
+  };
+  if (typeof value.text === "string" && value.text.trim()) {
+    return value.text.trim();
+  }
+  if (typeof value.content === "string" && value.content.trim()) {
+    return value.content.trim();
+  }
+  if (typeof value.message === "string" && value.message.trim()) {
+    return value.message.trim();
+  }
+  return null;
 };
 
 const resolveLatestTranscriptTimestampMs = (agent: AgentState): number | null => {
@@ -67,13 +87,15 @@ export async function sendChatMessageViaStudio(params: {
   agentId: string;
   sessionKey: string;
   message: string;
+  attachments?: RuntimeAttachment[];
   clearRunTracking?: (runId: string) => void;
   echoUserMessage?: boolean;
   now?: () => number;
   generateRunId?: () => string;
 }): Promise<void> {
   const trimmed = params.message.trim();
-  if (!trimmed) return;
+  const attachments = params.attachments ?? [];
+  if (!trimmed && attachments.length === 0) return;
   const echoUserMessage = params.echoUserMessage !== false;
 
   const generateRunId = params.generateRunId ?? (() => randomUUID());
@@ -187,6 +209,7 @@ export async function sendChatMessageViaStudio(params: {
     const sendResult = await params.client.call("chat.send", {
       sessionKey: params.sessionKey,
       message: buildAgentInstruction({ message: trimmed }),
+      ...(attachments.length > 0 ? { attachments } : {}),
       deliver: false,
       idempotencyKey: runId,
     });
@@ -200,6 +223,33 @@ export async function sendChatMessageViaStudio(params: {
     }
 
     if (resolveChatSendCompletionMode(sendResult, runId) === "terminal-immediate") {
+      const assistantText = extractImmediateAssistantText(sendResult);
+      if (assistantText) {
+        const assistantTimestamp = now();
+        params.dispatch({
+          type: "appendOutput",
+          agentId,
+          line: assistantText,
+          transcript: {
+            source: "local-send",
+            runId,
+            sessionKey: params.sessionKey,
+            timestampMs: assistantTimestamp,
+            role: "assistant",
+            kind: "assistant",
+          },
+        });
+        params.dispatch({
+          type: "updateAgent",
+          agentId,
+          patch: {
+            lastResult: assistantText,
+            latestPreview: assistantText,
+            lastAssistantMessageAt: assistantTimestamp,
+            lastActivityAt: assistantTimestamp,
+          },
+        });
+      }
       params.dispatch({
         type: "updateAgent",
         agentId,

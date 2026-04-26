@@ -649,6 +649,7 @@ export const useTaskBoardController = ({
   settingsCoordinator,
   client,
   status,
+  cronEnabled = true,
   agents,
   runLog,
   standup,
@@ -657,6 +658,7 @@ export const useTaskBoardController = ({
   settingsCoordinator: StudioSettingsCoordinator;
   client: GatewayClient;
   status: GatewayStatus;
+  cronEnabled?: boolean;
   agents: AgentState[];
   runLog: RunRecord[];
   standup: OfficeStandupController;
@@ -843,9 +845,10 @@ export const useTaskBoardController = ({
   }, [gatewayUrl, settingsCoordinator, state.cards, state.selectedCardId]);
 
   const refreshCronJobs = useCallback(async () => {
-    if (status !== "connected") {
+    if (!cronEnabled || status !== "connected") {
       setCronJobs([]);
       setCronError(null);
+      setCronLoading(false);
       return;
     }
     setCronLoading(true);
@@ -860,7 +863,7 @@ export const useTaskBoardController = ({
     } finally {
       setCronLoading(false);
     }
-  }, [client, status]);
+  }, [client, cronEnabled, status]);
 
   const refreshSharedTasks = useCallback(async () => {
     if (!sharedTasksSupported) {

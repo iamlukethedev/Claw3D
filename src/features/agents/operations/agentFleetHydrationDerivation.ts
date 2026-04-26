@@ -23,6 +23,7 @@ type AgentsListResult = {
   agents: Array<{
     id: string;
     name?: string;
+    role?: string;
     identity?: {
       name?: string;
       theme?: string;
@@ -118,11 +119,21 @@ const normalizeExecAsk = (raw: string | null | undefined): ExecAsk | undefined =
 };
 
 const resolveAgentName = (agent: AgentsListResult["agents"][number]) => {
-  const fromList = typeof agent.name === "string" ? agent.name.trim() : "";
-  if (fromList) return fromList;
   const fromIdentity = typeof agent.identity?.name === "string" ? agent.identity.name.trim() : "";
   if (fromIdentity) return fromIdentity;
+  const fromList = typeof agent.name === "string" ? agent.name.trim() : "";
+  if (fromList) return fromList;
   return agent.id;
+};
+
+const resolveRuntimeName = (agent: AgentsListResult["agents"][number]) => {
+  const fromList = typeof agent.name === "string" ? agent.name.trim() : "";
+  return fromList || null;
+};
+
+const resolveIdentityName = (agent: AgentsListResult["agents"][number]) => {
+  const fromIdentity = typeof agent.identity?.name === "string" ? agent.identity.name.trim() : "";
+  return fromIdentity || null;
 };
 
 const resolveAgentAvatarUrl = (agent: AgentsListResult["agents"][number]) => {
@@ -214,7 +225,11 @@ export const deriveHydrateAgentFleetResult = (
     const avatarSeed = persistedSeed ?? avatarProfile.seed ?? agent.id;
     const avatarUrl = resolveAgentAvatarUrl(agent);
     const name = resolveAgentName(agent);
+    const runtimeName = resolveRuntimeName(agent);
+    const identityName = resolveIdentityName(agent);
     const mainSession = input.mainSessionByAgentId.get(agent.id) ?? null;
+    const sessionDisplayName =
+      typeof mainSession?.displayName === "string" ? mainSession.displayName.trim() || null : null;
     const modelProvider =
       typeof mainSession?.modelProvider === "string" ? mainSession.modelProvider.trim() : "";
     const modelId = typeof mainSession?.model === "string" ? mainSession.model.trim() : "";
@@ -251,6 +266,10 @@ export const deriveHydrateAgentFleetResult = (
     return {
       agentId: agent.id,
       name,
+      runtimeName,
+      identityName,
+      sessionDisplayName,
+      role: typeof agent.role === "string" && agent.role.trim() ? agent.role.trim() : null,
       sessionKey: buildAgentMainSessionKey(agent.id, mainKey),
       avatarSeed,
       avatarProfile,

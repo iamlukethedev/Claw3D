@@ -2,8 +2,14 @@ import { describe, expect, it } from "vitest";
 import { createDefaultAgentAvatarProfile } from "@/lib/avatars/profile";
 
 import {
+  defaultStudioSettings,
+  defaultStudioFloorRuntimeState,
   mergeStudioSettings,
   normalizeStudioSettings,
+  resolveDefaultStudioGatewayProfile,
+  resolveStudioGatewayProfiles,
+  resolveStudioActiveFloorId,
+  resolveStudioFloorRuntimeState,
 } from "@/lib/studio/settings";
 
 describe("studio settings normalization", () => {
@@ -11,6 +17,7 @@ describe("studio settings normalization", () => {
     const normalized = normalizeStudioSettings(null);
     expect(normalized.version).toBe(1);
     expect(normalized.gateway).toBeNull();
+    expect(normalized.activeFloorId).toBe("lobby");
     expect(normalized.focused).toEqual({});
     expect(normalized.avatars).toEqual({});
     expect(normalized.office).toEqual({});
@@ -192,6 +199,88 @@ describe("studio settings normalization", () => {
     );
   });
 
+  it("creates default per-floor runtime state", () => {
+    const normalized = normalizeStudioSettings(null);
+
+    expect(normalized.officeFloors["openclaw-ground"]).toEqual(
+      expect.objectContaining({
+        floorId: "openclaw-ground",
+        provider: "openclaw",
+        runtimeProfileId: "openclaw-default",
+        gatewayUrl: null,
+        status: "disconnected",
+      }),
+    );
+  });
+
+  it("normalizes and merges per-floor runtime state", () => {
+    const normalized = normalizeStudioSettings({
+      officeFloors: {
+        "hermes-first": {
+          runtimeProfileId: " hermes-pi ",
+          gatewayUrl: " ws://127.0.0.1:18789 ",
+          status: "connected",
+          lastKnownGoodAt: 1234,
+          lastErrorCode: " ignored ",
+          lastErrorMessage: " ignored ",
+        },
+      },
+    });
+
+    expect(normalized.officeFloors["hermes-first"]).toEqual(
+      expect.objectContaining({
+        floorId: "hermes-first",
+        provider: "hermes",
+        runtimeProfileId: "hermes-pi",
+        gatewayUrl: "ws://localhost:18789",
+        status: "connected",
+        lastKnownGoodAt: 1234,
+        lastErrorCode: "ignored",
+        lastErrorMessage: "ignored",
+      }),
+    );
+
+    const merged = mergeStudioSettings(normalized, {
+      officeFloors: {
+        "hermes-first": {
+          status: "error",
+          lastErrorCode: "connect_timeout",
+          lastErrorMessage: "Timed out connecting",
+        },
+      },
+    });
+
+    expect(merged.officeFloors["hermes-first"]).toEqual(
+      expect.objectContaining({
+        runtimeProfileId: "hermes-pi",
+        gatewayUrl: "ws://localhost:18789",
+        status: "error",
+        lastErrorCode: "connect_timeout",
+        lastErrorMessage: "Timed out connecting",
+      }),
+    );
+  });
+
+  it("resolves floor runtime state with fallback", () => {
+    const normalized = normalizeStudioSettings(null);
+
+    expect(resolveStudioFloorRuntimeState(normalized, "training")).toEqual(
+      defaultStudioFloorRuntimeState("training"),
+    );
+  });
+
+  it("normalizes and merges active floor selection", () => {
+    const normalized = normalizeStudioSettings({
+      activeFloorId: "hermes-first",
+    });
+    expect(resolveStudioActiveFloorId(normalized)).toBe("hermes-first");
+
+    const merged = mergeStudioSettings(normalized, {
+      activeFloorId: "training",
+    });
+    expect(resolveStudioActiveFloorId(merged)).toBe("lobby");
+  });
+
   it("normalizes task board cards per gateway", () => {
     const normalized = normalizeStudioSettings({
       taskBoard: {
@@ -299,5 +388,131 @@ describe("studio settings normalization", () => {
         ],
       }),
     );
+  });
+
+  it("resolves simultaneous runtime profiles without collapsing them to one active url", () => {
+    const resolved = resolveStudioGatewayProfiles({
+      gateway: normalizeStudioSettings({
+        gateway: {
+          url: "ws://localhost:28789",
+          token: "",
+          adapterType: "hermes",
+          profiles: {
+            openclaw: { url: "ws://localhost:18789", token: "open-token" },
+            demo: { url: "ws://localhost:38789", token: "" },
+          },
+        },
+      }).gateway,
+      localDefaults: null,
+    });
+
+    expect(resolved.selectedAdapterType).toBe("hermes");
+    expect(resolved.activeProfile).toEqual({
+      url: "ws://localhost:28789",
+      token: "",
+    });
+    expect(resolved.profiles).toEqual(
+      expect.objectContaining({
+        openclaw: { url: "ws://localhost:18789", token: "open-token" },
+        hermes: { url: "ws://localhost:28789", token: "" },
+        demo: { url: "ws://localhost:38789", token: "" },
+      }),
+    );
+  });
+
+  it("resolves adapter-specific defaults for dormant profiles", () => {
+    expect(resolveDefaultStudioGatewayProfile("local", null)).toEqual({
+      url: "http://localhost:7770",
+      token: "",
+    });
+    expect(resolveDefaultStudioGatewayProfile("claw3d", null)).toEqual({
+      url: "http://localhost:3000/api/runtime/custom",
+      token: "",
+    });
+    expect(resolveDefaultStudioGatewayProfile("custom", null)).toEqual({
+      url: "http://localhost:7770",
+      token: "",
+    });
+    expect(resolveDefaultStudioGatewayProfile("demo", null)).toEqual({
+      url: "ws://localhost:18789",
+      token: "",
+    });
+  });
+
+  it("merging lastKnownGood with an empty-string token does not overwrite a stored token", () => {
+    const current = normalizeStudioSettings({
+      gateway: {
+        url: "ws://localhost:18789",
+        token: "stored-token",
+        lastKnownGood: {
+          url: "ws://localhost:18789",
+          token: "stored-token",
+          adapterType: "openclaw",
+        },
+      },
+    });
+
+    const merged = mergeStudioSettings(current, {
+      gateway: {
+        lastKnownGood: {
+          url: "ws://localhost:18789",
+          token: "",
+          adapterType: "openclaw",
+        },
+      },
+    });
+
+    expect(merged.gateway?.lastKnownGood?.token).toBe("stored-token");
+  });
+
+  it("merging lastKnownGood with a real token overwrites the stored token", () => {
+    const current = normalizeStudioSettings({
+      gateway: {
+        url: "ws://localhost:18789",
+        token: "old-token",
+        lastKnownGood: {
+          url: "ws://localhost:18789",
+          token: "old-token",
+          adapterType: "openclaw",
+        },
+      },
+    });
+
+    const merged = mergeStudioSettings(current, {
+      gateway: {
+        lastKnownGood: {
+          url: "ws://localhost:18789",
+          token: "new-token",
+          adapterType: "openclaw",
+        },
+      },
+    });
+
+    expect(merged.gateway?.lastKnownGood?.token).toBe("new-token");
+  });
+
+  it("merging lastKnownGood with undefined token leaves the stored token unchanged", () => {
+    const current = normalizeStudioSettings({
+      gateway: {
+        url: "ws://localhost:18789",
+        token: "stored-token",
+        lastKnownGood: {
+          url: "ws://localhost:18789",
+          token: "stored-token",
+          adapterType: "openclaw",
+        },
+      },
+    });
+
+    const merged = mergeStudioSettings(current, {
+      gateway: {
+        lastKnownGood: {
+          url: "ws://localhost:18789",
+          adapterType: "openclaw",
+        },
+      },
+    });
+
+    expect(merged.gateway?.lastKnownGood?.token).toBe("stored-token");
   });
 });

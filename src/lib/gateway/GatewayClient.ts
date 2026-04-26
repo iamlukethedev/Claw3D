@@ -7,10 +7,16 @@ import {
   type GatewayHelloOk,
 } from "./openclaw/GatewayBrowserClient";
 import type {
+  StudioGatewayProfilePublic,
+  StudioGatewayAdapterType,
   StudioGatewaySettings,
   StudioSettings,
   StudioSettingsPatch,
   StudioSettingsPublic,
+} from "@/lib/studio/settings";
+import {
+  resolveDefaultStudioGatewayProfile,
+  resolveStudioGatewayProfiles,
 } from "@/lib/studio/settings";
 import type {
   StudioSettingsLoadOptions,
@@ -18,7 +24,20 @@ import type {
 } from "@/lib/studio/coordinator";
 import { resolveStudioProxyGatewayUrl } from "@/lib/gateway/proxy-url";
 import { ensureGatewayReloadModeHotForLocalStudio } from "@/lib/gateway/gatewayReloadMode";
+import { isLocalGatewayUrl } from "@/lib/gateway/local-gateway";
 import { GatewayResponseError } from "@/lib/gateway/errors";
+
+const gatewayDebugEnabled = process.env.NODE_ENV !== "production";
+
+const gatewayDebugLog = (message: string, details?: Record<string, unknown>) => {
+  if (!gatewayDebugEnabled) return;
+  if (details) {
+    console.info("[gateway-client]", message, details);
+    return;
+  }
+  console.info("[gateway-client]", message);
+};
+import { probeCustomRuntime } from "@/lib/runtime/custom/http";
 
 export type ReqFrame = {
   type: "req";
@@ -82,7 +101,7 @@ export const isSameSessionKey = (a: string, b: string) => {
 };
 
 const CONNECT_FAILED_CLOSE_CODE = 4008;
-const GATEWAY_CONNECT_TIMEOUT_MS = 8_000;
+const GATEWAY_CONNECT_TIMEOUT_MS = 13_000;
 
 const parseConnectFailedCloseReason = (
   reason: string
@@ -100,10 +119,61 @@ const parseConnectFailedCloseReason = (
 
 const DEFAULT_UPSTREAM_GATEWAY_URL =
   process.env.NEXT_PUBLIC_GATEWAY_URL || "ws://localhost:18789";
+const INITIAL_AUTO_CONNECT_DELAY_MS = 900;
+const INITIAL_CONNECT_RETRY_DELAY_MS = 1_200;
+const OPENCLAW_CONTROL_UI_CLIENT_ID = "openclaw-control-ui";
+const OPENCLAW_WEBCHAT_UI_CLIENT_ID = "webchat-ui";
+
+const isAutoManagedAdapter = (adapterType: StudioGatewayAdapterType) =>
+  adapterType === "openclaw" || adapterType === "hermes" || adapterType === "demo";
+
+export const resolveGatewayClientName = (
+  adapterType: StudioGatewayAdapterType,
+  gatewayUrl: string
+) => {
+  if (adapterType !== "openclaw") {
+    return OPENCLAW_CONTROL_UI_CLIENT_ID;
+  }
+  return isLocalGatewayUrl(gatewayUrl)
+    ? OPENCLAW_CONTROL_UI_CLIENT_ID
+    : OPENCLAW_WEBCHAT_UI_CLIENT_ID;
+};
+
+export const resolveInitialGatewayAutoConnectDelayMs = (
+  adapterType: StudioGatewayAdapterType
+): number => {
+  switch (adapterType) {
+    case "hermes":
+    case "demo":
+      return INITIAL_AUTO_CONNECT_DELAY_MS;
+    default:
+      return 0;
+  }
+};
+
+export const resolveInitialGatewayConnectAttemptCount = (
+  adapterType: StudioGatewayAdapterType,
+  hasConnectedOnce: boolean
+): number => {
+  switch (adapterType) {
+    case "hermes":
+    case "demo":
+      return 2;
+    default:
+      if (hasConnectedOnce) return 1;
+      return 1;
+  }
+};
 
 const normalizeLocalGatewayDefaults = (value: unknown): StudioGatewaySettings | null => {
   if (!value || typeof value !== "object") return null;
-  const raw = value as { url?: unknown; token?: unknown; tokenConfigured?: unknown };
+  const raw = value as {
+    url?: unknown;
+    token?: unknown;
+    tokenConfigured?: unknown;
+    adapterType?: unknown;
+    profiles?: unknown;
+  };
   const url = typeof raw.url === "string" ? raw.url.trim() : "";
   if (!url) return null;
   // Accept both full settings ({ url, token }) and the sanitized public
@@ -111,7 +181,42 @@ const normalizeLocalGatewayDefaults = (value: unknown): StudioGatewaySettings | 
   // tokenConfigured is present the actual token isn't available on the
   // client — leave it empty so the connection dialog can prompt if needed.
   const token = typeof raw.token === "string" ? raw.token.trim() : "";
-  return { url, token };
+  const adapterType =
+    raw.adapterType === "demo" ||
+    raw.adapterType === "hermes" ||
+    raw.adapterType === "openclaw" ||
+    raw.adapterType === "local" ||
+    raw.adapterType === "claw3d" ||
+    raw.adapterType === "custom"
+      ? raw.adapterType
+      : "openclaw";
+  const profiles = normalizeGatewayProfilesPublic(raw.profiles);
+  return { url, token, adapterType, ...(profiles ? { profiles } : {}) };
+};
+
+const normalizeGatewayProfilePublic = (
+  value: unknown
+): { url: string; token: string } | null => {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as { url?: unknown };
+  const url = typeof raw.url === "string" ? raw.url.trim() : "";
+  if (!url) return null;
+  return { url, token: "" };
+};
+
+const normalizeGatewayProfilesPublic = (
+  value: unknown
+): Partial<Record<StudioGatewayAdapterType, { url: string; token: string }>> | undefined => {
+  if (!value || typeof value !== "object") return undefined;
+  const raw = value as Partial<Record<StudioGatewayAdapterType, StudioGatewayProfilePublic>>;
+  const profiles: Partial<Record<StudioGatewayAdapterType, { url: string; token: string }>> = {};
+  for (const adapterType of ["openclaw", "hermes", "demo", "local", "claw3d", "custom"] as const) {
+    const profile = normalizeGatewayProfilePublic(raw[adapterType]);
+    if (profile) {
+      profiles[adapterType] = profile;
+    }
+  }
+  return Object.keys(profiles).length > 0 ? profiles : undefined;
 };
 
 type StatusHandler = (status: GatewayStatus) => void;
@@ -146,6 +251,7 @@ export class GatewayClient {
   private rejectConnect: ((error: Error) => void) | null = null;
   private manualDisconnect = false;
   private lastHello: GatewayHelloOk | null = null;
+  private _lastDisconnectCode: number | null = null;
 
   onStatus(handler: StatusHandler) {
     this.statusHandlers.add(handler);
@@ -204,6 +310,7 @@ export class GatewayClient {
       },
       onClose: ({ code, reason }) => {
         if (this.client !== nextClient) return;
+        this._lastDisconnectCode = code;
         const connectFailed =
           code === CONNECT_FAILED_CLOSE_CODE ? parseConnectFailedCloseReason(reason) : null;
         const err = connectFailed
@@ -295,6 +402,10 @@ export class GatewayClient {
     return this.lastHello;
   }
 
+  get lastDisconnectCode() {
+    return this._lastDisconnectCode;
+  }
+
   private updateStatus(status: GatewayStatus) {
     this.status = status;
     this.statusHandlers.forEach((handler) => handler(status));
@@ -319,7 +430,7 @@ export const isGatewayDisconnectLikeError = (err: unknown): boolean => {
     return true;
   }
 
-  const match = msg.match(/gateway closed \\((\\d+)\\)/);
+  const match = msg.match(/gateway closed \((\d+)\)/);
   if (!match) return false;
   const code = Number(match[1]);
   return Number.isFinite(code) && code === 1012;
@@ -419,14 +530,73 @@ export const syncGatewaySessionSettings = async ({
 const doctorFixHint =
   "Run `npx openclaw doctor --fix` on the gateway host (or `pnpm openclaw doctor --fix` in a source checkout).";
 
+const protocolMismatchHint =
+  "This gateway looks too old for Claw3D's protocol v3. Upgrade OpenClaw, use the Hermes adapter, or run `npm run demo-gateway` for a no-framework office demo.";
+
+const tailscaleGatewayHint =
+  "If this is a remote OpenClaw/Tailscale gateway, confirm the Studio host can reach the `wss://...` address and approve the first device pairing on the gateway host with `openclaw devices approve --latest`.";
+
+const pairingRequiredHint =
+  "This gateway is asking for first-time device approval. Run `openclaw devices approve --latest` on the gateway host, then restart Claw3D and reconnect from this browser.";
+
+const requiresDeviceIdentityHint =
+  "This gateway rejected the client as a control UI without device identity. For remote OpenClaw/Tailscale connections, update to the latest Claw3D build and approve the device pairing on the gateway host.";
+
+const isGatewayProtocolMismatchError = (error: GatewayResponseError) => {
+  if (error.code.trim().toUpperCase() !== "INVALID_REQUEST") return false;
+  // The gateway may provide a structured details.code alongside the
+  // generic INVALID_REQUEST. Known non-protocol rejection codes must
+  // not surface the "possible protocol mismatch" hint, since it
+  // misleads operators whose real problem is origin allowlist, missing
+  // device identity, or upstream policy.
+  const details = error.details;
+  if (details && typeof details === "object") {
+    const code = (details as { code?: unknown }).code;
+    if (typeof code === "string") {
+      const NON_PROTOCOL_DETAIL_CODES = new Set([
+        "CONTROL_UI_ORIGIN_NOT_ALLOWED",
+        "CONTROL_UI_DEVICE_IDENTITY_REQUIRED",
+        "UPSTREAM_NOT_ALLOWED",
+      ]);
+      if (NON_PROTOCOL_DETAIL_CODES.has(code)) return false;
+    }
+  }
+  const message = error.message.trim();
+  if (!message) return false;
+  return /minProtocol|maxProtocol/i.test(message);
+};
+
 const formatGatewayError = (error: unknown) => {
   if (error instanceof GatewayResponseError) {
+    if (isGatewayProtocolMismatchError(error)) {
+      return `Gateway error (${error.code}): ${error.message}. ${protocolMismatchHint}`;
+    }
     if (error.code === "INVALID_REQUEST" && /invalid config/i.test(error.message)) {
       return `Gateway error (${error.code}): ${error.message}. ${doctorFixHint}`;
+    }
+    if (error.code === "studio.upstream_timeout") {
+      return `Gateway error (${error.code}): ${error.message} ${tailscaleGatewayHint}`;
+    }
+    if (error.code === "studio.upstream_rejected") {
+      const lower = error.message.toLowerCase();
+      if (lower.includes("pairing required")) {
+        return `Gateway error (${error.code}): ${error.message}. ${pairingRequiredHint}`;
+      }
+      if (lower.includes("device identity")) {
+        return `Gateway error (${error.code}): ${error.message}. ${requiresDeviceIdentityHint}`;
+      }
     }
     return `Gateway error (${error.code}): ${error.message}`;
   }
   if (error instanceof Error) {
+    if (/timed out connecting to the gateway/i.test(error.message)) {
+      // A local timeout carries no information about why the upstream did
+      // not respond. Suggest the directions the operator can actually check,
+      // without biasing toward a protocol mismatch — that is only one of
+      // several possible root causes (network, origin allowlist, upstream
+      // policy, credentials, nginx idle timeout, ...).
+      return `${error.message} Verify that the gateway is reachable at the configured URL, that origin and credentials meet the gateway's requirements, and (if testing locally with a self-built gateway) consider \`npm run demo-gateway\` to isolate the problem.`;
+    }
     return error.message;
   }
   return "Unknown gateway error.";
@@ -437,6 +607,10 @@ export type GatewayConnectionState = {
   status: GatewayStatus;
   gatewayUrl: string;
   token: string;
+  selectedAdapterType: StudioGatewayAdapterType;
+  detectedAdapterType: StudioGatewayAdapterType | null;
+  activeAdapterType: StudioGatewayAdapterType;
+  adapterProfiles: Partial<Record<StudioGatewayAdapterType, { url: string; token: string }>>;
   localGatewayDefaults: StudioGatewaySettings | null;
   error: string | null;
   connectPromptReady: boolean;
@@ -446,6 +620,7 @@ export type GatewayConnectionState = {
   useLocalGatewayDefaults: () => void;
   setGatewayUrl: (value: string) => void;
   setToken: (value: string) => void;
+  setSelectedAdapterType: (value: StudioGatewayAdapterType) => void;
   clearError: () => void;
 };
 
@@ -484,6 +659,8 @@ const NON_RETRYABLE_CONNECT_ERROR_CODES = new Set([
   "studio.gateway_url_invalid",
   "studio.settings_load_failed",
   "studio.upstream_error",
+  "studio.upstream_timeout",
+  "studio.upstream_rejected",
 ]);
 
 const isNonRetryableConnectErrorCode = (code: string | null): boolean => {
@@ -491,6 +668,10 @@ const isNonRetryableConnectErrorCode = (code: string | null): boolean => {
   if (!normalized) return false;
   return NON_RETRYABLE_CONNECT_ERROR_CODES.has(normalized);
 };
+
+/** WebSocket close code 1008 = policy violation (rate limit). */
+const WS_CLOSE_POLICY_VIOLATION = 1008;
+const RATE_LIMIT_RETRY_DELAY_MS = 15_000;
 
 export const resolveGatewayAutoRetryDelayMs = (params: {
   status: GatewayStatus;
@@ -500,6 +681,7 @@ export const resolveGatewayAutoRetryDelayMs = (params: {
   gatewayUrl: string;
   errorMessage: string | null;
   connectErrorCode: string | null;
+  lastDisconnectCode: number | null;
   attempt: number;
 }): number | null => {
   if (params.status !== "disconnected") return null;
@@ -511,8 +693,13 @@ export const resolveGatewayAutoRetryDelayMs = (params: {
   if (isNonRetryableConnectErrorCode(params.connectErrorCode)) return null;
   if (params.connectErrorCode === null && isAuthError(params.errorMessage)) return null;
 
+  const baseDelay =
+    params.lastDisconnectCode === WS_CLOSE_POLICY_VIOLATION
+      ? Math.max(INITIAL_RETRY_DELAY_MS, RATE_LIMIT_RETRY_DELAY_MS)
+      : INITIAL_RETRY_DELAY_MS;
+
   return Math.min(
-    INITIAL_RETRY_DELAY_MS * Math.pow(1.5, params.attempt),
+    baseDelay * Math.pow(1.5, params.attempt),
     MAX_RETRY_DELAY_MS
   );
 };
@@ -523,13 +710,27 @@ export const useGatewayConnection = (
   const [client] = useState(() => new GatewayClient());
   const didAutoConnect = useRef(false);
   const hasConnectedOnceRef = useRef(false);
-  const loadedGatewaySettings = useRef<{ gatewayUrl: string; token: string } | null>(null);
+  const loadedGatewaySettings = useRef<{
+    gatewayUrl: string;
+    token: string;
+    adapterType: StudioGatewayAdapterType;
+    profiles?: Partial<Record<StudioGatewayAdapterType, { url: string; token: string }>>;
+    hasLastKnownGood: boolean;
+  } | null>(null);
   const retryAttemptRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoConnectTimerRef = useRef<number | null>(null);
   const wasManualDisconnectRef = useRef(false);
 
   const [gatewayUrl, setGatewayUrl] = useState(DEFAULT_UPSTREAM_GATEWAY_URL);
   const [token, setToken] = useState("");
+  const [selectedAdapterType, setSelectedAdapterTypeState] =
+    useState<StudioGatewayAdapterType>("openclaw");
+  const [adapterProfiles, setAdapterProfiles] = useState<
+    Partial<Record<StudioGatewayAdapterType, { url: string; token: string }>>
+  >({});
+  const [detectedAdapterType, setDetectedAdapterType] =
+    useState<StudioGatewayAdapterType | null>(null);
   const [localGatewayDefaults, setLocalGatewayDefaults] = useState<StudioGatewaySettings | null>(
     null
   );
@@ -537,6 +738,29 @@ export const useGatewayConnection = (
   const [error, setError] = useState<string | null>(null);
   const [connectErrorCode, setConnectErrorCode] = useState<string | null>(null);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [hasLastKnownGoodState, setHasLastKnownGoodState] = useState(false);
+  const setSelectedAdapterType = useCallback(
+    (value: StudioGatewayAdapterType) => {
+      setSelectedAdapterTypeState(value);
+      const profile =
+        adapterProfiles[value] ?? resolveDefaultStudioGatewayProfile(value, localGatewayDefaults);
+      setGatewayUrl(profile.url ?? "");
+      // Prefer the token from the initial private settings load when the in-memory
+      // profile has an empty token (e.g. the profile was populated from the sanitized
+      // public API response which strips real token values).
+      const loadedToken = loadedGatewaySettings.current?.profiles?.[value]?.token ?? "";
+      setToken(profile.token || loadedToken);
+      const loaded = loadedGatewaySettings.current;
+      const nextHasLastKnownGood = Boolean(
+        (loaded?.adapterType === value && loaded.hasLastKnownGood) ||
+          loaded?.profiles?.[value]?.url?.trim()
+      );
+      setHasLastKnownGoodState(nextHasLastKnownGood);
+      setError(null);
+      setConnectErrorCode(null);
+    },
+    [adapterProfiles, localGatewayDefaults]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -548,32 +772,41 @@ export const useGatewayConnection = (
             : {
                 settings: await settingsCoordinator.loadSettings({ force: true }),
                 localGatewayDefaults: null,
+                gatewayPrivate: null,
+                localGatewayDefaultsPrivate: null,
               };
         const settings = envelope.settings ?? null;
-        const gateway = settings?.gateway ?? null;
+        // gatewayPrivate is no longer sent by the server — upstream tokens must not
+        // cross the browser API boundary. The Studio proxy injects tokens server-side.
+        // We derive profiles from the sanitized public settings only.
         if (cancelled) return;
-        const normalizedDefaults = normalizeLocalGatewayDefaults(envelope.localGatewayDefaults);
+        const normalizedDefaults = normalizeLocalGatewayDefaults(
+          envelope.localGatewayDefaults,
+        );
         setLocalGatewayDefaults(normalizedDefaults);
-        // When the user has no saved gateway URL, prefer the runtime
-        // localGatewayDefaults (from openclaw.json / CLAW3D_GATEWAY_URL)
-        // over the build-time NEXT_PUBLIC_GATEWAY_URL which may be stale
-        // or empty if the operator forgot to rebuild after .env changes.
-        const hasSavedUrl = Boolean(gateway?.url?.trim());
-        const resolvedUrl = hasSavedUrl
-          ? gateway!.url
-          : normalizedDefaults?.url || DEFAULT_UPSTREAM_GATEWAY_URL;
-        const nextGatewayUrl = resolvedUrl;
-        const nextToken = hasSavedUrl
-          ? (gateway && "token" in gateway && typeof gateway.token === "string"
-              ? gateway.token
-              : "")
-          : normalizedDefaults?.token ?? "";
+        const gatewaySettings = settings?.gateway ?? null;
+        const resolvedGatewayProfiles = resolveStudioGatewayProfiles({
+          gateway: gatewaySettings as StudioGatewaySettings | null,
+          localDefaults: normalizedDefaults,
+        });
+        const nextAdapterType = resolvedGatewayProfiles.selectedAdapterType;
+        const selectedProfile =
+          resolvedGatewayProfiles.activeProfile ??
+          resolveDefaultStudioGatewayProfile(nextAdapterType, normalizedDefaults);
+        const nextGatewayUrl = selectedProfile.url ?? "";
+        const nextToken = selectedProfile.token ?? "";
         loadedGatewaySettings.current = {
           gatewayUrl: nextGatewayUrl.trim(),
           token: nextToken,
+          adapterType: nextAdapterType,
+          profiles: resolvedGatewayProfiles.profiles,
+          hasLastKnownGood: Boolean(resolvedGatewayProfiles.lastKnownGoodForSelected?.url),
         };
         setGatewayUrl(nextGatewayUrl);
         setToken(nextToken);
+        setSelectedAdapterTypeState(nextAdapterType);
+        setAdapterProfiles(resolvedGatewayProfiles.profiles);
+        setHasLastKnownGoodState(Boolean(resolvedGatewayProfiles.lastKnownGoodForSelected?.url));
       } catch (err) {
         if (!cancelled) {
           const message = err instanceof Error ? err.message : "Failed to load gateway settings.";
@@ -585,6 +818,9 @@ export const useGatewayConnection = (
             loadedGatewaySettings.current = {
               gatewayUrl: DEFAULT_UPSTREAM_GATEWAY_URL.trim(),
               token: "",
+              adapterType: "openclaw",
+              profiles: undefined,
+              hasLastKnownGood: false,
             };
           }
           setSettingsLoaded(true);
@@ -599,11 +835,14 @@ export const useGatewayConnection = (
 
   useEffect(() => {
     return client.onStatus((nextStatus) => {
+      gatewayDebugLog("status", { nextStatus });
       setStatus(nextStatus);
       if (nextStatus !== "connecting") {
         setError(null);
         if (nextStatus === "connected") {
           setConnectErrorCode(null);
+        } else {
+          setDetectedAdapterType(null);
         }
       }
     });
@@ -611,6 +850,10 @@ export const useGatewayConnection = (
 
   useEffect(() => {
     return () => {
+      if (autoConnectTimerRef.current) {
+        clearTimeout(autoConnectTimerRef.current);
+        autoConnectTimerRef.current = null;
+      }
       if (retryTimerRef.current) {
         clearTimeout(retryTimerRef.current);
         retryTimerRef.current = null;
@@ -620,35 +863,152 @@ export const useGatewayConnection = (
   }, [client]);
 
   const connect = useCallback(async () => {
+    if (autoConnectTimerRef.current) {
+      clearTimeout(autoConnectTimerRef.current);
+      autoConnectTimerRef.current = null;
+    }
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    gatewayDebugLog("connect:start", {
+      selectedAdapterType,
+      gatewayUrl,
+      hasToken: Boolean(token),
+    });
     setError(null);
     setConnectErrorCode(null);
+    retryAttemptRef.current = 0;
     wasManualDisconnectRef.current = false;
+    if (
+      selectedAdapterType === "custom" ||
+      selectedAdapterType === "local" ||
+      selectedAdapterType === "claw3d"
+    ) {
+      setStatus("connecting");
+      try {
+        await settingsCoordinator.flushPending();
+        await probeCustomRuntime(gatewayUrl);
+        setDetectedAdapterType(selectedAdapterType);
+        setStatus("connected");
+        setConnectErrorCode(null);
+        gatewayDebugLog("connect:runtime-success", {
+          selectedAdapterType,
+          gatewayUrl,
+        });
+      } catch (err) {
+        setStatus("disconnected");
+        setDetectedAdapterType(null);
+        setConnectErrorCode("studio.custom_runtime_probe_failed");
+        setError(formatGatewayError(err));
+        gatewayDebugLog("connect:runtime-failed", {
+          selectedAdapterType,
+          message: err instanceof Error ? err.message : String(err),
+        });
+      }
+      return;
+    }
     try {
       await settingsCoordinator.flushPending();
-      await client.connect({
-        gatewayUrl: resolveStudioProxyGatewayUrl(),
-        token,
-        authScopeKey: gatewayUrl,
-        clientName: "openclaw-control-ui",
-      });
+      const maxAttempts = resolveInitialGatewayConnectAttemptCount(
+        selectedAdapterType,
+        hasConnectedOnceRef.current
+      );
+      let lastError: unknown = null;
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        try {
+          await client.connect({
+            gatewayUrl: resolveStudioProxyGatewayUrl(),
+            token,
+            authScopeKey: gatewayUrl,
+            clientName: resolveGatewayClientName(selectedAdapterType, gatewayUrl),
+            disableDeviceAuth: selectedAdapterType !== "openclaw",
+          });
+          lastError = null;
+          break;
+        } catch (err) {
+          lastError = err;
+          gatewayDebugLog("connect:attempt-failed", {
+            selectedAdapterType,
+            attempt: attempt + 1,
+            maxAttempts,
+            message: err instanceof Error ? err.message : String(err),
+          });
+          if (attempt + 1 >= maxAttempts) {
+            throw err;
+          }
+          client.disconnect();
+          await new Promise<void>((resolve) => {
+            window.setTimeout(resolve, INITIAL_CONNECT_RETRY_DELAY_MS);
+          });
+        }
+      }
+      if (lastError) {
+        throw lastError;
+      }
       await ensureGatewayReloadModeHotForLocalStudio({
         client,
         upstreamGatewayUrl: gatewayUrl,
       });
-      retryAttemptRef.current = 0;
+      const hello = client.getLastHello();
+      const nextDetectedAdapterType =
+        hello?.adapterType === "demo" ||
+        hello?.adapterType === "hermes" ||
+        hello?.adapterType === "openclaw" ||
+        hello?.adapterType === "custom"
+          ? hello.adapterType
+          : "openclaw";
+      setDetectedAdapterType(nextDetectedAdapterType);
+      setHasLastKnownGoodState(nextDetectedAdapterType === selectedAdapterType);
+      // Flush immediately (debounce=0) so lastKnownGood survives a quick refresh.
+      settingsCoordinator.schedulePatch({
+        gateway: {
+          lastKnownGood: {
+            url: gatewayUrl.trim(),
+            token: token || undefined,
+            adapterType: nextDetectedAdapterType,
+          },
+        },
+      }, 0);
+      gatewayDebugLog("connect:success", {
+        selectedAdapterType,
+        detectedAdapterType: nextDetectedAdapterType,
+      });
     } catch (err) {
       setConnectErrorCode(err instanceof GatewayResponseError ? err.code : null);
       setError(formatGatewayError(err));
+      gatewayDebugLog("connect:failed", {
+        selectedAdapterType,
+        code: err instanceof GatewayResponseError ? err.code : null,
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
-  }, [client, gatewayUrl, settingsCoordinator, token]);
+  }, [client, gatewayUrl, selectedAdapterType, settingsCoordinator, token]);
 
   useEffect(() => {
     if (didAutoConnect.current) return;
     if (!settingsLoaded) return;
+    if (!hasLastKnownGoodState) return;
     if (!gatewayUrl.trim()) return;
+    if (!isAutoManagedAdapter(selectedAdapterType)) return;
     didAutoConnect.current = true;
-    void connect();
-  }, [connect, gatewayUrl, settingsLoaded]);
+    const delayMs = resolveInitialGatewayAutoConnectDelayMs(selectedAdapterType);
+    gatewayDebugLog("auto-connect", {
+      selectedAdapterType,
+      gatewayUrl,
+      delayMs,
+    });
+    autoConnectTimerRef.current = window.setTimeout(() => {
+      autoConnectTimerRef.current = null;
+      void connect();
+    }, delayMs);
+    return () => {
+      if (autoConnectTimerRef.current) {
+        window.clearTimeout(autoConnectTimerRef.current);
+        autoConnectTimerRef.current = null;
+      }
+    };
+  }, [connect, gatewayUrl, hasLastKnownGoodState, selectedAdapterType, settingsLoaded]);
 
   // Auto-retry on disconnect (gateway busy, network blip, etc.)
   useEffect(() => {
@@ -661,12 +1021,28 @@ export const useGatewayConnection = (
       gatewayUrl,
       errorMessage: error,
       connectErrorCode,
+      lastDisconnectCode: client.lastDisconnectCode,
       attempt,
     });
+    if (!isAutoManagedAdapter(selectedAdapterType)) return;
     if (delay === null) return;
+    gatewayDebugLog("auto-retry-scheduled", {
+      selectedAdapterType,
+      attempt: attempt + 1,
+      delay,
+      gatewayUrl,
+      status,
+    });
     retryTimerRef.current = setTimeout(() => {
-      retryAttemptRef.current = attempt + 1;
+      // Call connect first (it synchronously resets retryAttemptRef to 0),
+      // then override with the correct attempt count so the next auto-retry
+      // uses proper exponential backoff.
       void connect();
+      retryAttemptRef.current = attempt + 1;
+      gatewayDebugLog("auto-retry-fire", {
+        selectedAdapterType,
+        attempt: retryAttemptRef.current,
+      });
     }, delay);
 
     return () => {
@@ -675,52 +1051,126 @@ export const useGatewayConnection = (
         retryTimerRef.current = null;
       }
     };
-  }, [connect, connectErrorCode, error, gatewayUrl, status]);
+  }, [connect, connectErrorCode, error, gatewayUrl, selectedAdapterType, status]);
 
-  // Reset retry count on successful connection
+  // Reset retry count after the connection has been stable for a minimum
+  // duration.  If the upstream drops the connection quickly (e.g. within a
+  // few seconds), keeping the current attempt count lets exponential backoff
+  // work properly instead of hammering the gateway every 2 seconds.
   useEffect(() => {
     if (status === "connected") {
       hasConnectedOnceRef.current = true;
-      retryAttemptRef.current = 0;
+      const stableTimer = setTimeout(() => {
+        retryAttemptRef.current = 0;
+      }, 10_000);
+      return () => clearTimeout(stableTimer);
     }
   }, [status]);
+
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    setAdapterProfiles((current) => {
+      const existing = current[selectedAdapterType];
+      // Never overwrite a stored token with an empty string — the Studio proxy
+      // injects the real token server-side; an empty token in UI state means
+      // "let the proxy handle it", not "clear the saved token".
+      const nextToken = token || existing?.token || "";
+      const nextProfile = { url: gatewayUrl.trim(), token: nextToken };
+      if (
+        existing &&
+        existing.url === nextProfile.url &&
+        existing.token === nextProfile.token
+      ) {
+        return current;
+      }
+      return {
+        ...current,
+        [selectedAdapterType]: nextProfile,
+      };
+    });
+  }, [gatewayUrl, selectedAdapterType, settingsLoaded, token]);
 
   useEffect(() => {
     if (!settingsLoaded) return;
     const baseline = loadedGatewaySettings.current;
     if (!baseline) return;
     const nextGatewayUrl = gatewayUrl.trim();
-    if (nextGatewayUrl === baseline.gatewayUrl && token === baseline.token) {
+    // Use undefined for the token in the patch when the in-memory token is empty so
+    // that mergeGatewaySettings / mergeGatewayProfiles treats it as "leave unchanged"
+    // rather than overwriting the persisted token with an empty string.
+    const persistToken = token || undefined;
+    const nextProfiles = {
+      ...adapterProfiles,
+      [selectedAdapterType]: {
+        url: nextGatewayUrl,
+        token: persistToken,
+      },
+    };
+    if (
+      nextGatewayUrl === baseline.gatewayUrl &&
+      token === baseline.token &&
+      selectedAdapterType === baseline.adapterType &&
+      JSON.stringify(nextProfiles) === JSON.stringify(baseline.profiles ?? {})
+    ) {
       return;
     }
     settingsCoordinator.schedulePatch(
       {
         gateway: {
           url: nextGatewayUrl,
-          token,
+          token: persistToken,
+          adapterType: selectedAdapterType,
+          profiles: nextProfiles,
         },
       },
       400
     );
-  }, [gatewayUrl, settingsCoordinator, settingsLoaded, token]);
+  }, [adapterProfiles, gatewayUrl, selectedAdapterType, settingsCoordinator, settingsLoaded, token]);
 
   const useLocalGatewayDefaults = useCallback(() => {
     if (!localGatewayDefaults) {
       return;
     }
-    setGatewayUrl(localGatewayDefaults.url);
-    setToken(localGatewayDefaults.token);
+    setGatewayUrl(localGatewayDefaults.url ?? "");
+    setToken(localGatewayDefaults.token ?? "");
+    setAdapterProfiles((current) => ({
+      ...current,
+      [localGatewayDefaults.adapterType]: {
+        url: localGatewayDefaults.url ?? "",
+        token: localGatewayDefaults.token ?? "",
+      },
+    }));
+    setSelectedAdapterTypeState(localGatewayDefaults.adapterType);
     setError(null);
     setConnectErrorCode(null);
   }, [localGatewayDefaults]);
 
   const disconnect = useCallback(() => {
+    gatewayDebugLog("disconnect", { selectedAdapterType, status });
     setError(null);
     setConnectErrorCode(null);
     wasManualDisconnectRef.current = true;
+    setDetectedAdapterType(null);
+    // Always close an active WebSocket connection regardless of selectedAdapterType.
+    // selectedAdapterType may already reflect the *target* adapter when this runs
+    // (e.g. switching from openclaw → local sets selectedAdapterType before disconnect
+    // is called), so we guard on actual connection state instead.
+    if (status === "connected" || status === "connecting") {
+      client.disconnect();
+      clearGatewayBrowserSessionStorage();
+      return;
+    }
+    if (
+      selectedAdapterType === "custom" ||
+      selectedAdapterType === "local" ||
+      selectedAdapterType === "claw3d"
+    ) {
+      setStatus("disconnected");
+      return;
+    }
     client.disconnect();
     clearGatewayBrowserSessionStorage();
-  }, [client]);
+  }, [client, selectedAdapterType, status]);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -728,16 +1178,29 @@ export const useGatewayConnection = (
   }, []);
 
   const connectPromptReady = settingsLoaded;
+  const activeAdapterType =
+    status === "connected" ? detectedAdapterType ?? selectedAdapterType : selectedAdapterType;
   const shouldPromptForConnect =
     settingsLoaded &&
     status !== "connected" &&
-    (!gatewayUrl.trim() || !token.trim() || wasManualDisconnectRef.current || Boolean(error));
+    (selectedAdapterType === "custom" ||
+      selectedAdapterType === "local" ||
+      selectedAdapterType === "claw3d" ||
+      !hasLastKnownGoodState ||
+      !(gatewayUrl ?? "").trim() ||
+      (selectedAdapterType === "openclaw" && !(token ?? "").trim()) ||
+      wasManualDisconnectRef.current ||
+      Boolean(error));
 
   return {
     client,
     status,
     gatewayUrl,
     token,
+    selectedAdapterType,
+    detectedAdapterType,
+    activeAdapterType,
+    adapterProfiles,
     localGatewayDefaults,
     error,
     connectPromptReady,
@@ -747,6 +1210,7 @@ export const useGatewayConnection = (
     useLocalGatewayDefaults,
     setGatewayUrl,
     setToken,
+    setSelectedAdapterType,
     clearError,
   };
 };

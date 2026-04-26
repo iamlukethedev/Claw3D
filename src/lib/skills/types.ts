@@ -1,4 +1,5 @@
 import type { GatewayClient } from "@/lib/gateway/GatewayClient";
+import { readGatewayAgentFile } from "@/lib/gateway/agentFiles";
 
 export type SkillStatusConfigCheck = {
   path: string;
@@ -95,6 +96,8 @@ export type PackagedSkillInstallRequest = {
   source: RemovableSkillSource;
   workspaceDir: string;
   managedSkillsDir: string;
+  agentId?: string;
+  agentName?: string;
 };
 
 export type PackagedSkillInstallResult = {
@@ -120,13 +123,69 @@ const resolveRequiredValue = (value: string, message: string): string => {
   return trimmed;
 };
 
+const isLikelyRootWorkspace = (workspaceDir: string): boolean => {
+  const normalized = workspaceDir.trim().replace(/[\\/]+$/, "");
+  if (!normalized) return false;
+  return /[\\/]workspace$/i.test(normalized);
+};
+
+const resolveWorkspaceDirFromPath = (filePath: string | null | undefined): string | null => {
+  const normalized = filePath?.trim().replace(/[\\/]+$/, "") ?? "";
+  if (!normalized) return null;
+  const index = Math.max(normalized.lastIndexOf("/"), normalized.lastIndexOf("\\"));
+  if (index <= 0) return null;
+  const candidate = normalized.slice(0, index).trim();
+  if (!candidate || isLikelyRootWorkspace(candidate)) {
+    return null;
+  }
+  return candidate;
+};
+
+export const resolveWorkspaceFromAgentFiles = async (
+  client: GatewayClient,
+  agentId: string
+): Promise<string | null> => {
+  for (const name of ["IDENTITY.md", "SOUL.md", "AGENTS.md"] as const) {
+    try {
+      const file = await readGatewayAgentFile({ client, agentId, name });
+      const workspace = file.workspace?.trim() ?? "";
+      if (workspace && !isLikelyRootWorkspace(workspace)) {
+        return workspace;
+      }
+      const derivedFromPath = resolveWorkspaceDirFromPath(file.path);
+      if (derivedFromPath) {
+        return derivedFromPath;
+      }
+    } catch {
+      // Best-effort provenance recovery only.
+    }
+  }
+  return null;
+};
+
 export const loadAgentSkillStatus = async (
   client: GatewayClient,
   agentId: string
 ): Promise<SkillStatusReport> => {
-  return client.call<SkillStatusReport>("skills.status", {
-    agentId: resolveAgentId(agentId),
+  const resolvedAgentId = resolveAgentId(agentId);
+  const report = await client.call<SkillStatusReport>("skills.status", {
+    agentId: resolvedAgentId,
   });
+  const workspaceDir = report.workspaceDir?.trim() ?? "";
+  if (!workspaceDir || !isLikelyRootWorkspace(workspaceDir)) {
+    return report;
+  }
+  const recoveredWorkspace = await resolveWorkspaceFromAgentFiles(
+    client,
+    resolvedAgentId
+  );
+  if (!recoveredWorkspace) {
+    return report;
+  }
+  return {
+    ...report,
+    workspaceDir: recoveredWorkspace,
+  };
 };
 
 export const installSkill = async (

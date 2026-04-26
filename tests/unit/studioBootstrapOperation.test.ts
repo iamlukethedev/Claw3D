@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentStoreSeed } from "@/features/agents/state/store";
 import type { GatewayModelPolicySnapshot } from "@/lib/gateway/models";
-import type { StudioSettingsPatch } from "@/lib/studio/settings";
+import { defaultStudioSettings, type StudioSettingsPatch } from "@/lib/studio/settings";
 
 vi.mock("@/features/agents/operations/agentFleetHydration", () => ({
   hydrateAgentFleetFromGateway: vi.fn(),
@@ -153,8 +153,7 @@ describe("studioBootstrapOperation", () => {
     const commands = await runStudioFocusedPreferenceLoadOperation({
       gatewayUrl: "https://gateway.test",
       loadStudioSettings: async () => ({
-        version: 1,
-        gateway: null,
+        ...defaultStudioSettings(),
         focused: {
           "https://gateway.test": {
             mode: "focused",
@@ -162,11 +161,6 @@ describe("studioBootstrapOperation", () => {
             filter: "running",
           },
         },
-        avatars: {},
-        deskAssignments: {},
-        analytics: {},
-        voiceReplies: {},
-        office: {},
       }),
       isFocusFilterTouched: () => false,
     });
@@ -191,8 +185,7 @@ describe("studioBootstrapOperation", () => {
     const commands = await runStudioFocusedPreferenceLoadOperation({
       gatewayUrl: "https://gateway.test",
       loadStudioSettings: async () => ({
-        version: 1,
-        gateway: null,
+        ...defaultStudioSettings(),
         focused: {
           "https://gateway.test": {
             mode: "focused",
@@ -200,11 +193,6 @@ describe("studioBootstrapOperation", () => {
             filter: "running",
           },
         },
-        avatars: {},
-        deskAssignments: {},
-        analytics: {},
-        voiceReplies: {},
-        office: {},
       }),
       isFocusFilterTouched: () => true,
     });

@@ -14,7 +14,10 @@ describe("personalityBuilder", () => {
     const files = createFiles();
     files["IDENTITY.md"] = {
       exists: true,
-      content: `# IDENTITY.md - Who Am I?\n\n- **Name:** Nova\n- **Creature:** fox spirit\n- **Vibe:** calm + direct\n- **Emoji:** 🦊\n- **Avatar:** avatars/nova.png\n`,
+      content:
+        "# IDENTITY.md - Who Am I?\n\n- **Name:** Nova\n- **Creature:** fox spirit\n- **Vibe:** calm + direct\n- **Emoji:** fox\n- **Avatar:** avatars/nova.png\n",
+      path: null,
+      workspace: null,
     };
 
     const draft = parsePersonalityFiles(files);
@@ -23,7 +26,7 @@ describe("personalityBuilder", () => {
       name: "Nova",
       creature: "fox spirit",
       vibe: "calm + direct",
-      emoji: "🦊",
+      emoji: "fox",
       avatar: "avatars/nova.png",
     });
   });
@@ -32,7 +35,10 @@ describe("personalityBuilder", () => {
     const files = createFiles();
     files["USER.md"] = {
       exists: true,
-      content: `# USER.md - About Your Human\n\n- **Name:** George\n- **What to call them:** GP\n- **Pronouns:** he/him\n- **Timezone:** America/Chicago\n- **Notes:** Building Claw3D.\n\n## Context\n\nWants concise technical answers.\nPrefers implementation over discussion.\n`,
+      content:
+        "# USER.md - About Your Human\n\n- **Name:** George\n- **What to call them:** GP\n- **Pronouns:** he/him\n- **Timezone:** America/Chicago\n- **Notes:** Building Claw3D.\n\n## Context\n\nWants concise technical answers.\nPrefers implementation over discussion.\n",
+      path: null,
+      workspace: null,
     };
 
     const draft = parsePersonalityFiles(files);
@@ -51,7 +57,10 @@ describe("personalityBuilder", () => {
     const files = createFiles();
     files["SOUL.md"] = {
       exists: true,
-      content: `# SOUL.md - Who You Are\n\n## Core Truths\n\nBe direct.\nAvoid filler.\n\n## Boundaries\n\n- Keep user data private.\n\n## Vibe\n\nPragmatic and calm.\n\n## Continuity\n\nUpdate files when behavior changes.\n`,
+      content:
+        "# SOUL.md - Who You Are\n\n## Core Truths\n\nBe direct.\nAvoid filler.\n\n## Boundaries\n\n- Keep user data private.\n\n## Vibe\n\nPragmatic and calm.\n\n## Continuity\n\nUpdate files when behavior changes.\n",
+      path: null,
+      workspace: null,
     };
 
     const draft = parsePersonalityFiles(files);
@@ -69,12 +78,16 @@ describe("personalityBuilder", () => {
     files["IDENTITY.md"] = {
       exists: true,
       content:
-        "# IDENTITY.md - Who Am I?\n\n- **Name:** _(pick something you like)_\n- **Creature:** _(AI? robot? familiar? ghost in the machine? something weirder?)_\n- **Vibe:** _(how do you come across? sharp? warm? chaotic? calm?)_\n- **Emoji:** _(your signature — pick one that feels right)_\n- **Avatar:** _(workspace-relative path, http(s) URL, or data URI)_\n",
+        "# IDENTITY.md - Who Am I?\n\n- **Name:** _(pick something you like)_\n- **Creature:** _(AI? robot? familiar? ghost in the machine? something weirder?)_\n- **Vibe:** _(how do you come across? sharp? warm? chaotic? calm?)_\n- **Emoji:** _(your signature - pick one that feels right)_\n- **Avatar:** _(workspace-relative path, http(s) URL, or data URI)_\n",
+      path: null,
+      workspace: null,
     };
     files["USER.md"] = {
       exists: true,
       content:
         "# USER.md - About Your Human\n\n- **Name:**\n- **What to call them:**\n- **Pronouns:** _(optional)_\n- **Timezone:**\n- **Notes:**\n\n## Context\n\n_(What do they care about? What projects are they working on? What annoys them? What makes them laugh? Build this over time.)_\n",
+      path: null,
+      workspace: null,
     };
 
     const draft = parsePersonalityFiles(files);
@@ -102,7 +115,7 @@ describe("personalityBuilder", () => {
         name: "Nova",
         creature: "fox spirit",
         vibe: "calm + direct",
-        emoji: "🦊",
+        emoji: "fox",
         avatar: "avatars/nova.png",
       },
       user: {
@@ -134,7 +147,7 @@ describe("personalityBuilder", () => {
         "- Name: Nova",
         "- Creature: fox spirit",
         "- Vibe: calm + direct",
-        "- Emoji: 🦊",
+        "- Emoji: fox",
         "- Avatar: avatars/nova.png",
         "",
       ].join("\n")

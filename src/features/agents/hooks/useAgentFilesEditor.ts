@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { GatewayClient } from "@/lib/gateway/GatewayClient";
-import { readGatewayAgentFile, writeGatewayAgentFile } from "@/lib/gateway/agentFiles";
+import {
+  readGatewayAgentFile,
+  writeGatewayAgentFile,
+  writeGatewayAgentFiles,
+} from "@/lib/gateway/agentFiles";
 import {
   AGENT_FILE_NAMES,
   type AgentFileName,
@@ -21,6 +25,7 @@ export type UseAgentFilesEditorResult = {
   agentFilesError: string | null;
   setAgentFileContent: (name: AgentFileName, value: string) => void;
   saveAgentFiles: () => Promise<boolean>;
+  initializeAgentFiles: (files: Partial<Record<AgentFileName, string>>) => Promise<boolean>;
   discardAgentFileChanges: () => void;
 };
 
@@ -67,7 +72,13 @@ export const useAgentFilesEditor = (params: {
       const results = await Promise.all(
         AGENT_FILE_NAMES.map(async (name) => {
           const file = await readGatewayAgentFile({ client, agentId: trimmedAgentId, name });
-          return { name, content: file.content, exists: file.exists };
+          return {
+            name,
+            content: file.content,
+            exists: file.exists,
+            path: file.path,
+            workspace: file.workspace,
+          };
         })
       );
 
@@ -77,6 +88,8 @@ export const useAgentFilesEditor = (params: {
         nextState[file.name] = {
           content: file.content ?? "",
           exists: Boolean(file.exists),
+          path: file.path ?? null,
+          workspace: file.workspace ?? null,
         };
       }
 
@@ -123,6 +136,8 @@ export const useAgentFilesEditor = (params: {
         nextState[name] = {
           content: agentFiles[name].content,
           exists: true,
+          path: agentFiles[name].path,
+          workspace: agentFiles[name].workspace,
         };
       }
 
@@ -138,6 +153,55 @@ export const useAgentFilesEditor = (params: {
       setAgentFilesSaving(false);
     }
   }, [agentFiles, agentId, client]);
+
+  const initializeAgentFiles = useCallback(
+    async (files: Partial<Record<AgentFileName, string>>) => {
+      setAgentFilesSaving(true);
+      setAgentFilesError(null);
+
+      try {
+        const trimmedAgentId = agentId?.trim();
+        if (!trimmedAgentId) {
+          setAgentFilesError("Agent ID is missing for this agent.");
+          return false;
+        }
+
+        if (!client) {
+          setAgentFilesError("Gateway client is not available.");
+          return false;
+        }
+
+        await writeGatewayAgentFiles({
+          client,
+          agentId: trimmedAgentId,
+          files,
+        });
+
+        const nextState = cloneAgentFilesState(savedAgentFilesRef.current);
+        for (const [name, content] of Object.entries(files)) {
+          if (!isAgentFileName(name) || typeof content !== "string") continue;
+          nextState[name] = {
+            content,
+            exists: true,
+            path: nextState[name].path,
+            workspace: nextState[name].workspace,
+          };
+        }
+
+        savedAgentFilesRef.current = nextState;
+        setAgentFiles(nextState);
+        setAgentFilesDirty(false);
+        return true;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to initialize agent files.";
+        setAgentFilesError(message);
+        return false;
+      } finally {
+        setAgentFilesSaving(false);
+      }
+    },
+    [agentId, client, cloneAgentFilesState]
+  );
 
   const setAgentFileContent = useCallback((name: AgentFileName, value: string) => {
     if (!isAgentFileName(name)) return;
@@ -167,6 +231,7 @@ export const useAgentFilesEditor = (params: {
     agentFilesError,
     setAgentFileContent,
     saveAgentFiles,
+    initializeAgentFiles,
     discardAgentFileChanges,
   };
 };
