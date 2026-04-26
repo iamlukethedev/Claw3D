@@ -159,6 +159,7 @@ import { AnalyticsPanel } from "@/features/office/components/panels/AnalyticsPan
 import { HistoryPanel } from "@/features/office/components/panels/HistoryPanel";
 import { InboxPanel } from "@/features/office/components/panels/InboxPanel";
 import { KanbanDisabledPanel } from "@/features/office/components/panels/KanbanDisabledPanel";
+import { OperationsCenterPanel } from "@/features/office/components/panels/OperationsCenterPanel";
 import { PlaybooksPanel } from "@/features/office/components/panels/PlaybooksPanel";
 import { SkillsMarketplaceModal } from "@/features/office/components/panels/SkillsMarketplaceModal";
 import { TaskBoardPanel } from "@/features/office/components/panels/TaskBoardPanel";
@@ -1145,7 +1146,7 @@ export function OfficeScreen({
     return searchParams.has("code");
   });
   const [activeSidebarTab, setActiveSidebarTab] =
-    useState<HQSidebarTab>("inbox");
+    useState<HQSidebarTab>("ops");
   const pendingJukeboxCommandTimeoutsRef = useRef<
     Map<string, { requestKey: string; timeoutId: number }>
   >(new Map());
@@ -5164,6 +5165,17 @@ export function OfficeScreen({
           onOpenMarketplace={() => setMarketplaceOpen(true)}
           onAddAgent={handleOpenCreateAgentWizard}
           onOpenCompanyBuilder={handleOpenCompanyBuilder}
+          operationsPanel={
+            <OperationsCenterPanel
+              agents={state.agents}
+              runLog={runLog}
+              feedEvents={feedEvents}
+              onSelectAgent={(agentId) => {
+                handleOpenAgentChat(agentId);
+                setActiveSidebarTab("ops");
+              }}
+            />
+          }
           inboxPanel={
             <InboxPanel
               agents={state.agents}
