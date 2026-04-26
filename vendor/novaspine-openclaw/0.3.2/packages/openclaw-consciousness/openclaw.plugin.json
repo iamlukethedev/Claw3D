@@ -1,0 +1,87 @@
+{
+  "id": "nova-consciousness",
+  "name": "Nova Consciousness",
+  "description": "Passive continuity, goal, decision, learning, and confidence wiring for OpenClaw via the Nova Consciousness Suite.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "baseUrl": {
+        "type": "string",
+        "description": "Nova Consciousness Suite API base URL."
+      },
+      "apiToken": {
+        "type": "string",
+        "description": "Optional Bearer token for the consciousness suite."
+      },
+      "requestTimeoutMs": {
+        "type": "integer",
+        "minimum": 250,
+        "maximum": 30000,
+        "description": "HTTP timeout for consciousness suite requests."
+      },
+      "passiveCapture": {
+        "type": "boolean",
+        "description": "Process incoming prompts through the consciousness suite before answering."
+      },
+      "injectContinuity": {
+        "type": "boolean",
+        "description": "Inject compact continuity context from the consciousness suite when a prior thread exists."
+      },
+      "injectDashboard": {
+        "type": "boolean",
+        "description": "Optionally append a small goals/dashboard block to injected continuity context."
+      },
+      "guidance": {
+        "type": "boolean",
+        "description": "Add stable low-noise system guidance for the consciousness integration."
+      },
+      "maxRecentMessages": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 12,
+        "description": "How many recent messages to send as context when passively processing a prompt."
+      },
+      "maxRecentMessageChars": {
+        "type": "integer",
+        "minimum": 80,
+        "maximum": 800,
+        "description": "Maximum characters per recent message sent to the consciousness suite."
+      },
+      "maxConversationContextChars": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 5000,
+        "description": "Maximum characters to send for the synthesized conversation context block."
+      },
+      "maxMessageChars": {
+        "type": "integer",
+        "minimum": 256,
+        "maximum": 5000,
+        "description": "Maximum characters to send for the current prompt message."
+      },
+      "maxInjectedOpenLoops": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 6,
+        "description": "Maximum open loops to inject into prompt context."
+      },
+      "maxInjectedNextActions": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 6,
+        "description": "Maximum next actions to inject into prompt context."
+      },
+      "maxInjectedFacts": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 6,
+        "description": "Maximum pinned facts to inject into prompt context."
+      },
+      "benchmarkSafe": {
+        "type": "boolean",
+        "description": "When true, suppress continuity injection on static benchmark-style QA prompts unless the prompt explicitly asks about continuity."
+      }
+    }
+  }
+}

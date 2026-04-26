@@ -85,6 +85,7 @@ type SessionRecord = {
   agentId: string;
   role: string | null;
   model: string | null;
+  thinkingLevel: string | null;
   updatedAt: number | null;
   messages: SessionMessage[];
 };
@@ -282,6 +283,8 @@ export class CustomRuntimeProvider implements RuntimeProvider {
         return (await this.callAgentsList()) as T;
       case "sessions.list":
         return (await this.callSessionsList(params)) as T;
+      case "sessions.patch":
+        return (await this.callSessionsPatch(params)) as T;
       case "status":
         return (await this.callStatus()) as T;
       case "models.list":
@@ -432,6 +435,57 @@ export class CustomRuntimeProvider implements RuntimeProvider {
           ],
         })),
       },
+    };
+  }
+
+  private async callSessionsPatch(rawParams: unknown) {
+    const params = isRecord(rawParams) ? rawParams : {};
+    const key = typeof params.key === "string" ? params.key.trim() : "";
+    if (!key) {
+      throw new Error("Custom runtime requires key for sessions.patch.");
+    }
+
+    const descriptor = await this.describeRuntime();
+    const modelChoices = normalizeModelChoices(descriptor.registry);
+    const agentId = parseAgentIdFromSessionKey(key) ?? "main";
+    const session = this.ensureSession(
+      key,
+      agentId,
+      resolveDefaultModelId(descriptor.state, modelChoices)
+    );
+
+    if ("model" in params) {
+      const nextModel =
+        typeof params.model === "string" && params.model.trim() ? params.model.trim() : null;
+      session.model = nextModel ?? resolveDefaultModelId(descriptor.state, modelChoices);
+    }
+
+    if ("thinkingLevel" in params) {
+      session.thinkingLevel =
+        typeof params.thinkingLevel === "string" && params.thinkingLevel.trim()
+          ? params.thinkingLevel.trim()
+          : null;
+    }
+
+    const resolvedModel = typeof session.model === "string" ? session.model.trim() : "";
+    const slashIndex = resolvedModel.indexOf("/");
+    const modelProvider =
+      slashIndex > 0 ? resolvedModel.slice(0, slashIndex).trim() : resolvedModel ? "custom" : "";
+    const model = slashIndex > 0 ? resolvedModel.slice(slashIndex + 1).trim() : resolvedModel;
+
+    return {
+      ok: true,
+      key,
+      entry: {
+        ...(session.thinkingLevel ? { thinkingLevel: session.thinkingLevel } : {}),
+      },
+      resolved:
+        modelProvider && model
+          ? {
+              modelProvider,
+              model,
+            }
+          : undefined,
     };
   }
 
@@ -702,6 +756,7 @@ export class CustomRuntimeProvider implements RuntimeProvider {
       agentId,
       role: agentId || null,
       model,
+      thinkingLevel: null,
       updatedAt: null,
       messages: [],
     };

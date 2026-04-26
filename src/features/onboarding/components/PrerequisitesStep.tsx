@@ -2,6 +2,7 @@
  * PrerequisitesStep — Tells users what they need before connecting.
  */
 import { CheckCircle2, ExternalLink } from "lucide-react";
+import { NovaSpineSetupCard } from "@/features/agents/components/NovaSpineSetupCard";
 
 const prerequisites = [
   {
@@ -31,8 +32,11 @@ export const PrerequisitesStep = () => (
   <div className="space-y-2.5">
     <p className="text-[13px] leading-5 text-white/70">
       Make sure you have these ready before connecting. If you already have
-      OpenClaw running, you can skip this step.
+      OpenClaw running, you can skip this step. If you want NovaSpine, Claw3D
+      can wire it into that same OpenClaw install from here.
     </p>
+
+    <NovaSpineSetupCard />
 
     <div className="space-y-1.5">
       {prerequisites.map(({ label, detail, ...rest }) => (

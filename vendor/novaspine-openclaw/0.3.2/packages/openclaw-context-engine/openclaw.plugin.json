@@ -1,0 +1,75 @@
+{
+  "id": "novaspine-context",
+  "name": "NovaSpine Context Engine",
+  "kind": "context-engine",
+  "description": "NovaSpine context engine for OpenClaw with session-file ingestion and bounded envelope assembly across long-term memory, recent session, and workspace memory.",
+  "uiHints": {
+    "baseUrl": {
+      "label": "NovaSpine Base URL",
+      "placeholder": "http://127.0.0.1:8420",
+      "help": "HTTP endpoint for the NovaSpine API service."
+    },
+    "apiToken": {
+      "label": "API Token",
+      "sensitive": true,
+      "placeholder": "Optional bearer token"
+    },
+    "autoRecall": {
+      "label": "Long-Term Recall",
+      "help": "Include long-term NovaSpine recall inside the assembled context envelope."
+    },
+    "sessionIngestOnBootstrap": {
+      "label": "Session Ingest On Bootstrap",
+      "help": "Ingest the session transcript when OpenClaw boots a session."
+    },
+    "sessionIngestOnAfterTurn": {
+      "label": "Session Ingest After Turn",
+      "help": "Refresh NovaSpine from the session transcript after each run."
+    },
+    "mode": {
+      "label": "Assembly Mode",
+      "help": "Rebalance the working-set envelope between long-term memory and recent-session detail."
+    },
+    "includeWorkspaceMemory": {
+      "label": "Workspace Memory",
+      "help": "Include recent workspace memory markdown notes in the envelope."
+    },
+    "recentMemoryFiles": {
+      "label": "Recent Memory Files",
+      "placeholder": "2"
+    },
+    "reserveTokens": {
+      "label": "Reserve Tokens",
+      "placeholder": "2048"
+    },
+    "defaultTokenBudget": {
+      "label": "Default Token Budget",
+      "placeholder": "24000"
+    },
+    "timeoutMs": {
+      "label": "Timeout (ms)",
+      "placeholder": "12000"
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "baseUrl": { "type": "string" },
+      "apiToken": { "type": "string" },
+      "autoRecall": { "type": "boolean" },
+      "sessionIngestOnBootstrap": { "type": "boolean" },
+      "sessionIngestOnAfterTurn": { "type": "boolean" },
+      "recallTopK": { "type": "number", "minimum": 1, "maximum": 20 },
+      "recallMinScore": { "type": "number", "minimum": 0, "maximum": 1 },
+      "recallFormat": { "type": "string", "enum": ["xml", "plain"] },
+      "recentMessages": { "type": "number", "minimum": 1, "maximum": 20 },
+      "reserveTokens": { "type": "number", "minimum": 256, "maximum": 32000 },
+      "defaultTokenBudget": { "type": "number", "minimum": 1024, "maximum": 200000 },
+      "timeoutMs": { "type": "number", "minimum": 1000, "maximum": 60000 },
+      "mode": { "type": "string", "enum": ["balanced", "memory-heavy", "session-heavy"] },
+      "includeWorkspaceMemory": { "type": "boolean" },
+      "recentMemoryFiles": { "type": "number", "minimum": 1, "maximum": 10 }
+    }
+  }
+}
