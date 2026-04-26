@@ -84,14 +84,15 @@ const itemBlocksNavigation = (type: string): boolean =>
 
 export function buildNavGrid(furniture: FurnitureItem[]): NavGrid {
   const grid = new Uint8Array(GRID_COLS * GRID_ROWS);
-  const pad = GRID_CELL * 0.6;
+  const defaultPad = GRID_CELL * 0.6;
   for (const item of furniture) {
     if (!itemBlocksNavigation(item.type)) continue;
+    const itemPad = ITEM_METADATA[item.type]?.navPadding ?? defaultPad;
     const bounds = getItemBounds(item);
-    const x1 = bounds.x - pad;
-    const y1 = bounds.y - pad;
-    const x2 = bounds.x + bounds.w + pad;
-    const y2 = bounds.y + bounds.h + pad;
+    const x1 = bounds.x - itemPad;
+    const y1 = bounds.y - itemPad;
+    const x2 = bounds.x + bounds.w + itemPad;
+    const y2 = bounds.y + bounds.h + itemPad;
     const c1 = Math.max(0, Math.floor(x1 / GRID_CELL));
     const c2 = Math.min(GRID_COLS - 1, Math.floor(x2 / GRID_CELL));
     const r1 = Math.max(0, Math.floor(y1 / GRID_CELL));
@@ -302,7 +303,7 @@ export function astar(
 export const getDeskLocations = (items: FurnitureItem[]) =>
   items
     .filter((item) => item.type === "desk_cubicle")
-    .map((item) => ({ x: item.x + 40, y: item.y + 40 }));
+    .map((item) => ({ x: item.x + 40, y: item.y - 5 }));
 
 export const getMeetingSeatLocations = (items: FurnitureItem[]) => {
   // Meeting seats are inferred from chair placement in the conference area so standup
@@ -497,7 +498,7 @@ export const resolveDeskIndexForItem = (
   if (deskLocations.length === 0) return -1;
   if (item.type === "desk_cubicle") {
     return deskLocations.findIndex(
-      (desk) => desk.x === item.x + 40 && desk.y === item.y + 40,
+      (desk) => desk.x === item.x + 40 && desk.y === item.y - 5,
     );
   }
 

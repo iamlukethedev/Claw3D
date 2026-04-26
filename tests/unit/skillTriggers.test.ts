@@ -15,11 +15,17 @@ describe("skill triggers", () => {
     const todoTrigger = listPackagedSkillTriggerDefinitions().find(
       (entry) => entry.skillKey === "todo-board",
     );
+    const taskManagerTrigger = listPackagedSkillTriggerDefinitions().find(
+      (entry) => entry.skillKey === "task-manager",
+    );
 
     expect(todoTrigger).not.toBeUndefined();
     expect(todoTrigger?.movementTarget).toBe("desk");
     expect(todoTrigger?.activationPhrases).toContain("todo");
     expect(todoTrigger?.activationPhrases).toContain("blocked tasks");
+    expect(taskManagerTrigger).not.toBeUndefined();
+    expect(taskManagerTrigger?.movementTarget).toBe("desk");
+    expect(taskManagerTrigger?.activationPhrases).toContain("add a task");
   });
 
   it("matches the running agent's latest request against enabled skill triggers", () => {

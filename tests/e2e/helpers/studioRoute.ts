@@ -6,6 +6,13 @@ export type StudioSettingsFixture = {
   gateway: { url: string; token: string } | null;
   focused: Record<string, { mode: "focused"; filter: string; selectedAgentId: string | null }>;
   avatars: Record<string, Record<string, AgentAvatarProfile>>;
+  taskBoard?: Record<
+    string,
+    {
+      cards: Array<Record<string, unknown>>;
+      selectedCardId: string | null;
+    }
+  >;
 };
 
 const DEFAULT_SETTINGS: StudioSettingsFixture = {
@@ -13,6 +20,7 @@ const DEFAULT_SETTINGS: StudioSettingsFixture = {
   gateway: null,
   focused: {},
   avatars: {},
+  taskBoard: {},
 };
 
 const createStudioRoute = (initial: StudioSettingsFixture = DEFAULT_SETTINGS) => {
@@ -21,6 +29,7 @@ const createStudioRoute = (initial: StudioSettingsFixture = DEFAULT_SETTINGS) =>
     gateway: initial.gateway ?? null,
     focused: { ...(initial.focused ?? {}) },
     avatars: { ...(initial.avatars ?? {}) },
+    taskBoard: { ...(initial.taskBoard ?? {}) },
   };
 
   return async (route: Route, request: Request) => {
@@ -95,6 +104,32 @@ const createStudioRoute = (initial: StudioSettingsFixture = DEFAULT_SETTINGS) =>
         avatarsNext[gatewayKey] = existing;
       }
       next.avatars = avatarsNext;
+    }
+
+    if (patch.taskBoard && typeof patch.taskBoard === "object") {
+      const taskBoardPatch = patch.taskBoard as Record<
+        string,
+        { cards?: Array<Record<string, unknown>>; selectedCardId?: string | null } | null
+      >;
+      const taskBoardNext = { ...(next.taskBoard ?? {}) };
+      for (const [gatewayKey, gatewayValue] of Object.entries(taskBoardPatch)) {
+        if (gatewayValue === null) {
+          delete taskBoardNext[gatewayKey];
+          continue;
+        }
+        const existing = taskBoardNext[gatewayKey] ?? {
+          cards: [],
+          selectedCardId: null,
+        };
+        taskBoardNext[gatewayKey] = {
+          cards: Array.isArray(gatewayValue.cards) ? gatewayValue.cards : existing.cards,
+          selectedCardId:
+            "selectedCardId" in gatewayValue
+              ? (gatewayValue.selectedCardId ?? null)
+              : existing.selectedCardId,
+        };
+      }
+      next.taskBoard = taskBoardNext;
     }
 
     settings = next;

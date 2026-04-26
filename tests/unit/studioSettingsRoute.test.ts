@@ -47,18 +47,44 @@ describe("studio settings route", () => {
 
     const response = await GET();
     const body = (await response.json()) as {
-      settings?: { gateway?: { url?: string; tokenConfigured?: boolean } | null };
-      localGatewayDefaults?: { url?: string; tokenConfigured?: boolean } | null;
+      settings?: {
+        gateway?: {
+          url?: string;
+          tokenConfigured?: boolean;
+          adapterType?: string;
+          profiles?: Record<string, { url?: string; tokenConfigured?: boolean }>;
+        } | null;
+      };
+      localGatewayDefaults?: {
+        url?: string;
+        tokenConfigured?: boolean;
+        adapterType?: string;
+        profiles?: Record<string, { url?: string; tokenConfigured?: boolean }>;
+      } | null;
     };
 
     expect(response.status).toBe(200);
     expect(body.localGatewayDefaults).toEqual({
       url: "ws://localhost:18791",
       tokenConfigured: true,
+      adapterType: "openclaw",
+      profiles: {
+        openclaw: {
+          url: "ws://localhost:18791",
+          tokenConfigured: true,
+        },
+      },
     });
     expect(body.settings?.gateway).toEqual({
       url: "ws://localhost:18791",
       tokenConfigured: true,
+      adapterType: "openclaw",
+      profiles: {
+        openclaw: {
+          url: "ws://localhost:18791",
+          tokenConfigured: true,
+        },
+      },
     });
   });
 
@@ -67,7 +93,7 @@ describe("studio settings route", () => {
     process.env.OPENCLAW_STATE_DIR = tempDir;
 
     const response = await PUT({
-      json: async () => "nope",
+      text: async () => JSON.stringify("nope"),
     } as unknown as Request);
     const body = (await response.json()) as { error?: string };
 
@@ -81,7 +107,7 @@ describe("studio settings route", () => {
     process.env.OPENCLAW_STATE_DIR = tempDir;
 
     const patch = {
-      gateway: { url: "ws://example.test:1234", token: "t" },
+      gateway: { url: "ws://example.test:1234", token: "t", adapterType: "hermes" },
       office: {
         "ws://example.test:1234": {
           title: "Orbit Control",
@@ -90,7 +116,7 @@ describe("studio settings route", () => {
     };
 
     const putResponse = await PUT({
-      json: async () => patch,
+      text: async () => JSON.stringify(patch),
     } as unknown as Request);
     expect(putResponse.status).toBe(200);
 
@@ -106,6 +132,7 @@ describe("studio settings route", () => {
     expect(body.settings?.gateway).toEqual({
       url: "ws://example.test:1234",
       tokenConfigured: true,
+      adapterType: "hermes",
     });
     expect(body.settings?.office?.["ws://example.test:1234"]).toEqual(
       expect.objectContaining({
@@ -117,10 +144,14 @@ describe("studio settings route", () => {
     expect(fs.existsSync(settingsPath)).toBe(true);
     const raw = fs.readFileSync(settingsPath, "utf8");
     const parsed = JSON.parse(raw) as {
-      gateway?: { url?: string; token?: string } | null;
+      gateway?: { url?: string; token?: string; adapterType?: string } | null;
       office?: Record<string, { title?: string }>;
     };
-    expect(parsed.gateway).toEqual({ url: "ws://example.test:1234", token: "t" });
+    expect(parsed.gateway).toEqual({
+      url: "ws://example.test:1234",
+      token: "t",
+      adapterType: "hermes",
+    });
     expect(parsed.office?.["ws://example.test:1234"]).toEqual(
       expect.objectContaining({
         title: "Orbit Control",

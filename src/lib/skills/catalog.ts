@@ -3,7 +3,7 @@ import type {
   SkillStatusEntry,
 } from "@/lib/skills/types";
 
-export type PackagedSkillId = "soundclaw" | "todo-board";
+export type PackagedSkillId = "soundclaw" | "task-manager" | "todo-board";
 
 export type PackagedSkillDefinition = {
   packageId: PackagedSkillId;
@@ -32,6 +32,16 @@ const PACKAGED_SKILLS: PackagedSkillDefinition[] = [
     installSource: "openclaw-workspace",
     creatorName: "iamlukethedev",
     creatorUrl: "http://x.com/iamlukethedev/",
+  },
+  {
+    packageId: "task-manager",
+    skillKey: "task-manager",
+    name: "task-manager",
+    description:
+      "Capture actionable requests as persistent tasks and keep a shared Kanban task store in sync.",
+    installSource: "openclaw-workspace",
+    creatorName: "iamlukethedev",
+    creatorUrl: "https://github.com/iamlukethedev",
   },
   {
     packageId: "soundclaw",

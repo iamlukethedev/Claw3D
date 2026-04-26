@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   isPermissionsCustom,
@@ -8,9 +8,64 @@ import {
   resolveRoleForCommandMode,
   resolveToolGroupOverrides,
   resolveToolGroupStateFromConfigEntry,
+  updateAgentPermissionsViaStudio,
+  updateExecutionRoleViaStudio,
 } from "@/features/agents/operations/agentPermissionsOperation";
+import { syncGatewaySessionSettings } from "@/lib/gateway/GatewayClient";
+import { updateGatewayAgentOverrides } from "@/lib/gateway/agentConfig";
+import {
+  readGatewayAgentExecApprovals,
+  upsertGatewayAgentExecApprovals,
+} from "@/lib/gateway/execApprovals";
+import { GatewayResponseError } from "@/lib/gateway/errors";
+
+vi.mock("@/lib/gateway/GatewayClient", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/gateway/GatewayClient")>(
+    "@/lib/gateway/GatewayClient"
+  );
+  return {
+    ...actual,
+    syncGatewaySessionSettings: vi.fn(),
+  };
+});
+
+vi.mock("@/lib/gateway/agentConfig", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/gateway/agentConfig")>(
+    "@/lib/gateway/agentConfig"
+  );
+  return {
+    ...actual,
+    updateGatewayAgentOverrides: vi.fn(async () => undefined),
+  };
+});
+
+vi.mock("@/lib/gateway/execApprovals", () => ({
+  readGatewayAgentExecApprovals: vi.fn(async () => null),
+  upsertGatewayAgentExecApprovals: vi.fn(async () => undefined),
+}));
+
+const createWebchatBlockedPatchError = () =>
+  new GatewayResponseError({
+    code: "INVALID_REQUEST",
+    message: "webchat clients cannot patch sessions; use chat.send for session-scoped updates",
+  });
 
 describe("agentPermissionsOperation", () => {
+  const mockedSyncGatewaySessionSettings = vi.mocked(syncGatewaySessionSettings);
+  const mockedUpdateGatewayAgentOverrides = vi.mocked(updateGatewayAgentOverrides);
+  const mockedReadGatewayAgentExecApprovals = vi.mocked(readGatewayAgentExecApprovals);
+  const mockedUpsertGatewayAgentExecApprovals = vi.mocked(upsertGatewayAgentExecApprovals);
+
+  beforeEach(() => {
+    mockedSyncGatewaySessionSettings.mockReset();
+    mockedUpdateGatewayAgentOverrides.mockClear();
+    mockedReadGatewayAgentExecApprovals.mockReset();
+    mockedUpsertGatewayAgentExecApprovals.mockReset();
+    mockedReadGatewayAgentExecApprovals.mockResolvedValue(null);
+    mockedUpsertGatewayAgentExecApprovals.mockResolvedValue(undefined);
+    mockedUpdateGatewayAgentOverrides.mockResolvedValue(undefined);
+  });
+
   it("maps command mode and preset role in both directions", () => {
     expect(resolveRoleForCommandMode("off")).toBe("conservative");
     expect(resolveRoleForCommandMode("ask")).toBe("collaborative");
@@ -110,5 +165,85 @@ describe("agentPermissionsOperation", () => {
         },
       })
     ).toBe(true);
+  });
+
+  it("does not fail permission updates when webchat blocks sessions.patch after config writes", async () => {
+    mockedSyncGatewaySessionSettings.mockRejectedValue(createWebchatBlockedPatchError());
+    const client = {
+      call: vi.fn(async (method: string) => {
+        if (method === "config.get") {
+          return {
+            config: {
+              agents: [
+                {
+                  id: "agent-1",
+                  sandbox: { mode: "workspace-write" },
+                  tools: { allow: ["group:web"], deny: [] },
+                },
+              ],
+            },
+          };
+        }
+        throw new Error(`Unexpected method: ${method}`);
+      }),
+    } as never;
+    const loadAgents = vi.fn(async () => undefined);
+
+    await expect(
+      updateAgentPermissionsViaStudio({
+        client,
+        agentId: "agent-1",
+        sessionKey: "session-1",
+        draft: {
+          commandMode: "ask",
+          webAccess: true,
+          fileTools: false,
+        },
+        loadAgents,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(mockedUpsertGatewayAgentExecApprovals).toHaveBeenCalledTimes(1);
+    expect(mockedUpdateGatewayAgentOverrides).toHaveBeenCalledTimes(1);
+    expect(mockedSyncGatewaySessionSettings).toHaveBeenCalledTimes(1);
+    expect(loadAgents).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fail execution-role updates when webchat blocks sessions.patch after config writes", async () => {
+    mockedSyncGatewaySessionSettings.mockRejectedValue(createWebchatBlockedPatchError());
+    const client = {
+      call: vi.fn(async (method: string) => {
+        if (method === "config.get") {
+          return {
+            config: {
+              agents: [
+                {
+                  id: "agent-1",
+                  sandbox: { mode: "workspace-write" },
+                  tools: { allow: ["group:web"], deny: [] },
+                },
+              ],
+            },
+          };
+        }
+        throw new Error(`Unexpected method: ${method}`);
+      }),
+    } as never;
+    const loadAgents = vi.fn(async () => undefined);
+
+    await expect(
+      updateExecutionRoleViaStudio({
+        client,
+        agentId: "agent-1",
+        sessionKey: "session-1",
+        role: "autonomous",
+        loadAgents,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(mockedUpsertGatewayAgentExecApprovals).toHaveBeenCalledTimes(1);
+    expect(mockedUpdateGatewayAgentOverrides).toHaveBeenCalledTimes(1);
+    expect(mockedSyncGatewaySessionSettings).toHaveBeenCalledTimes(1);
+    expect(loadAgents).toHaveBeenCalledTimes(1);
   });
 });

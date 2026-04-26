@@ -6,7 +6,7 @@ import {
   planFocusedPreferenceRestore,
   planFocusedSelectionPatch,
 } from "@/features/agents/operations/studioBootstrapWorkflow";
-import type { StudioSettings } from "@/lib/studio/settings";
+import { defaultStudioSettings, type StudioSettings } from "@/lib/studio/settings";
 
 describe("studioBootstrapWorkflow", () => {
   it("keeps existing selection when one is already active", () => {
@@ -144,8 +144,7 @@ describe("studioBootstrapWorkflow", () => {
 
   it("resolves focused preference restore values from settings", () => {
     const settings: StudioSettings = {
-      version: 1,
-      gateway: null,
+      ...defaultStudioSettings(),
       focused: {
         "https://gateway.test": {
           mode: "focused",
@@ -153,11 +152,6 @@ describe("studioBootstrapWorkflow", () => {
           filter: "approvals",
         },
       },
-      avatars: {},
-      deskAssignments: {},
-      analytics: {},
-      voiceReplies: {},
-      office: {},
     };
 
     expect(
@@ -185,8 +179,7 @@ describe("studioBootstrapWorkflow", () => {
 
   it("restores running filter as all", () => {
     const settings: StudioSettings = {
-      version: 1,
-      gateway: null,
+      ...defaultStudioSettings(),
       focused: {
         "https://gateway.test": {
           mode: "focused",
@@ -194,11 +187,6 @@ describe("studioBootstrapWorkflow", () => {
           filter: "running",
         },
       },
-      avatars: {},
-      deskAssignments: {},
-      analytics: {},
-      voiceReplies: {},
-      office: {},
     };
 
     expect(

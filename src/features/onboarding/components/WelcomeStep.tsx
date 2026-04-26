@@ -32,11 +32,11 @@ export const WelcomeStep = () => (
       <p className="text-sm leading-relaxed text-white/80">
         Claw3D turns your AI automation into a{" "}
         <span className="font-medium text-white">visual workplace</span> — an
-        office where your OpenClaw agents collaborate, code, test, and execute
+        office where your AI agents collaborate, code, test, and execute
         tasks in a shared 3D environment.
       </p>
       <p className="text-sm text-white/60">
-        This wizard will help you connect to your OpenClaw gateway and get
+        This wizard will help you connect to your runtime gateway and get
         started in about two minutes.
       </p>
     </div>

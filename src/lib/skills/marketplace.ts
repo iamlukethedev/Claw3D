@@ -102,6 +102,19 @@ const SKILL_MARKETPLACE_OVERRIDES: Record<
     editorBadge: "Claw3D test",
     hideStats: true,
   },
+  "task-manager": {
+    category: "Productivity",
+    tagline:
+      "Turns actionable requests into persistent shared tasks that power the Claw3D Kanban board.",
+    capabilities: [
+      "Automatic task capture",
+      "Task lifecycle tracking",
+      "Shared Kanban state",
+    ],
+    featured: true,
+    editorBadge: "Kanban core",
+    hideStats: true,
+  },
   soundclaw: {
     category: "Audio",
     tagline:

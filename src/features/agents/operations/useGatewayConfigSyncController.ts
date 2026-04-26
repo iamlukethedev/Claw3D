@@ -21,6 +21,7 @@ const defaultLogError = (message: string, err: unknown) => {
 export type UseGatewayConfigSyncControllerParams = {
   client: GatewayClient;
   status: GatewayConnectionStatus;
+  enabled?: boolean;
   settingsRouteActive: boolean;
   inspectSidebarAgentId: string | null;
   gatewayConfigSnapshot: GatewayModelPolicySnapshot | null;
@@ -49,6 +50,7 @@ export function useGatewayConfigSyncController(
   const {
     client,
     status,
+    enabled = true,
     settingsRouteActive,
     inspectSidebarAgentId,
     gatewayConfigSnapshot,
@@ -63,6 +65,7 @@ export function useGatewayConfigSyncController(
   const logError = params.logError ?? defaultLogError;
 
   const refreshGatewayConfigSnapshot = useCallback(async () => {
+    if (!enabled) return null;
     if (status !== "connected") return null;
     try {
       const snapshot = await client.call<GatewayModelPolicySnapshot>("config.get", {});
@@ -74,9 +77,17 @@ export function useGatewayConfigSyncController(
       }
       return null;
     }
-  }, [client, isDisconnectLikeError, setGatewayConfigSnapshot, status, logError]);
+  }, [client, enabled, isDisconnectLikeError, setGatewayConfigSnapshot, status, logError]);
 
   useEffect(() => {
+    if (enabled) return;
+    setGatewayModels([]);
+    setGatewayModelsError(null);
+    setGatewayConfigSnapshot(null);
+  }, [enabled, setGatewayConfigSnapshot, setGatewayModels, setGatewayModelsError]);
+
+  useEffect(() => {
+    if (!enabled) return;
     const repairIntent = resolveSandboxRepairIntent({
       status,
       attempted: sandboxRepairAttemptedRef.current,
@@ -107,9 +118,10 @@ export function useGatewayConfigSyncController(
         await loadAgents();
       },
     });
-  }, [client, enqueueConfigMutation, gatewayConfigSnapshot, loadAgents, status]);
+  }, [client, enabled, enqueueConfigMutation, gatewayConfigSnapshot, loadAgents, status]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (
       !shouldRefreshGatewayConfigForSettingsRoute({
         status,
@@ -120,9 +132,12 @@ export function useGatewayConfigSyncController(
       return;
     }
     void refreshGatewayConfigSnapshot();
-  }, [inspectSidebarAgentId, refreshGatewayConfigSnapshot, settingsRouteActive, status]);
+  }, [enabled, inspectSidebarAgentId, refreshGatewayConfigSnapshot, settingsRouteActive, status]);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     const syncIntent = resolveGatewayModelsSyncIntent({ status });
     if (syncIntent.kind === "clear") {
       setGatewayModels([]);
@@ -175,6 +190,7 @@ export function useGatewayConfigSyncController(
     setGatewayConfigSnapshot,
     setGatewayModels,
     setGatewayModelsError,
+    enabled,
     status,
     logError,
   ]);

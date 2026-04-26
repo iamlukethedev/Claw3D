@@ -19,6 +19,7 @@ export type InteractiveFurnitureModelProps = {
   isSelected: boolean;
   isHovered: boolean;
   editMode: boolean;
+  kanbanTaskCount?: number;
   doorOpen?: boolean;
   onPointerDown: (uid: string) => void;
   onPointerOver: (uid: string) => void;
@@ -29,6 +30,7 @@ export type InteractiveFurnitureModelProps = {
 export type AgentModelProps = {
   agentId: string;
   name: string;
+  subtitle?: string | null;
   status: OfficeAgent["status"];
   color: string;
   appearance?: AgentAvatarProfile | null;

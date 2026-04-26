@@ -72,5 +72,5 @@ export const AGENT_FILE_PLACEHOLDERS: Record<AgentFileName, string> = {
 
 export const createAgentFilesState = () =>
   Object.fromEntries(
-    AGENT_FILE_NAMES.map((name) => [name, { content: "", exists: false }])
-  ) as Record<AgentFileName, { content: string; exists: boolean }>;
+    AGENT_FILE_NAMES.map((name) => [name, { content: "", exists: false, path: null, workspace: null }])
+  ) as Record<AgentFileName, { content: string; exists: boolean; path: string | null; workspace: string | null }>;

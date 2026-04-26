@@ -167,6 +167,7 @@ const renderController = (overrides?: Partial<Parameters<typeof useAgentSettings
   const params: Parameters<typeof useAgentSettingsMutationController>[0] = {
     client: client as never,
     status: "connected",
+    runtimeSupportsCron: true,
     isLocalGateway: false,
     agents: [{ agentId: "agent-1", name: "Agent One", sessionKey: "session-1" }] as never,
     hasCreateBlock: false,
@@ -412,8 +413,11 @@ describe("useAgentSettingsMutationController", () => {
       expect(restartBlockHookParams?.block).not.toBeNull();
     });
 
+    const timeoutHookParams = restartBlockHookParams;
+    expect(timeoutHookParams).not.toBeNull();
+
     await act(async () => {
-      restartBlockHookParams?.onTimeout();
+      timeoutHookParams!.onTimeout();
     });
     expect(ctx.setError).toHaveBeenCalledWith("Gateway restart timed out after renaming the agent.");
 
@@ -426,12 +430,16 @@ describe("useAgentSettingsMutationController", () => {
       await ctx.getValue().handleRenameAgent("agent-1", "Renamed Again");
     });
     await waitFor(() => {
-      expect(restartBlockHookParams?.block?.phase).toBe("awaiting-restart");
+      expect(ctx.getValue().restartingMutationBlock?.phase).toBe("awaiting-restart");
     });
 
+    const restartHookParams = restartBlockHookParams;
+    expect(restartHookParams?.onRestartComplete).toBeTypeOf("function");
+    expect(ctx.getValue().restartingMutationBlock?.phase).toBe("awaiting-restart");
+
     await act(async () => {
-      await restartBlockHookParams?.onRestartComplete(
-        restartBlockHookParams.block as MutationBlockState,
+      await restartHookParams!.onRestartComplete(
+        ctx.getValue().restartingMutationBlock as MutationBlockState,
         { isCancelled: () => false }
       );
     });
@@ -451,6 +459,21 @@ describe("useAgentSettingsMutationController", () => {
     });
 
     expect(mockedPerformCronCreateFlow).toHaveBeenCalledTimes(1);
+  });
+
+  it("cron_mutations_fail_fast_when_runtime_lacks_cron_capability", async () => {
+    const ctx = renderController({ runtimeSupportsCron: false });
+
+    await act(async () => {
+      await ctx.getValue().handleCreateCronJob("agent-1", createCronDraft());
+      await ctx.getValue().handleRunCronJob("agent-1", "job-1");
+      await ctx.getValue().handleDeleteCronJob("agent-1", "job-1");
+    });
+
+    expect(mockedPerformCronCreateFlow).not.toHaveBeenCalled();
+    expect(mockedRunCronJobNow).not.toHaveBeenCalled();
+    expect(mockedRemoveCronJob).not.toHaveBeenCalled();
+    expect(ctx.getValue().settingsCronError).toBe("This runtime does not support automations.");
   });
 
   it("loads_skills_when_settings_skills_tab_is_active", async () => {

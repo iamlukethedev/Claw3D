@@ -37,7 +37,6 @@ import {
   resolveOfficeGithubDirective,
   resolveOfficeGymDirective,
   resolveOfficeQaDirective,
-  resolveOfficeStandupDirective,
   resolveOfficeTextDirective,
 } from "@/lib/office/deskDirectives";
 import { extractText, extractThinking } from "@/lib/text/message-extract";
@@ -51,6 +50,7 @@ const WORKING_LATCH_MS = 5_000;
 const GYM_WORKOUT_LATCH_MS = 60_000;
 const STREAM_ACTIVITY_LATCH_MS = 6_000;
 const THINKING_ACTIVITY_LATCH_MS = 6_000;
+const STANDUP_TRIGGER_MAX_AGE_MS = 30_000;
 const CLEANING_CUE_LIMIT = 24;
 const TRANSIENT_BOOTH_RESTORE_MAX_AGE_MS = 2 * 60_000;
 
@@ -807,17 +807,15 @@ const applyUserMessageTriggers = (params: {
     };
   }
   if (params.agentId === "main" && intentSnapshot.standup === "standup") {
-    const requestKey = normalizeCommandText(params.message);
-    if (next.pendingStandupRequest?.key !== requestKey) {
-      next = {
-        ...next,
-        pendingStandupRequest: {
-          key: requestKey,
-          message: params.message.trim(),
-          requestedAt: params.nowMs,
-        },
-      };
-    }
+    const requestKey = `${normalizeCommandText(params.message)}:${params.nowMs}`;
+    next = {
+      ...next,
+      pendingStandupRequest: {
+        key: requestKey,
+        message: params.message.trim(),
+        requestedAt: params.nowMs,
+      },
+    };
   }
   if (intentSnapshot.call) {
     const request = createPhoneCallRequest({
@@ -1108,6 +1106,12 @@ export const reconcileOfficeAnimationTriggerState = (params: {
   let workingUntilByAgentId = next.workingUntilByAgentId;
   const manualGymUntilByAgentId = next.manualGymUntilByAgentId;
   let pendingStandupRequest = next.pendingStandupRequest;
+  if (
+    pendingStandupRequest &&
+    nowMs - pendingStandupRequest.requestedAt > STANDUP_TRIGGER_MAX_AGE_MS
+  ) {
+    pendingStandupRequest = null;
+  }
 
   for (const agent of params.agents) {
     const agentId = agent.agentId;
@@ -1190,23 +1194,6 @@ export const reconcileOfficeAnimationTriggerState = (params: {
       // "release" directive clears the gym hold — do not set skillGymHoldByAgentId[agentId]
     } else if (next.skillGymHoldByAgentId[agentId]) {
       skillGymHoldByAgentId[agentId] = true;
-    }
-
-    const standupDirective = resolveLatestDirective({
-      lastUserMessage: agent.lastUserMessage,
-      transcriptEntries: agent.transcriptEntries,
-      resolver: resolveOfficeStandupDirective,
-    });
-    if (
-      agentId === "main" &&
-      standupDirective &&
-      pendingStandupRequest?.key !== standupDirective.key
-    ) {
-      pendingStandupRequest = {
-        key: standupDirective.key,
-        message: standupDirective.text,
-        requestedAt: nowMs,
-      };
     }
 
     const phoneCallRequest = resolveLatestPhoneCallRequest({

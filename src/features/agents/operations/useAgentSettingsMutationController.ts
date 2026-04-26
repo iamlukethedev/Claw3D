@@ -54,6 +54,7 @@ type AgentForSettingsMutation = Pick<AgentState, "agentId" | "name" | "sessionKe
 export type UseAgentSettingsMutationControllerParams = {
   client: GatewayClient;
   status: GatewayStatus;
+  runtimeSupportsCron: boolean;
   isLocalGateway: boolean;
   agents: AgentForSettingsMutation[];
   hasCreateBlock: boolean;
@@ -99,6 +100,7 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
     useState<RestartingMutationBlockState | null>(null);
   const REMOTE_MUTATION_EXEC_TIMEOUT_MS = 45_000;
   const SKILL_INSTALL_TIMEOUT_MS = 120_000;
+  const CRON_UNSUPPORTED_MESSAGE = "This runtime does not support automations.";
 
   const hasRenameMutationBlock = restartingMutationBlock?.kind === "rename-agent";
   const hasDeleteMutationBlock = restartingMutationBlock?.kind === "delete-agent";
@@ -218,6 +220,12 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
 
   const loadCronJobsForSettingsAgent = useCallback(
     async (agentId: string) => {
+      if (!params.runtimeSupportsCron) {
+        setSettingsCronJobs([]);
+        setSettingsCronLoading(false);
+        setSettingsCronError(CRON_UNSUPPORTED_MESSAGE);
+        return;
+      }
       const resolvedAgentId = agentId.trim();
       if (!resolvedAgentId) {
         setSettingsCronJobs([]);
@@ -241,7 +249,7 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
         setSettingsCronLoading(false);
       }
     },
-    [params.client]
+    [params.client, params.runtimeSupportsCron]
   );
 
   useEffect(() => {
@@ -466,6 +474,10 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
 
   const handleCreateCronJob = useCallback(
     async (agentId: string, draft: CronCreateDraft) => {
+      if (!params.runtimeSupportsCron) {
+        setSettingsCronError(CRON_UNSUPPORTED_MESSAGE);
+        return;
+      }
       const decision = planAgentSettingsMutation(
         { kind: "create-cron-job", agentId },
         mutationContext
@@ -499,11 +511,22 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
         throw err;
       }
     },
-    [cronCreateBusy, cronDeleteBusyJobId, cronRunBusyJobId, mutationContext, params.client]
+    [
+      cronCreateBusy,
+      cronDeleteBusyJobId,
+      cronRunBusyJobId,
+      mutationContext,
+      params.client,
+      params.runtimeSupportsCron,
+    ]
   );
 
   const handleRunCronJob = useCallback(
     async (agentId: string, jobId: string) => {
+      if (!params.runtimeSupportsCron) {
+        setSettingsCronError(CRON_UNSUPPORTED_MESSAGE);
+        return;
+      }
       const decision = planAgentSettingsMutation(
         { kind: "run-cron-job", agentId, jobId },
         mutationContext
@@ -530,11 +553,15 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
         setCronRunBusyJobId((current) => (current === resolvedJobId ? null : current));
       }
     },
-    [loadCronJobsForSettingsAgent, mutationContext, params.client]
+    [loadCronJobsForSettingsAgent, mutationContext, params.client, params.runtimeSupportsCron]
   );
 
   const handleDeleteCronJob = useCallback(
     async (agentId: string, jobId: string) => {
+      if (!params.runtimeSupportsCron) {
+        setSettingsCronError(CRON_UNSUPPORTED_MESSAGE);
+        return;
+      }
       const decision = planAgentSettingsMutation(
         { kind: "delete-cron-job", agentId, jobId },
         mutationContext
@@ -564,7 +591,7 @@ export function useAgentSettingsMutationController(params: UseAgentSettingsMutat
         setCronDeleteBusyJobId((current) => (current === resolvedJobId ? null : current));
       }
     },
-    [loadCronJobsForSettingsAgent, mutationContext, params.client]
+    [loadCronJobsForSettingsAgent, mutationContext, params.client, params.runtimeSupportsCron]
   );
 
   const handleRenameAgent = useCallback(

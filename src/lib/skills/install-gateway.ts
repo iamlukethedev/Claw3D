@@ -5,7 +5,11 @@ import {
 } from "@/lib/gateway/agentConfig";
 import { getPackagedSkillById } from "@/lib/skills/catalog";
 import { readPackagedSkillFiles } from "@/lib/skills/packaged";
-import type { PackagedSkillInstallRequest, PackagedSkillInstallResult } from "@/lib/skills/types";
+import {
+  resolveWorkspaceFromAgentFiles,
+  type PackagedSkillInstallRequest,
+  type PackagedSkillInstallResult,
+} from "@/lib/skills/types";
 
 const normalizeRequired = (value: string, field: string): string => {
   const trimmed = value.trim();
@@ -13,6 +17,35 @@ const normalizeRequired = (value: string, field: string): string => {
     throw new Error(`${field} is required.`);
   }
   return trimmed;
+};
+
+const normalizeOptional = (value: string | undefined | null): string => value?.trim() ?? "";
+
+const getPathLeaf = (value: string): string => {
+  const normalized = value.replace(/[\\/]+$/, "");
+  const segments = normalized.split(/[\\/]/).filter(Boolean);
+  return segments[segments.length - 1] ?? "";
+};
+
+const isRootWorkspace = (workspaceDir: string) => {
+  const leaf = getPathLeaf(workspaceDir).toLowerCase();
+  return leaf === "workspace";
+};
+
+const validateWorkspaceInstallTarget = (params: {
+  workspaceDir: string;
+  agentId?: string;
+  agentName?: string;
+}) => {
+  if (isRootWorkspace(params.workspaceDir)) {
+    const targetLabel =
+      normalizeOptional(params.agentName) ||
+      normalizeOptional(params.agentId) ||
+      "the selected agent";
+    throw new Error(
+      `Cannot install a packaged skill because the workspace reported for ${targetLabel} resolves to the gateway root workspace (${params.workspaceDir}). Re-select the agent and refresh the marketplace before installing.`
+    );
+  }
 };
 
 const escapeForJsonString = (value: string) => JSON.stringify(value);
@@ -70,7 +103,21 @@ export const installPackagedSkillViaGatewayAgent = async (params: {
     throw new Error("Gateway-native packaged install currently supports workspace skills only.");
   }
 
-  const workspaceDir = normalizeRequired(params.request.workspaceDir, "workspaceDir");
+  let workspaceDir = normalizeRequired(params.request.workspaceDir, "workspaceDir");
+  if (isRootWorkspace(workspaceDir) && normalizeOptional(params.request.agentId)) {
+    const recoveredWorkspace = await resolveWorkspaceFromAgentFiles(
+      params.client,
+      normalizeOptional(params.request.agentId)
+    );
+    if (recoveredWorkspace) {
+      workspaceDir = recoveredWorkspace;
+    }
+  }
+  validateWorkspaceInstallTarget({
+    workspaceDir,
+    agentId: params.request.agentId,
+    agentName: params.request.agentName,
+  });
   const files = readPackagedSkillFiles(packagedSkill.packageId);
   const installerName = `Skill Installer ${Date.now()}`;
 

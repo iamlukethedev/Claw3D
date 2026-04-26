@@ -140,11 +140,13 @@ const formatRelativeDateTime = (timestampMs?: number) => {
 export function PlaybooksPanel({
   client,
   status,
+  cronEnabled = true,
   agents,
   standup,
 }: {
   client: GatewayClient;
   status: GatewayStatus;
+  cronEnabled?: boolean;
   agents: AgentState[];
   standup: OfficeStandupController;
 }) {
@@ -217,8 +219,10 @@ export function PlaybooksPanel({
   }, [standup.config, standupAgentId]);
 
   const loadJobs = useCallback(async () => {
-    if (status !== "connected") {
+    if (!cronEnabled || status !== "connected") {
       setJobs([]);
+      setError(null);
+      setLoading(false);
       return;
     }
     setLoading(true);
@@ -235,13 +239,17 @@ export function PlaybooksPanel({
     } finally {
       setLoading(false);
     }
-  }, [client, status]);
+  }, [client, cronEnabled, status]);
 
   useEffect(() => {
     void loadJobs();
   }, [loadJobs]);
 
   const handleCreate = useCallback(async () => {
+    if (!cronEnabled) {
+      setError("This runtime does not expose scheduled playbooks.");
+      return;
+    }
     if (!activeTemplate) return;
     const agent = agentById.get(selectedAgentId);
     if (!agent) {
@@ -265,10 +273,14 @@ export function PlaybooksPanel({
     } finally {
       setCreateBusy(false);
     }
-  }, [activeTemplate, agentById, client, loadJobs, nameOverride, selectedAgentId]);
+  }, [activeTemplate, agentById, client, cronEnabled, loadJobs, nameOverride, selectedAgentId]);
 
   const handleRunNow = useCallback(
     async (jobId: string) => {
+      if (!cronEnabled) {
+        setError("This runtime does not expose scheduled playbooks.");
+        return;
+      }
       setRunBusyJobId(jobId);
       setError(null);
       setActionMessage(null);
@@ -282,11 +294,15 @@ export function PlaybooksPanel({
         setRunBusyJobId(null);
       }
     },
-    [client, loadJobs]
+    [client, cronEnabled, loadJobs]
   );
 
   const handleDelete = useCallback(
     async (jobId: string) => {
+      if (!cronEnabled) {
+        setError("This runtime does not expose scheduled playbooks.");
+        return;
+      }
       setDeleteBusyJobId(jobId);
       setError(null);
       setActionMessage(null);
@@ -300,7 +316,7 @@ export function PlaybooksPanel({
         setDeleteBusyJobId(null);
       }
     },
-    [client, loadJobs]
+    [client, cronEnabled, loadJobs]
   );
 
   const handleSaveStandupConfig = useCallback(async () => {
@@ -385,11 +401,17 @@ export function PlaybooksPanel({
           <button
             type="button"
             onClick={() => void loadJobs()}
+            disabled={!cronEnabled}
             className="rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-200 transition-colors hover:border-cyan-400/40 hover:text-cyan-100"
           >
             Refresh
           </button>
         </div>
+        {!cronEnabled ? (
+          <div className="mt-2 font-mono text-[11px] text-white/35">
+            This runtime does not expose scheduled playbooks.
+          </div>
+        ) : null}
         {error ? <div className="mt-2 font-mono text-[11px] text-rose-300">{error}</div> : null}
         {actionMessage ? (
           <div className="mt-2 font-mono text-[11px] text-emerald-300">{actionMessage}</div>

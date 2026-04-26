@@ -311,7 +311,7 @@ const normalizeRole = (value: ParsedCompanyRole, index: number): CompanyBuilderR
 export const buildImproveCompanyBriefPrompt = (businessDescription: string) =>
   [
     "You are helping a user describe the company they want to build inside Claw3D.",
-    "Rewrite their brief so another OpenClaw agent can generate a clean org structure from it.",
+    "Rewrite their brief so another connected runtime agent can generate a clean org structure from it.",
     "Keep the answer short, concrete, and useful.",
     "Return markdown with these sections only:",
     "## Company",

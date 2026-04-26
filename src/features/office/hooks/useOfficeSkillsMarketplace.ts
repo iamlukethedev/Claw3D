@@ -30,6 +30,7 @@ type MarketplaceMessage = {
 export const useOfficeSkillsMarketplace = ({
   client,
   status,
+  enabled = true,
   agents,
   preferredAgentId,
   onSkillActivityStart,
@@ -37,6 +38,7 @@ export const useOfficeSkillsMarketplace = ({
 }: {
   client: GatewayClient;
   status: GatewayStatus;
+  enabled?: boolean;
   agents: AgentState[];
   preferredAgentId?: string | null;
   onSkillActivityStart?: (agentId: string) => void;
@@ -88,7 +90,7 @@ export const useOfficeSkillsMarketplace = ({
   const loadMarketplace = useCallback(
     async (agentId: string) => {
       const resolvedAgentId = agentId.trim();
-      if (!resolvedAgentId || status !== "connected") {
+      if (!enabled || !resolvedAgentId || status !== "connected") {
         setSkillsReport(null);
         setSkillsAllowlist(undefined);
         setLoading(false);
@@ -132,11 +134,11 @@ export const useOfficeSkillsMarketplace = ({
         }
       }
     },
-    [client, status],
+    [client, enabled, status],
   );
 
   useEffect(() => {
-    if (!selectedAgentId || status !== "connected") {
+    if (!enabled || !selectedAgentId || status !== "connected") {
       requestIdRef.current += 1;
       setSkillsReport(null);
       setSkillsAllowlist(undefined);
@@ -144,14 +146,15 @@ export const useOfficeSkillsMarketplace = ({
       return;
     }
     void loadMarketplace(selectedAgentId);
-  }, [loadMarketplace, selectedAgentId, status]);
+  }, [enabled, loadMarketplace, selectedAgentId, status]);
 
   const refresh = useCallback(async () => {
+    if (!enabled) return;
     if (!selectedAgentId) {
       return;
     }
     await loadMarketplace(selectedAgentId);
-  }, [loadMarketplace, selectedAgentId]);
+  }, [enabled, loadMarketplace, selectedAgentId]);
 
   const runSkillMutation = useCallback(
     async (params: {
@@ -162,6 +165,13 @@ export const useOfficeSkillsMarketplace = ({
       const agentId = selectedAgentId?.trim() ?? "";
       const report = skillsReport;
       const normalizedSkillKey = params.skillKey.trim();
+      if (!enabled) {
+        setMessage({
+          kind: "error",
+          text: "This runtime does not expose skill management.",
+        });
+        return;
+      }
       if (!agentId || !report) {
         setMessage({
           kind: "error",
@@ -201,13 +211,13 @@ export const useOfficeSkillsMarketplace = ({
         );
       }
     },
-    [loadMarketplace, onSkillActivityEnd, onSkillActivityStart, selectedAgentId, skillsReport],
+    [enabled, loadMarketplace, onSkillActivityEnd, onSkillActivityStart, selectedAgentId, skillsReport],
   );
 
   const handleSetSkillEnabled = useCallback(
     async (skillName: string, enabled: boolean) => {
       const entry =
-        skillsReport?.skills.find(
+        skillsReport?.skills?.find(
           (skill) => skill.name.trim() === skillName.trim(),
         ) ?? null;
       await runSkillMutation({
@@ -276,12 +286,128 @@ export const useOfficeSkillsMarketplace = ({
               source: packagedSkill.installSource,
               workspaceDir: report.workspaceDir,
               managedSkillsDir: report.managedSkillsDir,
+              agentId: selectedAgent?.agentId ?? undefined,
+              agentName: selectedAgent?.name ?? undefined,
             },
           });
         },
       });
     },
-    [client, runSkillMutation]
+    [client, runSkillMutation, selectedAgent]
+  );
+
+  const handleInstallPackagedSkillAndEnable = useCallback(
+    async (params: {
+      skillKey: string;
+      agentId?: string | null;
+      onProgress?: (progress: { percent: number; message: string }) => void;
+    }) => {
+      const packagedSkill = getPackagedSkillBySkillKey(params.skillKey);
+      if (!packagedSkill) {
+        setMessage({
+          kind: "error",
+          text: `No packaged marketplace skill was found for ${params.skillKey.trim() || "that entry"}.`,
+        });
+        return;
+      }
+
+      const targetAgentId = params.agentId?.trim() || selectedAgentId?.trim() || "";
+      if (!targetAgentId) {
+        setMessage({
+          kind: "error",
+          text: "Select an agent before installing marketplace skills.",
+        });
+        return;
+      }
+
+      setSelectedAgentId(targetAgentId);
+      setBusySkillKey(packagedSkill.skillKey);
+      setError(null);
+      setMessage(null);
+      onSkillActivityStart?.(targetAgentId);
+      try {
+        params.onProgress?.({
+          percent: 12,
+          message: "Preparing the workspace skill install.",
+        });
+        const initialReport = await loadAgentSkillStatus(client, targetAgentId);
+        params.onProgress?.({
+          percent: 38,
+          message: "Installing task-manager into the workspace.",
+        });
+        await installPackagedSkillViaGatewayAgent({
+          client,
+          request: {
+            packageId: packagedSkill.packageId,
+            source: packagedSkill.installSource,
+            workspaceDir: initialReport.workspaceDir,
+            managedSkillsDir: initialReport.managedSkillsDir,
+            agentId: targetAgentId,
+            agentName:
+              agents.find((agent) => agent.agentId === targetAgentId)?.name ?? undefined,
+          },
+        });
+        params.onProgress?.({
+          percent: 62,
+          message: "Enabling task-manager for this gateway.",
+        });
+        await updateSkill(client, { skillKey: packagedSkill.skillKey, enabled: true });
+        params.onProgress?.({
+          percent: 78,
+          message: "Enabling task-manager for the main agent.",
+        });
+        const refreshedReport = await loadAgentSkillStatus(client, targetAgentId);
+        await setAgentSkillEnabled({
+          client,
+          agentId: targetAgentId,
+          skillName: packagedSkill.name,
+          enabled: true,
+          visibleSkills: refreshedReport.skills,
+        });
+        params.onProgress?.({
+          percent: 92,
+          message: "Refreshing skill state in Claw3D.",
+        });
+        await loadMarketplace(targetAgentId);
+        params.onProgress?.({
+          percent: 100,
+          message: "Task-manager installed and enabled.",
+        });
+        const agentName =
+          agents.find((agent) => agent.agentId === targetAgentId)?.name ?? "the main agent";
+        setMessage({
+          kind: "success",
+          text: `Installed and enabled ${packagedSkill.name.trim()} for ${agentName}.`,
+        });
+      } catch (err) {
+        const nextMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to install and enable the skill.";
+        setError(nextMessage);
+        setMessage({
+          kind: "error",
+          text: nextMessage,
+        });
+        if (!isGatewayDisconnectLikeError(err)) {
+          console.error(nextMessage);
+        }
+        throw err instanceof Error ? err : new Error(nextMessage);
+      } finally {
+        onSkillActivityEnd?.(targetAgentId);
+        setBusySkillKey((current) =>
+          current === packagedSkill.skillKey ? null : current,
+        );
+      }
+    },
+    [
+      agents,
+      client,
+      loadMarketplace,
+      onSkillActivityEnd,
+      onSkillActivityStart,
+      selectedAgentId,
+    ],
   );
 
   const handleSetSkillGlobalEnabled = useCallback(
@@ -338,6 +464,7 @@ export const useOfficeSkillsMarketplace = ({
     handleSetSkillEnabled,
     handleInstallSkill,
     handleInstallPackagedSkill,
+    handleInstallPackagedSkillAndEnable,
     handleSetSkillGlobalEnabled,
     handleRemoveSkill,
   };

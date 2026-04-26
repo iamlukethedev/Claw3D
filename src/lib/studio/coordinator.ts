@@ -3,17 +3,22 @@ import type { AgentAvatarProfile } from "@/lib/avatars/profile";
 import type {
   StudioAnalyticsPreferencePatch,
   StudioFocusedPreference,
+  StudioGatewaySettings,
   StudioGatewaySettingsPublic,
+  StudioGatewaySettingsPatch,
   StudioOfficePreferencePatch,
   StudioSettingsPublic,
   StudioSettingsPatch,
   StudioStandupPreferencePatch,
+  StudioTaskBoardPreferencePatch,
   StudioVoiceRepliesPreferencePatch,
 } from "@/lib/studio/settings";
 
 export type StudioSettingsResponse = {
   settings: StudioSettingsPublic;
   localGatewayDefaults?: StudioGatewaySettingsPublic | null;
+  gatewayPrivate?: StudioGatewaySettings | null;
+  localGatewayDefaultsPrivate?: StudioGatewaySettings | null;
 };
 
 export type StudioSettingsLoadOptions = {
@@ -28,6 +33,7 @@ type AnalyticsPatch = Record<string, StudioAnalyticsPreferencePatch | null>;
 type VoiceRepliesPatch = Record<string, StudioVoiceRepliesPreferencePatch | null>;
 type OfficePatch = Record<string, StudioOfficePreferencePatch | null>;
 type StandupPatch = Record<string, StudioStandupPreferencePatch | null>;
+type TaskBoardPatch = Record<string, StudioTaskBoardPreferencePatch | null>;
 
 export type StudioSettingsCoordinatorTransport = {
   fetchSettings: () => Promise<StudioSettingsResponse>;
@@ -225,13 +231,121 @@ const mergeStandupPatch = (
   return merged;
 };
 
+const mergeTaskBoardPatch = (
+  current: TaskBoardPatch | undefined,
+  next: TaskBoardPatch | undefined
+): TaskBoardPatch | undefined => {
+  if (!current && !next) return undefined;
+  const merged: TaskBoardPatch = { ...(current ?? {}) };
+  for (const [gatewayKey, value] of Object.entries(next ?? {})) {
+    if (value === null) {
+      merged[gatewayKey] = null;
+      continue;
+    }
+    const existing = merged[gatewayKey];
+    if (existing && existing !== null) {
+      merged[gatewayKey] = {
+        ...existing,
+        ...value,
+        ...(value.cards ? { cards: [...value.cards] } : {}),
+      };
+      continue;
+    }
+    merged[gatewayKey] = {
+      ...value,
+      ...(value.cards ? { cards: [...value.cards] } : {}),
+    };
+  }
+  return merged;
+};
+
+const mergeOfficeFloorsPatch = (
+  current: StudioSettingsPatch["officeFloors"],
+  next: StudioSettingsPatch["officeFloors"],
+): StudioSettingsPatch["officeFloors"] => {
+  if (!next) return current;
+  if (!current) return { ...next };
+  return { ...current, ...next };
+};
+
+const mergeGatewayProfilesPatch = (
+  current: StudioGatewaySettingsPatch["profiles"],
+  next: StudioGatewaySettingsPatch["profiles"],
+): StudioGatewaySettingsPatch["profiles"] => {
+  if (next === undefined) return current;
+  if (next === null) return null;
+  if (!current || current === null) return { ...next };
+  const merged: NonNullable<StudioGatewaySettingsPatch["profiles"]> = {
+    ...current,
+  };
+  for (const [adapterType, profilePatch] of Object.entries(next)) {
+    if (profilePatch === null) {
+      merged[adapterType as keyof typeof merged] = null;
+      continue;
+    }
+    const existing = merged[adapterType as keyof typeof merged];
+    merged[adapterType as keyof typeof merged] =
+      existing && existing !== null
+        ? { ...existing, ...profilePatch }
+        : { ...profilePatch };
+  }
+  return merged;
+};
+
+const mergeGatewayConnectionPatch = (
+  current: StudioGatewaySettingsPatch["lastKnownGood"],
+  next: StudioGatewaySettingsPatch["lastKnownGood"],
+): StudioGatewaySettingsPatch["lastKnownGood"] => {
+  if (next === undefined) return current;
+  if (next === null) return null;
+  if (!current || current === null) return { ...next };
+  return { ...current, ...next };
+};
+
+const mergeGatewayPatch = (
+  current: StudioSettingsPatch["gateway"],
+  next: StudioSettingsPatch["gateway"],
+): StudioSettingsPatch["gateway"] => {
+  if (next === undefined) return current;
+  if (next === null) return null;
+  if (!current || current === null) {
+    return {
+      ...next,
+      ...(next.profiles !== undefined
+        ? { profiles: mergeGatewayProfilesPatch(undefined, next.profiles) }
+        : {}),
+      ...(next.lastKnownGood !== undefined
+        ? {
+            lastKnownGood: mergeGatewayConnectionPatch(
+              undefined,
+              next.lastKnownGood,
+            ),
+          }
+        : {}),
+    };
+  }
+
+  const profiles = mergeGatewayProfilesPatch(current.profiles, next.profiles);
+  const lastKnownGood = mergeGatewayConnectionPatch(
+    current.lastKnownGood,
+    next.lastKnownGood,
+  );
+  return {
+    ...current,
+    ...next,
+    ...(profiles !== undefined ? { profiles } : {}),
+    ...(lastKnownGood !== undefined ? { lastKnownGood } : {}),
+  };
+};
+
 const mergeStudioPatch = (
   current: StudioSettingsPatch | null,
   next: StudioSettingsPatch
 ): StudioSettingsPatch => {
   if (!current) {
     return {
-      ...(next.gateway !== undefined ? { gateway: next.gateway } : {}),
+      ...(next.gateway !== undefined ? { gateway: mergeGatewayPatch(undefined, next.gateway) } : {}),
+      ...(next.activeFloorId !== undefined ? { activeFloorId: next.activeFloorId } : {}),
       ...(next.focused ? { focused: { ...next.focused } } : {}),
       ...(next.avatars ? { avatars: { ...next.avatars } } : {}),
       ...(next.deskAssignments ? { deskAssignments: { ...next.deskAssignments } } : {}),
@@ -239,6 +353,7 @@ const mergeStudioPatch = (
       ...(next.voiceReplies ? { voiceReplies: { ...next.voiceReplies } } : {}),
       ...(next.office ? { office: { ...next.office } } : {}),
       ...(next.standup ? { standup: { ...next.standup } } : {}),
+      ...(next.officeFloors ? { officeFloors: { ...next.officeFloors } } : {}),
     };
   }
   const focused = mergeFocusedPatch(current.focused, next.focused);
@@ -251,11 +366,19 @@ const mergeStudioPatch = (
   const voiceReplies = mergeVoiceRepliesPatch(current.voiceReplies, next.voiceReplies);
   const office = mergeOfficePatch(current.office, next.office);
   const standup = mergeStandupPatch(current.standup, next.standup);
+  const taskBoard = mergeTaskBoardPatch(current.taskBoard, next.taskBoard);
+  const officeFloors = mergeOfficeFloorsPatch(current.officeFloors, next.officeFloors);
+  const gateway = mergeGatewayPatch(current.gateway, next.gateway);
   return {
     ...(next.gateway !== undefined
-      ? { gateway: next.gateway }
-      : current.gateway !== undefined
-        ? { gateway: current.gateway }
+      ? { gateway }
+      : gateway !== undefined
+        ? { gateway }
+        : {}),
+    ...(next.activeFloorId !== undefined
+      ? { activeFloorId: next.activeFloorId }
+      : current.activeFloorId !== undefined
+        ? { activeFloorId: current.activeFloorId }
         : {}),
     ...(focused ? { focused } : {}),
     ...(avatars ? { avatars } : {}),
@@ -264,6 +387,8 @@ const mergeStudioPatch = (
     ...(voiceReplies ? { voiceReplies } : {}),
     ...(office ? { office } : {}),
     ...(standup ? { standup } : {}),
+    ...(taskBoard ? { taskBoard } : {}),
+    ...(officeFloors ? { officeFloors } : {}),
   };
 };
 
@@ -316,9 +441,10 @@ export class StudioSettingsCoordinator {
       if (this.pendingLoadPromise) {
         return this.pendingLoadPromise;
       }
-    } else if (this.pendingLoadPromise) {
-      return this.pendingLoadPromise;
     }
+    // force=true bypasses both cache and any in-flight request so callers
+    // that need authoritative state (e.g. useGatewayConnection on startup)
+    // always get a fresh fetch rather than a possibly-stale pending one.
 
     const loadPromise = this.transport
       .fetchSettings()

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createRafBatcher } from "@/lib/dom";
+import type { RuntimeAttachment } from "@/lib/runtime/types";
 import {
   planDraftFlushIntent,
   planDraftTimerIntent,
@@ -23,6 +24,23 @@ type GatewayClientLike = {
   call: (method: string, params: unknown) => Promise<unknown>;
 };
 
+const buildQueuedAttachmentMessage = (message: string, attachments: RuntimeAttachment[]): string => {
+  const trimmed = message.trim();
+  const attachmentBlocks = attachments.map((attachment) => {
+    const lines = [
+      `[Attached file: ${attachment.name}]`,
+      `URL: ${attachment.url}`,
+      `Content-Type: ${attachment.contentType}`,
+    ];
+    if (attachment.extractedText?.trim()) {
+      lines.push("", attachment.extractedText.trim());
+    }
+    lines.push(`[End attached file: ${attachment.name}]`);
+    return lines.join("\n");
+  });
+  return [trimmed, ...attachmentBlocks].filter(Boolean).join("\n\n").trim();
+};
+
 export type UseChatInteractionControllerParams = {
   client: GatewayClientLike;
   status: GatewayStatus;
@@ -43,7 +61,7 @@ export type ChatInteractionController = {
   stopBusyAgentId: string | null;
   flushPendingDraft: (agentId: string | null) => void;
   handleDraftChange: (agentId: string, value: string) => void;
-  handleSend: (agentId: string, sessionKey: string, message: string) => Promise<void>;
+  handleSend: (agentId: string, sessionKey: string, message: string, attachments?: RuntimeAttachment[]) => Promise<void>;
   removeQueuedMessage: (agentId: string, index: number) => void;
   handleNewSession: (agentId: string) => Promise<void>;
   handleStopRun: (agentId: string, sessionKey: string) => Promise<void>;
@@ -186,9 +204,11 @@ export function useChatInteractionController(
   );
 
   const handleSend = useCallback(
-    async (agentId: string, sessionKey: string, message: string) => {
+    async (agentId: string, sessionKey: string, message: string, attachments?: RuntimeAttachment[]) => {
       const trimmed = message.trim();
-      if (!trimmed) return;
+      const normalizedAttachments = attachments ?? [];
+      const hasAttachments = normalizedAttachments.length > 0;
+      if (!trimmed && !hasAttachments) return;
       const pendingDraftTimer = pendingDraftTimersRef.current.get(agentId) ?? null;
       if (pendingDraftTimer !== null) {
         window.clearTimeout(pendingDraftTimer);
@@ -211,7 +231,7 @@ export function useChatInteractionController(
         params.dispatch({
           type: "enqueueQueuedMessage",
           agentId,
-          message: trimmed,
+          message: buildQueuedAttachmentMessage(trimmed, normalizedAttachments),
         });
         return;
       }
@@ -224,6 +244,7 @@ export function useChatInteractionController(
         agentId,
         sessionKey,
         message: trimmed,
+        attachments: normalizedAttachments,
         clearRunTracking: (runId) => params.clearRunTracking(runId),
       });
     },

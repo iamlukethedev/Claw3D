@@ -35,10 +35,12 @@ const isSkillEnabledForAgent = (params: {
 export const useOfficeSkillTriggers = ({
   client,
   status,
+  enabled = true,
   agents,
 }: {
   client: GatewayClient;
   status: GatewayStatus;
+  enabled?: boolean;
   agents: AgentState[];
 }) => {
   const requestIdRef = useRef(0);
@@ -55,7 +57,10 @@ export const useOfficeSkillTriggers = ({
     [agentIdsKey],
   );
   const shouldLoadTriggers =
-    status === "connected" && stableAgentIds.length > 0 && packagedTriggers.length > 0;
+    enabled &&
+    status === "connected" &&
+    stableAgentIds.length > 0 &&
+    packagedTriggers.length > 0;
 
   useEffect(() => {
     if (!shouldLoadTriggers) {

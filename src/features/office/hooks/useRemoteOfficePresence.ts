@@ -66,8 +66,10 @@ export const useRemoteOfficePresence = ({
       ? presenceUrl.trim().length > 0
       : normalizedGatewayUrl.length > 0);
   const requestUrl = useMemo(() => {
-    if (!active || sourceKind !== "presence_endpoint") return "";
-    const searchParams = new URLSearchParams({ source: "remote" });
+    if (!active) return "";
+    const searchParams = new URLSearchParams({
+      source: sourceKind === "presence_endpoint" ? "remote" : "remote_gateway",
+    });
     return `/api/office/presence?${searchParams.toString()}`;
   }, [active, sourceKind]);
 
@@ -250,8 +252,7 @@ export const useRemoteOfficePresence = ({
         }
       }
     };
-    const loadSnapshot =
-      sourceKind === "presence_endpoint" ? loadFromPresenceEndpoint : loadFromGateway;
+    const loadSnapshot = requestUrl ? loadFromPresenceEndpoint : loadFromGateway;
     void loadSnapshot();
     intervalId = window.setInterval(() => {
       void loadSnapshot();

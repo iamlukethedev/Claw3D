@@ -31,7 +31,7 @@ const CONNECT_TIMEOUT_MS = 8_000;
 const REQUEST_TIMEOUT_MS = 12_000;
 const INITIAL_CONNECT_DELAY_MS = 750;
 const GATEWAY_ROLE = "operator";
-const GATEWAY_SCOPES = ["operator.admin", "operator.approvals", "operator.pairing"];
+const GATEWAY_SCOPES = ["operator.read", "operator.admin", "operator.approvals", "operator.pairing"];
 const GATEWAY_CLIENT_ID = "openclaw-control-ui";
 
 const asRecord = (value: unknown): value is Record<string, unknown> =>

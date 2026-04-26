@@ -28,7 +28,10 @@ export type PersonalityBuilderDraft = {
   memory: string;
 };
 
-type AgentFilesInput = Record<AgentFileName, { content: string; exists: boolean }>;
+type AgentFilesInput = Record<
+  AgentFileName,
+  { content: string; exists: boolean; path: string | null; workspace: string | null }
+>;
 
 export const createEmptyPersonalityDraft = (): PersonalityBuilderDraft => ({
   identity: {

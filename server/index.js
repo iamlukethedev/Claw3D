@@ -91,8 +91,10 @@ async function main() {
   const proxy = createGatewayProxy({
     loadUpstreamSettings: async () => {
       const settings = loadUpstreamGatewaySettings(process.env);
-      return { url: settings.url, token: settings.token };
+      return { url: settings.url, token: settings.token, adapterType: settings.adapterType };
     },
+    log: (message) => console.info(message),
+    logError: (message, error) => console.error(message, error),
     allowWs: (req) => {
       if (resolvePathname(req.url) !== "/api/gateway/ws") return false;
       return true;

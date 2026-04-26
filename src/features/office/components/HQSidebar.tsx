@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 export type HQSidebarTab =
   | "inbox"
   | "history"
+  | "kanban"
   | "playbooks"
   | "analytics";
 
@@ -19,6 +20,7 @@ type HQSidebarProps = {
   onOpenCompanyBuilder?: () => void;
   inboxPanel: ReactNode;
   historyPanel: ReactNode;
+  kanbanPanel: ReactNode;
   playbooksPanel: ReactNode;
   analyticsPanel: ReactNode;
 };
@@ -26,11 +28,12 @@ type HQSidebarProps = {
 const TAB_LABELS: Record<HQSidebarTab, string> = {
   inbox: "Inbox",
   history: "History",
+  kanban: "Kanban",
   playbooks: "Playbooks",
   analytics: "Analytics",
 };
 
-const PRIMARY_TABS: HQSidebarTab[] = ["inbox", "history", "playbooks"];
+const PRIMARY_TABS: HQSidebarTab[] = ["inbox", "history", "kanban", "playbooks"];
 
 export function HQSidebar({
   open,
@@ -43,6 +46,7 @@ export function HQSidebar({
   onOpenCompanyBuilder,
   inboxPanel,
   historyPanel,
+  kanbanPanel,
   playbooksPanel,
   analyticsPanel,
 }: HQSidebarProps) {
@@ -53,9 +57,12 @@ export function HQSidebar({
       ? inboxPanel
       : activeTab === "history"
         ? historyPanel
+        : activeTab === "kanban"
+          ? kanbanPanel
         : activeTab === "playbooks"
           ? playbooksPanel
           : analyticsPanel;
+  const boardLikeWidth = activeTab === "kanban";
 
   return (
     <aside className="pointer-events-none fixed inset-y-0 right-0 z-20 flex justify-end">
@@ -108,7 +115,11 @@ export function HQSidebar({
       </div>
 
       {open ? (
-        <div className="pointer-events-auto flex h-full w-56 flex-col border-l border-cyan-500/20 bg-black/85 shadow-2xl backdrop-blur">
+        <div
+          className={`pointer-events-auto flex h-full flex-col border-l border-cyan-500/20 bg-black/85 shadow-2xl backdrop-blur ${
+            boardLikeWidth ? "w-[min(94vw,1180px)]" : "w-56"
+          }`}
+        >
           <div className="border-b border-cyan-500/15 px-4 py-3">
             <div className="font-mono text-[10px] font-semibold tracking-[0.32em] text-cyan-300/80">
               {analyticsOnly ? "ANALYTICS" : "HEADQUARTERS"}
@@ -151,7 +162,7 @@ export function HQSidebar({
             <div
               role="tablist"
               aria-label="Headquarters panels"
-              className="grid grid-cols-3 border-b border-cyan-500/15"
+              className="grid grid-cols-4 border-b border-cyan-500/15"
             >
               {PRIMARY_TABS.map((tab) => {
                 const isActive = tab === activeTab;

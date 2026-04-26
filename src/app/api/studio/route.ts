@@ -24,6 +24,9 @@ export async function GET() {
       {
         settings: sanitizeStudioSettings(settings),
         localGatewayDefaults: sanitizeStudioGatewaySettings(localGatewayDefaults),
+        // gatewayPrivate and localGatewayDefaultsPrivate are intentionally omitted.
+        // Upstream tokens must not cross the browser API boundary — the Studio proxy
+        // (server/gateway-proxy.js) injects the server-side token into connect frames.
       },
       { headers: { "Cache-Control": "no-store" } }
     );
@@ -36,13 +39,21 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const body = (await request.json()) as unknown;
+    const rawBody = await request.text();
+    if (!rawBody.trim()) {
+      return NextResponse.json({ error: "Invalid settings payload." }, { status: 400 });
+    }
+    const body = JSON.parse(rawBody) as unknown;
     if (!isPatch(body)) {
       return NextResponse.json({ error: "Invalid settings payload." }, { status: 400 });
     }
     const settings = applyStudioSettingsPatch(body);
     return NextResponse.json(
-      { settings: sanitizeStudioSettings(settings) },
+      {
+        settings: sanitizeStudioSettings(settings),
+        localGatewayDefaults: sanitizeStudioGatewaySettings(loadLocalGatewayDefaults()),
+        // gatewayPrivate intentionally omitted — see GET handler comment.
+      },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (err) {

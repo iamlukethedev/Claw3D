@@ -24,6 +24,8 @@ import type {
   FurnitureSeed,
 } from "@/features/retro-office/core/types";
 
+export type OfficeLayoutPreset = "office" | "lobby";
+
 const DEFAULT_PINGPONG_TABLE: FurnitureSeed = {
   type: "pingpong",
   x: 950,
@@ -58,6 +60,13 @@ const DEFAULT_JUKEBOX: FurnitureSeed = {
   x: 20,
   y: 380,
   facing: 90,
+};
+
+const DEFAULT_KANBAN_BOARD: FurnitureSeed = {
+  type: "kanban_board",
+  x: 460,
+  y: -60,
+  facing: 180,
 };
 
 const PREVIOUS_SERVER_ROOM_ITEMS_BOTTOM_RIGHT: FurnitureSeed[] = [
@@ -411,6 +420,39 @@ const DEFAULT_ART_ROOM_ITEMS: FurnitureSeed[] = [
   { type: "plant", x: 280, y: 240 },
 ];
 
+const DEFAULT_LOBBY_FURNITURE: FurnitureSeed[] = [
+  { type: "round_table", x: 120, y: 110, r: 72 },
+  { type: "chair", x: 182, y: 110, facing: 0 },
+  { type: "chair", x: 160, y: 168, facing: 220 },
+  { type: "chair", x: 92, y: 170, facing: 140 },
+  { type: "chair", x: 58, y: 112, facing: 90 },
+  { type: "chair", x: 92, y: 52, facing: 40 },
+  { type: "bookshelf", x: 248, y: 32, w: 78, h: 118 },
+  { type: "couch", x: 332, y: 92, w: 44, h: 112, vertical: true, facing: 180 },
+  { type: "couch", x: 430, y: 92, w: 44, h: 112, vertical: true, facing: 180 },
+  { type: "table_rect", x: 382, y: 138, w: 72, h: 34 },
+  { type: "beanbag", x: 332, y: 210, color: "#1565c0", facing: 135 },
+  { type: "beanbag", x: 436, y: 216, color: "#7c3aed", facing: 225 },
+  { type: "whiteboard", x: 36, y: 214, w: 10, h: 64 },
+  { type: "clock", x: 566, y: 6 },
+  { type: "table_rect", x: 874, y: 102, w: 124, h: 34, facing: 0 },
+  { type: "chair", x: 934, y: 176, facing: 180 },
+  { type: "vending", x: 788, y: 10 },
+  { type: "trash", x: 826, y: 20 },
+  { type: "couch", x: 982, y: 382, w: 112, h: 42, facing: 90 },
+  { type: "couch", x: 392, y: 634, w: 112, h: 42 },
+  { type: "table_rect", x: 980, y: 380, w: 60, h: 30, facing: 270 },
+  { type: "plant", x: 40, y: 40 },
+  { type: "plant", x: 662, y: 32 },
+  { type: "plant", x: 340, y: 700 },
+  { type: "plant", x: 1088, y: 312 },
+  { type: "plant", x: 530, y: 700 },
+  ...DEFAULT_SERVER_ROOM_ITEMS,
+  ...DEFAULT_GYM_ITEMS,
+  ...DEFAULT_QA_LAB_ITEMS,
+  ...DEFAULT_ART_ROOM_ITEMS,
+];
+
 const DEFAULT_FURNITURE: FurnitureSeed[] = [
   { type: "round_table", x: 50, y: 50, r: 90 },
   { type: "chair", x: 130, y: 50, facing: 0 },
@@ -419,9 +461,8 @@ const DEFAULT_FURNITURE: FurnitureSeed[] = [
   { type: "chair", x: 120, y: 480, facing: 180 },
   { type: "chair", x: 50, y: 150, facing: 105 },
   { type: "chair", x: 60, y: 80, facing: 60 },
-  { type: "executive_desk", x: 420, y: 60, w: 130, h: 65 },
-  { type: "chair", x: 540, y: 60, facing: 0 },
-  { type: "bookshelf", x: 500, y: 30, w: 80, h: 120 },
+  { type: "chair", x: 550, y: 50, facing: 0 },
+  { type: "bookshelf", x: 600, y: 30, w: 80, h: 120 },
   { type: "couch", x: 270, y: 90, w: 40, h: 80, vertical: true, facing: 180 },
   { type: "fridge", x: 1050, y: 20, w: 40, h: 80 },
   { type: "stove", x: 920, y: 20 },
@@ -433,7 +474,11 @@ const DEFAULT_FURNITURE: FurnitureSeed[] = [
   { type: "coffee_machine", x: 880, y: 30, elevation: 0.56 },
   { type: "wall_cabinet", x: 960, y: 10, w: 80, h: 20, elevation: 0.9 },
   { type: "wall_cabinet", x: 880, y: 10, w: 80, h: 20, elevation: 0.9 },
-  ...DEFAULT_DINING_ITEMS,
+  { type: "round_table", x: 890, y: 100, r: 50 },
+  { type: "chair", x: 930, y: 100, facing: 0 },
+  { type: "chair", x: 930, y: 180, facing: 180 },
+  { type: "chair", x: 880, y: 130, facing: 90 },
+  { type: "chair", x: 970, y: 130, facing: 270 },
   { type: "vending", x: 790, y: 10 },
   { type: "trash", x: 210, y: 20 },
   { type: "desk_cubicle", x: 100, y: 300, id: "desk_0" },
@@ -486,11 +531,12 @@ const DEFAULT_FURNITURE: FurnitureSeed[] = [
   { type: "couch", x: 1000, y: 380, w: 100, h: 40, facing: 90 },
   { type: "couch", x: 390, y: 630, w: 100, h: 40 },
   { type: "table_rect", x: 980, y: 380, w: 60, h: 30, facing: 270 },
-  DEFAULT_PINGPONG_TABLE,
+  { type: "pingpong", x: 950, y: 600, w: 100, h: 60 },
   { type: "beanbag", x: 1000, y: 330, color: "#e65100", facing: 90 },
   { type: "beanbag", x: 1000, y: 410, color: "#1565c0", facing: 90 },
   DEFAULT_ATM_MACHINE,
   DEFAULT_PHONE_BOOTH,
+  DEFAULT_KANBAN_BOARD,
   { type: "whiteboard", x: 40, y: 200, w: 10, h: 60 },
   { type: "clock", x: 550, y: 5 },
   { type: "lamp", x: 430, y: 100 },
@@ -511,10 +557,12 @@ const DEFAULT_FURNITURE: FurnitureSeed[] = [
   { type: "chair", x: 100, y: 200, facing: 180 },
 ];
 
-export const materializeDefaults = (): FurnitureItem[] =>
-  DEFAULT_FURNITURE.map((item, index) => ({
+export const materializeDefaults = (
+  preset: OfficeLayoutPreset = "office",
+): FurnitureItem[] =>
+  (preset === "lobby" ? DEFAULT_LOBBY_FURNITURE : DEFAULT_FURNITURE).map((item, index) => ({
     ...item,
-    _uid: `default_${index}`,
+    _uid: `${preset}_${index}`,
   }));
 
 export const isRetiredPingPongLamp = (item: FurnitureItem) =>
@@ -593,6 +641,11 @@ export const ensureOfficeAtm = (items: FurnitureItem[]): FurnitureItem[] => {
 export const ensureOfficeJukebox = (items: FurnitureItem[]): FurnitureItem[] => {
   if (items.some((item) => item.type === "jukebox")) return items;
   return [...items, { ...DEFAULT_JUKEBOX, _uid: nextUid() }];
+};
+
+export const ensureOfficeKanbanBoard = (items: FurnitureItem[]): FurnitureItem[] => {
+  if (items.some((item) => item.type === "kanban_board")) return items;
+  return [...items, { ...DEFAULT_KANBAN_BOARD, _uid: nextUid() }];
 };
 
 export const ensureOfficePhoneBooth = (

@@ -7,10 +7,14 @@ import type { GatewayClient } from "@/lib/gateway/GatewayClient";
 import { AgentIdentityFields } from "@/features/agents/components/AgentIdentityFields";
 import {
   AGENT_FILE_META,
-  AGENT_FILE_PLACEHOLDERS,
+  PERSONALITY_FILE_NAMES,
   type AgentFileName,
 } from "@/lib/agents/agentFiles";
-import { parsePersonalityFiles, serializePersonalityFiles } from "@/lib/agents/personalityBuilder";
+import {
+  createEmptyPersonalityDraft,
+  parsePersonalityFiles,
+  serializePersonalityFiles,
+} from "@/lib/agents/personalityBuilder";
 import { useAgentFilesEditor } from "@/features/agents/hooks/useAgentFilesEditor";
 
 export type AgentBrainPanelProps = {
@@ -35,6 +39,30 @@ const AgentBrainPanelSection = ({
     {children}
   </section>
 );
+
+const AgentFileProvenance = ({
+  path,
+  workspace,
+}: {
+  path: string | null;
+  workspace: string | null;
+}) => {
+  if (!path && !workspace) return null;
+  return (
+    <div className="rounded-md border border-border/50 bg-black/20 px-3 py-2 text-[11px] text-muted-foreground">
+      {workspace ? (
+        <div>
+          Workspace: <span className="font-mono text-foreground">{workspace}</span>
+        </div>
+      ) : null}
+      {path ? (
+        <div>
+          File: <span className="font-mono text-foreground">{path}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+};
 
 export const AgentBrainPanel = ({
   client,
@@ -61,9 +89,14 @@ export const AgentBrainPanel = ({
     agentFilesError,
     setAgentFileContent,
     saveAgentFiles,
+    initializeAgentFiles,
   } = useAgentFilesEditor({ client, agentId: selectedAgent?.agentId ?? null });
   const draft = useMemo(() => parsePersonalityFiles(agentFiles), [agentFiles]);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const missingPersonalityFiles = useMemo(
+    () => PERSONALITY_FILE_NAMES.filter((name) => !agentFiles[name].exists),
+    [agentFiles]
+  );
 
   const setIdentityField = useCallback(
     (field: "name" | "creature" | "vibe" | "emoji" | "avatar", value: string) => {
@@ -101,6 +134,19 @@ export const AgentBrainPanel = ({
     selectedAgent,
   ]);
 
+  const handleInitializeMissingFiles = useCallback(async () => {
+    if (!selectedAgent) return;
+    setSaveError(null);
+    const nextDraft = createEmptyPersonalityDraft();
+    nextDraft.identity.name = selectedAgent.name.trim();
+    nextDraft.identity.creature = selectedAgent.role?.trim() ?? "";
+    const serialized = serializePersonalityFiles(nextDraft);
+    const missingEntries = Object.fromEntries(
+      missingPersonalityFiles.map((name) => [name, serialized[name]])
+    ) as Partial<Record<AgentFileName, string>>;
+    await initializeAgentFiles(missingEntries);
+  }, [initializeAgentFiles, missingPersonalityFiles, selectedAgent]);
+
   useEffect(() => {
     onUnsavedChangesChange?.(agentFilesDirty);
   }, [agentFilesDirty, onUnsavedChangesChange]);
@@ -112,21 +158,36 @@ export const AgentBrainPanel = ({
   }, [onUnsavedChangesChange]);
 
   const renderMarkdownEditor = useCallback(
-    (name: Exclude<AgentFileName, "IDENTITY.md">) => (
-      <AgentBrainPanelSection title={AGENT_FILE_META[name].title}>
-        <div className="text-xs text-muted-foreground">{AGENT_FILE_META[name].hint}</div>
-        <textarea
-          aria-label={AGENT_FILE_META[name].title}
-          className="h-[min(56vh,480px)] w-full resize-y rounded-md border border-border/80 bg-background px-4 py-3 font-mono text-sm leading-6 text-foreground outline-none"
-          value={agentFiles[name].content}
-          placeholder={AGENT_FILE_PLACEHOLDERS[name]}
-          disabled={agentFilesLoading || agentFilesSaving}
-          onChange={(event) => {
-            setAgentFileContent(name, event.target.value);
-          }}
-        />
-      </AgentBrainPanelSection>
-    ),
+    (name: Exclude<AgentFileName, "IDENTITY.md">) => {
+      const file = agentFiles[name];
+      const trimmedContent = file.content.trim();
+      const statusCopy = !file.exists
+        ? `This agent does not have a custom ${name} yet. Saving here will create the real workspace file.`
+        : !trimmedContent
+          ? `This agent's ${name} exists, but it is currently empty.`
+          : null;
+      return (
+        <AgentBrainPanelSection title={AGENT_FILE_META[name].title}>
+          <div className="text-xs text-muted-foreground">{AGENT_FILE_META[name].hint}</div>
+          {statusCopy ? (
+            <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              {statusCopy}
+            </div>
+          ) : null}
+          <AgentFileProvenance path={file.path} workspace={file.workspace} />
+          <textarea
+            aria-label={AGENT_FILE_META[name].title}
+            className="h-[min(56vh,480px)] w-full resize-y rounded-md border border-border/80 bg-background px-4 py-3 font-mono text-sm leading-6 text-foreground outline-none"
+            value={file.content}
+            placeholder={!file.exists ? `No ${name} yet.` : ""}
+            disabled={agentFilesLoading || agentFilesSaving}
+            onChange={(event) => {
+              setAgentFileContent(name, event.target.value);
+            }}
+          />
+        </AgentBrainPanelSection>
+      );
+    },
     [agentFiles, agentFilesLoading, agentFilesSaving, setAgentFileContent],
   );
 
@@ -141,6 +202,10 @@ export const AgentBrainPanel = ({
           Changing <span className="font-medium text-foreground">Name</span> here also renames the live agent
           when you save.
         </div>
+        <AgentFileProvenance
+          path={agentFiles["IDENTITY.md"].path}
+          workspace={agentFiles["IDENTITY.md"].workspace}
+        />
         <AgentIdentityFields
           values={draft.identity}
           disabled={agentFilesLoading || agentFilesSaving}
@@ -191,6 +256,18 @@ export const AgentBrainPanel = ({
           ) : null}
 
           <div className="mb-6 flex items-center justify-end gap-2 border-b border-border/40 pb-4">
+            {missingPersonalityFiles.length > 0 ? (
+              <button
+                type="button"
+                className="ui-btn-secondary px-3 py-2 text-xs"
+                disabled={agentFilesLoading || agentFilesSaving}
+                onClick={() => {
+                  void handleInitializeMissingFiles();
+                }}
+              >
+                Initialize missing files
+              </button>
+            ) : null}
             <button
               type="button"
               className="ui-btn-ghost px-3 py-2 text-xs"

@@ -123,5 +123,35 @@ describe("/api/gateway/media route", () => {
     expect(typeof options.maxBuffer).toBe("number");
     expect(options.maxBuffer).toBeGreaterThan(payloadBytes.length);
   });
+
+  it("rejects symlinked local media paths", async () => {
+    tempDir = makeTempDir("gateway-media-route-local-symlink");
+    const realHome = os.homedir();
+    const allowedRoot = path.join(realHome, ".openclaw");
+    const imagesDir = path.join(allowedRoot, "images");
+    const outsideDir = path.join(tempDir, "outside");
+    fs.mkdirSync(imagesDir, { recursive: true });
+    fs.mkdirSync(outsideDir, { recursive: true });
+
+    const outsideFile = path.join(outsideDir, "secret.png");
+    fs.writeFileSync(outsideFile, "not-allowed", "utf8");
+    const symlinkPath = path.join(imagesDir, "linked.png");
+    fs.symlinkSync(outsideFile, symlinkPath);
+
+    process.env.OPENCLAW_STATE_DIR = tempDir;
+    writeStudioSettings(tempDir, "ws://localhost:18789");
+
+    const response = await GET(
+      new Request(
+        `http://localhost/api/gateway/media?path=${encodeURIComponent(symlinkPath)}`
+      )
+    );
+    const body = (await response.json()) as { error?: string };
+
+    expect(response.status).toBe(400);
+    expect(body.error).toMatch(/symlink/i);
+
+    fs.rmSync(symlinkPath, { force: true });
+  });
 });
 

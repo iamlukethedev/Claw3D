@@ -35,7 +35,7 @@ export const CompanyStep = ({
           {
             icon: Sparkles,
             title: "Improve the brief",
-            description: "Use your connected OpenClaw runtime to sharpen the company prompt.",
+            description: "Use your connected runtime to sharpen the company prompt.",
           },
           {
             icon: Users,
@@ -45,7 +45,7 @@ export const CompanyStep = ({
           {
             icon: Wand2,
             title: "Create everything",
-            description: "Write agent files and create the team directly in OpenClaw.",
+            description: "Write agent files and create the team directly in the connected runtime.",
           },
         ].map(({ icon: Icon, title, description }) => (
           <div
@@ -73,7 +73,7 @@ export const CompanyStep = ({
           </div>
         ) : (
           <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-xs text-amber-100/80">
-            Connect to OpenClaw and keep at least one planning agent available to generate the
+            Connect to a runtime and keep at least one planning agent available to generate the
             company with AI.
           </div>
         )}

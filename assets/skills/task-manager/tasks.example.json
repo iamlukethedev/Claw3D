@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-03-30T00:10:00.000Z",
+  "tasks": [
+    {
+      "id": "research-mtulsa-com",
+      "title": "Research mtulsa.com",
+      "description": "Review mtulsa.com and summarize the site, positioning, and improvement opportunities.",
+      "status": "in_progress",
+      "source": "claw3d_manual",
+      "sourceEventId": null,
+      "assignedAgentId": "main",
+      "createdAt": "2026-03-30T00:00:00.000Z",
+      "updatedAt": "2026-03-30T00:10:00.000Z",
+      "playbookJobId": null,
+      "runId": null,
+      "channel": "telegram",
+      "externalThreadId": "telegram:direct:6866695577",
+      "lastActivityAt": "2026-03-30T00:10:00.000Z",
+      "notes": [],
+      "isArchived": false,
+      "isInferred": false,
+      "history": [
+        {
+          "at": "2026-03-30T00:00:00.000Z",
+          "type": "created",
+          "note": "Task created.",
+          "fromStatus": null,
+          "toStatus": "todo"
+        },
+        {
+          "at": "2026-03-30T00:10:00.000Z",
+          "type": "status_changed",
+          "note": null,
+          "fromStatus": "todo",
+          "toStatus": "in_progress"
+        }
+      ]
+    }
+  ]
+}

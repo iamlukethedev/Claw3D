@@ -1,5 +1,8 @@
 import type { GatewayClient } from "@/lib/gateway/GatewayClient";
-import { syncGatewaySessionSettings } from "@/lib/gateway/GatewayClient";
+import {
+  isWebchatSessionMutationBlockedError,
+  syncGatewaySessionSettings,
+} from "@/lib/gateway/GatewayClient";
 import {
   readGatewayAgentExecApprovals,
   upsertGatewayAgentExecApprovals,
@@ -318,6 +321,32 @@ const upsertExecApprovalsPolicyForRole = async (params: {
   });
 };
 
+const syncExecutionRoleSessionSettings = async (params: {
+  client: GatewayClient;
+  sessionKey: string;
+  role: ExecutionRoleId;
+  sandboxMode?: string | null;
+}) => {
+  const execSettings = resolveSessionExecSettingsForRole({
+    role: params.role,
+    sandboxMode: params.sandboxMode ?? "",
+  });
+  try {
+    await syncGatewaySessionSettings({
+      client: params.client,
+      sessionKey: params.sessionKey,
+      execHost: execSettings.execHost,
+      execSecurity: execSettings.execSecurity,
+      execAsk: execSettings.execAsk,
+    });
+  } catch (error) {
+    if (isWebchatSessionMutationBlockedError(error)) {
+      return;
+    }
+    throw error;
+  }
+};
+
 export async function updateAgentPermissionsViaStudio(params: {
   client: GatewayClient;
   agentId: string;
@@ -354,16 +383,11 @@ export async function updateAgentPermissionsViaStudio(params: {
     overrides: toolOverrides,
   });
 
-  const execSettings = resolveSessionExecSettingsForRole({
-    role,
-    sandboxMode: runtimeConfigContext.sandboxMode,
-  });
-  await syncGatewaySessionSettings({
+  await syncExecutionRoleSessionSettings({
     client: params.client,
     sessionKey: params.sessionKey,
-    execHost: execSettings.execHost,
-    execSecurity: execSettings.execSecurity,
-    execAsk: execSettings.execAsk,
+    role,
+    sandboxMode: runtimeConfigContext.sandboxMode,
   });
 
   if (params.loadAgents) {
@@ -403,16 +427,11 @@ export async function updateExecutionRoleViaStudio(params: {
     overrides: toolOverrides,
   });
 
-  const execSettings = resolveSessionExecSettingsForRole({
-    role: params.role,
-    sandboxMode: runtimeConfigContext.sandboxMode,
-  });
-  await syncGatewaySessionSettings({
+  await syncExecutionRoleSessionSettings({
     client: params.client,
     sessionKey: params.sessionKey,
-    execHost: execSettings.execHost,
-    execSecurity: execSettings.execSecurity,
-    execAsk: execSettings.execAsk,
+    role: params.role,
+    sandboxMode: runtimeConfigContext.sandboxMode,
   });
 
   await params.loadAgents();
