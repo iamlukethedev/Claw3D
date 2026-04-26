@@ -264,6 +264,7 @@ Common environment variables:
 - `OPENCLAW_STATE_DIR` and `OPENCLAW_CONFIG_PATH` override the default OpenClaw paths.
 - `OPENCLAW_GATEWAY_SSH_TARGET`, `OPENCLAW_GATEWAY_SSH_USER`, `OPENCLAW_GATEWAY_SSH_PORT`, and `OPENCLAW_GATEWAY_SSH_STRICT_HOST_KEY_CHECKING` support advanced gateway-host operations over SSH when needed.
 - `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, and `ELEVENLABS_MODEL_ID` enable voice reply integration.
+- `CLAW3D_OFFICE_EVENTS_SECRET` enables signed external office events at `/api/office/events`. Send `X-Claw3D-Signature: sha256=<hex hmac>` over the raw JSON body.
 
 See [`.env.example`](.env.example) for the full local development template.
 

@@ -10,7 +10,8 @@ export type OperationsCenterFeedEvent = {
   name: string;
   text: string;
   ts: number;
-  kind?: "status" | "reply";
+  kind?: "status" | "reply" | "external";
+  effect?: "confetti" | "alarm" | "doorbell" | null;
 };
 
 type OperationsCenterPanelProps = {
