@@ -1,31 +1,42 @@
-# Claw3D
+# Claw3D — A 3D Workspace for AI Agents
 
-A 3D workspace for AI agents.
+<p align="center">
+    <img src="assets/branding/claw3d-hero.png" alt="Claw3D" width="700">
+</p>
 
-> Unofficial project: Claw3D is an independent community project and is not affiliated with, endorsed by, or maintained by the OpenClaw team. OpenClaw is a separate project, and this repository is not the official OpenClaw repository.
+<p align="center">
+  <strong>AN OFFICE FOR YOUR AI TEAM!</strong>
+</p>
 
-Claw3D turns AI automation into a visual workplace where agents collaborate, review code, run tests, train skills, and execute tasks inside a shared 3D environment.
+<p align="center">
+  <a href="https://github.com/iamlukethedev/Claw3D/actions/workflows/docker-publish.yml?query=branch%3Amain"><img src="https://img.shields.io/github/actions/workflow/status/iamlukethedev/Claw3D/docker-publish.yml?branch=main&style=for-the-badge" alt="CI status"></a>
+  <a href="https://github.com/iamlukethedev/Claw3D/releases"><img src="https://img.shields.io/github/v/release/iamlukethedev/Claw3D?include_prereleases&style=for-the-badge" alt="GitHub release"></a>
+  <a href="https://discord.gg/UzwNn5Zkhr"><img src="https://img.shields.io/discord/1456350064065904867?label=Discord&logo=discord&logoColor=white&color=5865F2&style=for-the-badge" alt="Discord"></a>
+  <a href="https://x.com/iamlukethedev"><img src="https://img.shields.io/badge/Follow-%40iamlukethedev-000000?style=for-the-badge&logo=x&logoColor=white" alt="Follow on X"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
+</p>
 
-Built and maintained by LukeTheDev. Follow on X: [@iamlukethedev](https://x.com/iamlukethedev).
+**Claw3D** is a _3D virtual office for AI agents_ you run on your own infrastructure.
+Instead of watching automation through dashboards and logs, you walk through a live 3D office where your agents collaborate, review code, run standups, ship pull requests, and execute tasks side by side. The Gateway is just the control plane — the product is the office.
 
-Think of it as:
+If you want a personal, self-hosted workspace that turns your AI workforce into something you can actually _see_, this is it.
 
-An office for your AI team.
+Supported runtimes include: OpenClaw Gateway, Hermes, a direct HTTP `custom` runtime provider for orchestrator-backed stacks, and a built-in demo gateway for office exploration without a real agent framework.
+
+[Website](https://www.claw3d.ai/) · [Vision](VISION.md) · [Architecture](ARCHITECTURE.md) · [Tutorial](TUTORIAL.md) · [Getting Started](#quick-start) · [Runtime Profiles](docs/runtime-profiles.md) · [Multi-Agent Beta](docs/multi-agent-beta.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Discord](https://discord.gg/UzwNn5Zkhr)
+
+> **Unofficial project.** Claw3D is an independent, community-driven project and is not affiliated with, endorsed by, or maintained by the OpenClaw team. OpenClaw is a separate project, and this repository is not the official OpenClaw repository.
+
+Built and maintained by **LukeTheDev**. Follow on X: [@iamlukethedev](https://x.com/iamlukethedev).
 
 ## What you can do with Claw3D
 
-• Watch your AI agents work in real time
-• Run standups with agents connected to GitHub and Jira
-• Review pull requests from inside the office
-• Monitor QA pipelines and logs
-• Train agents in the gym to develop new skills
-• Reset sessions and clean context with the janitor system
-
-Instead of managing automation through dashboards and logs…
-
-You walk through your AI workplace.
-
-[Vision](VISION.md) · [Architecture](ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+- **Watch your AI agents work in real time** inside a shared 3D office.
+- **Run standups** with agents connected to GitHub and Jira.
+- **Review pull requests** from inside the office.
+- **Monitor QA pipelines** and logs without leaving the workspace.
+- **Train agents in the gym** to develop new skills.
+- **Reset sessions and clean context** with the janitor system.
 
 ## What Claw3D Is
 
@@ -100,26 +111,31 @@ npm run dev
 ```
 
 Then open `http://localhost:3000` and configure the gateway URL and token in Studio.
-Studio now also persists the selected backend mode (`OpenClaw`, `Hermes`, `Demo`, or `Custom`) and
+Studio now also persists the selected backend mode (`OpenClaw`, `Hermes`, `Demo`, `Local`, `Claw3D`, or `Custom`) and
 shows the active backend reported by the connected gateway.
 
-### Custom runtime mode
+### Runtime profiles
 
-If you are integrating an orchestrator-backed runtime through the `custom`
-provider seam, start your runtime first, then start Claw3D:
+If you are integrating an orchestrator-backed runtime through the direct
+HTTP runtime seam, start your runtime first, then start Claw3D:
 
 ```bash
 npm run dev
 ```
 
-Then open `http://localhost:3000`, choose `Custom backend`, and point the
-upstream URL at your runtime boundary, for example:
+Then open `http://localhost:3000`, choose `Local runtime`, `Claw3D runtime`,
+or `Custom backend`, and point the upstream URL at your runtime boundary.
+Typical examples:
 
 ```text
 http://127.0.0.1:7770
 ```
 
-Current `custom` runtime expectations:
+```text
+http://localhost:3000/api/runtime/custom
+```
+
+Current direct-runtime expectations:
 
 - `GET /health`
 - `GET /state`
@@ -242,7 +258,7 @@ Common environment variables:
 - `CUSTOM_RUNTIME_ALLOWLIST` restricts which hosts `/api/runtime/custom` may fetch. If unset, it falls back to `UPSTREAM_ALLOWLIST`.
 - `NEXT_PUBLIC_GATEWAY_URL` provides the default upstream gateway URL when Studio settings are empty. **Note:** this is a build-time variable — changes require `npm run build` to take effect.
 - `CLAW3D_GATEWAY_URL` and `CLAW3D_GATEWAY_TOKEN` provide a runtime alternative to `NEXT_PUBLIC_GATEWAY_URL` that takes effect on server restart without a rebuild.
-- `CLAW3D_GATEWAY_ADAPTER_TYPE` can pair with `CLAW3D_GATEWAY_URL` to mark those runtime defaults as `openclaw`, `hermes`, `demo`, or `custom`.
+- `CLAW3D_GATEWAY_ADAPTER_TYPE` can pair with `CLAW3D_GATEWAY_URL` to mark those runtime defaults as `openclaw`, `hermes`, `demo`, `local`, `claw3d`, or `custom`.
 - If `CLAW3D_GATEWAY_URL` is not set, Studio can still surface local Hermes or demo adapter defaults from `HERMES_ADAPTER_PORT` / `DEMO_ADAPTER_PORT`.
 - OpenClaw file defaults still come from `~/.openclaw/openclaw.json` when present.
 - `OPENCLAW_STATE_DIR` and `OPENCLAW_CONFIG_PATH` override the default OpenClaw paths.
@@ -270,7 +286,8 @@ See [`.env.example`](.env.example) for the full local development template.
 - [`VISION.md`](VISION.md): project direction and long-term guardrails.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md): system boundaries, data flow, and major trade-offs.
 - [`TUTORIAL.md`](TUTORIAL.md): detailed step-by-step setup for OpenClaw + Tailscale + Claw3D.
-- [`MULTI_AGENT_BETA.md`](MULTI_AGENT_BETA.md): remote office beta setup, connection modes, and limitations.
+- [`docs/multi-agent-beta.md`](docs/multi-agent-beta.md): remote office beta setup, connection modes, and limitations.
+- [`docs/runtime-profiles.md`](docs/runtime-profiles.md): saved backend/runtime profiles and the current HTTP runtime seam.
 - [`CODE_DOCUMENTATION.md`](CODE_DOCUMENTATION.md): practical code map, extension points, and contributor onboarding order.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): local workflow, testing, and PR expectations.
 - [`SUPPORT.md`](SUPPORT.md): where to ask for help and how to route reports.

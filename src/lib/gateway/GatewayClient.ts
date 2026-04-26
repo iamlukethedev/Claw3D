@@ -14,6 +14,10 @@ import type {
   StudioSettingsPatch,
   StudioSettingsPublic,
 } from "@/lib/studio/settings";
+import {
+  resolveDefaultStudioGatewayProfile,
+  resolveStudioGatewayProfiles,
+} from "@/lib/studio/settings";
 import type {
   StudioSettingsLoadOptions,
   StudioSettingsResponse,
@@ -115,14 +119,13 @@ const parseConnectFailedCloseReason = (
 
 const DEFAULT_UPSTREAM_GATEWAY_URL =
   process.env.NEXT_PUBLIC_GATEWAY_URL || "ws://localhost:18789";
-const DEFAULT_CUSTOM_RUNTIME_URL = "http://localhost:7770";
 const INITIAL_AUTO_CONNECT_DELAY_MS = 900;
 const INITIAL_CONNECT_RETRY_DELAY_MS = 1_200;
 const OPENCLAW_CONTROL_UI_CLIENT_ID = "openclaw-control-ui";
 const OPENCLAW_WEBCHAT_UI_CLIENT_ID = "webchat-ui";
 
 const isAutoManagedAdapter = (adapterType: StudioGatewayAdapterType) =>
-  adapterType !== "custom";
+  adapterType === "openclaw" || adapterType === "hermes" || adapterType === "demo";
 
 export const resolveGatewayClientName = (
   adapterType: StudioGatewayAdapterType,
@@ -162,25 +165,6 @@ export const resolveInitialGatewayConnectAttemptCount = (
   }
 };
 
-const resolveDefaultGatewayProfile = (
-  adapterType: StudioGatewayAdapterType,
-  localDefaults: StudioGatewaySettings | null
-): { url: string; token: string } => {
-  switch (adapterType) {
-    case "custom":
-      return { url: DEFAULT_CUSTOM_RUNTIME_URL, token: "" };
-    case "demo":
-    case "hermes":
-      return { url: "ws://localhost:18789", token: "" };
-    case "openclaw":
-    default:
-      return {
-        url: localDefaults?.url || DEFAULT_UPSTREAM_GATEWAY_URL,
-        token: localDefaults?.token ?? "",
-      };
-  }
-};
-
 const normalizeLocalGatewayDefaults = (value: unknown): StudioGatewaySettings | null => {
   if (!value || typeof value !== "object") return null;
   const raw = value as {
@@ -201,6 +185,8 @@ const normalizeLocalGatewayDefaults = (value: unknown): StudioGatewaySettings | 
     raw.adapterType === "demo" ||
     raw.adapterType === "hermes" ||
     raw.adapterType === "openclaw" ||
+    raw.adapterType === "local" ||
+    raw.adapterType === "claw3d" ||
     raw.adapterType === "custom"
       ? raw.adapterType
       : "openclaw";
@@ -224,7 +210,7 @@ const normalizeGatewayProfilesPublic = (
   if (!value || typeof value !== "object") return undefined;
   const raw = value as Partial<Record<StudioGatewayAdapterType, StudioGatewayProfilePublic>>;
   const profiles: Partial<Record<StudioGatewayAdapterType, { url: string; token: string }>> = {};
-  for (const adapterType of ["openclaw", "hermes", "demo", "custom"] as const) {
+  for (const adapterType of ["openclaw", "hermes", "demo", "local", "claw3d", "custom"] as const) {
     const profile = normalizeGatewayProfilePublic(raw[adapterType]);
     if (profile) {
       profiles[adapterType] = profile;
@@ -444,7 +430,7 @@ export const isGatewayDisconnectLikeError = (err: unknown): boolean => {
     return true;
   }
 
-  const match = msg.match(/gateway closed \\((\\d+)\\)/);
+  const match = msg.match(/gateway closed \((\d+)\)/);
   if (!match) return false;
   const code = Number(match[1]);
   return Number.isFinite(code) && code === 1012;
@@ -558,6 +544,23 @@ const requiresDeviceIdentityHint =
 
 const isGatewayProtocolMismatchError = (error: GatewayResponseError) => {
   if (error.code.trim().toUpperCase() !== "INVALID_REQUEST") return false;
+  // The gateway may provide a structured details.code alongside the
+  // generic INVALID_REQUEST. Known non-protocol rejection codes must
+  // not surface the "possible protocol mismatch" hint, since it
+  // misleads operators whose real problem is origin allowlist, missing
+  // device identity, or upstream policy.
+  const details = error.details;
+  if (details && typeof details === "object") {
+    const code = (details as { code?: unknown }).code;
+    if (typeof code === "string") {
+      const NON_PROTOCOL_DETAIL_CODES = new Set([
+        "CONTROL_UI_ORIGIN_NOT_ALLOWED",
+        "CONTROL_UI_DEVICE_IDENTITY_REQUIRED",
+        "UPSTREAM_NOT_ALLOWED",
+      ]);
+      if (NON_PROTOCOL_DETAIL_CODES.has(code)) return false;
+    }
+  }
   const message = error.message.trim();
   if (!message) return false;
   return /minProtocol|maxProtocol/i.test(message);
@@ -587,7 +590,12 @@ const formatGatewayError = (error: unknown) => {
   }
   if (error instanceof Error) {
     if (/timed out connecting to the gateway/i.test(error.message)) {
-      return `${error.message} If you are testing locally, an older OpenClaw build may be speaking an incompatible protocol. Try upgrading OpenClaw, using the Hermes adapter, or running \`npm run demo-gateway\`.`;
+      // A local timeout carries no information about why the upstream did
+      // not respond. Suggest the directions the operator can actually check,
+      // without biasing toward a protocol mismatch — that is only one of
+      // several possible root causes (network, origin allowlist, upstream
+      // policy, credentials, nginx idle timeout, ...).
+      return `${error.message} Verify that the gateway is reachable at the configured URL, that origin and credentials meet the gateway's requirements, and (if testing locally with a self-built gateway) consider \`npm run demo-gateway\` to isolate the problem.`;
     }
     return error.message;
   }
@@ -602,6 +610,7 @@ export type GatewayConnectionState = {
   selectedAdapterType: StudioGatewayAdapterType;
   detectedAdapterType: StudioGatewayAdapterType | null;
   activeAdapterType: StudioGatewayAdapterType;
+  adapterProfiles: Partial<Record<StudioGatewayAdapterType, { url: string; token: string }>>;
   localGatewayDefaults: StudioGatewaySettings | null;
   error: string | null;
   connectPromptReady: boolean;
@@ -734,9 +743,19 @@ export const useGatewayConnection = (
     (value: StudioGatewayAdapterType) => {
       setSelectedAdapterTypeState(value);
       const profile =
-        adapterProfiles[value] ?? resolveDefaultGatewayProfile(value, localGatewayDefaults);
-      setGatewayUrl(profile.url);
-      setToken(profile.token);
+        adapterProfiles[value] ?? resolveDefaultStudioGatewayProfile(value, localGatewayDefaults);
+      setGatewayUrl(profile.url ?? "");
+      // Prefer the token from the initial private settings load when the in-memory
+      // profile has an empty token (e.g. the profile was populated from the sanitized
+      // public API response which strips real token values).
+      const loadedToken = loadedGatewaySettings.current?.profiles?.[value]?.token ?? "";
+      setToken(profile.token || loadedToken);
+      const loaded = loadedGatewaySettings.current;
+      const nextHasLastKnownGood = Boolean(
+        (loaded?.adapterType === value && loaded.hasLastKnownGood) ||
+          loaded?.profiles?.[value]?.url?.trim()
+      );
+      setHasLastKnownGoodState(nextHasLastKnownGood);
       setError(null);
       setConnectErrorCode(null);
     },
@@ -753,99 +772,41 @@ export const useGatewayConnection = (
             : {
                 settings: await settingsCoordinator.loadSettings({ force: true }),
                 localGatewayDefaults: null,
+                gatewayPrivate: null,
+                localGatewayDefaultsPrivate: null,
               };
         const settings = envelope.settings ?? null;
-        const gateway = settings?.gateway ?? null;
+        // gatewayPrivate is no longer sent by the server — upstream tokens must not
+        // cross the browser API boundary. The Studio proxy injects tokens server-side.
+        // We derive profiles from the sanitized public settings only.
         if (cancelled) return;
-        const normalizedDefaults = normalizeLocalGatewayDefaults(envelope.localGatewayDefaults);
-        setLocalGatewayDefaults(normalizedDefaults);
-        const lastKnownGood =
-          gateway && "lastKnownGood" in gateway && gateway.lastKnownGood
-            ? {
-                url:
-                  typeof gateway.lastKnownGood.url === "string"
-                    ? gateway.lastKnownGood.url
-                    : "",
-                token:
-                  "token" in gateway.lastKnownGood &&
-                  typeof gateway.lastKnownGood.token === "string"
-                    ? gateway.lastKnownGood.token
-                    : "",
-                adapterType:
-                  gateway.lastKnownGood.adapterType === "demo" ||
-                  gateway.lastKnownGood.adapterType === "hermes" ||
-                  gateway.lastKnownGood.adapterType === "openclaw" ||
-                  gateway.lastKnownGood.adapterType === "custom"
-                    ? gateway.lastKnownGood.adapterType
-                    : "openclaw",
-              }
-            : null;
-        // When the user has no saved gateway URL, prefer the runtime
-        // localGatewayDefaults (from openclaw.json, CLAW3D_GATEWAY_URL,
-        // or detected local Hermes/demo adapter ports)
-        // over the build-time NEXT_PUBLIC_GATEWAY_URL which may be stale
-        // or empty if the operator forgot to rebuild after .env changes.
-        const hasSavedUrl = Boolean(gateway?.url?.trim());
-        const savedAdapterType =
-          hasSavedUrl && gateway && "adapterType" in gateway && typeof gateway.adapterType === "string"
-            ? ((gateway.adapterType === "demo" ||
-                gateway.adapterType === "hermes" ||
-                gateway.adapterType === "openclaw" ||
-                gateway.adapterType === "custom"
-                ? gateway.adapterType
-                : "openclaw") as StudioGatewayAdapterType)
-            : null;
-        const nextAdapterType =
-          savedAdapterType ??
-          lastKnownGood?.adapterType ??
-          normalizedDefaults?.adapterType ??
-          "openclaw";
-        const lastKnownGoodForSelectedAdapter =
-          lastKnownGood?.adapterType === nextAdapterType ? lastKnownGood : null;
-        const resolvedUrl = hasSavedUrl
-          ? gateway!.url
-          : lastKnownGoodForSelectedAdapter?.url ||
-            normalizedDefaults?.url ||
-            DEFAULT_UPSTREAM_GATEWAY_URL;
-        const baseProfiles = {
-          ...(gateway?.profiles
-            ? normalizeGatewayProfilesPublic(gateway.profiles)
-            : undefined),
-          ...(normalizedDefaults?.profiles ?? {}),
-        };
-        const mergedProfiles = {
-          ...baseProfiles,
-          ...(hasSavedUrl
-            ? {
-                [nextAdapterType]: {
-                  url: resolvedUrl,
-                  token:
-                    gateway && "token" in gateway && typeof gateway.token === "string"
-                      ? gateway.token
-                      : "",
-                },
-              }
-            : {}),
-        };
-        const selectedProfile = (
-          mergedProfiles[nextAdapterType] ??
-          lastKnownGoodForSelectedAdapter ??
-          resolveDefaultGatewayProfile(nextAdapterType, normalizedDefaults)
+        const normalizedDefaults = normalizeLocalGatewayDefaults(
+          envelope.localGatewayDefaults,
         );
-        const nextGatewayUrl = selectedProfile.url;
-        const nextToken = selectedProfile.token;
+        setLocalGatewayDefaults(normalizedDefaults);
+        const gatewaySettings = settings?.gateway ?? null;
+        const resolvedGatewayProfiles = resolveStudioGatewayProfiles({
+          gateway: gatewaySettings as StudioGatewaySettings | null,
+          localDefaults: normalizedDefaults,
+        });
+        const nextAdapterType = resolvedGatewayProfiles.selectedAdapterType;
+        const selectedProfile =
+          resolvedGatewayProfiles.activeProfile ??
+          resolveDefaultStudioGatewayProfile(nextAdapterType, normalizedDefaults);
+        const nextGatewayUrl = selectedProfile.url ?? "";
+        const nextToken = selectedProfile.token ?? "";
         loadedGatewaySettings.current = {
           gatewayUrl: nextGatewayUrl.trim(),
           token: nextToken,
           adapterType: nextAdapterType,
-          profiles: mergedProfiles,
-          hasLastKnownGood: Boolean(lastKnownGoodForSelectedAdapter?.url),
+          profiles: resolvedGatewayProfiles.profiles,
+          hasLastKnownGood: Boolean(resolvedGatewayProfiles.lastKnownGoodForSelected?.url),
         };
         setGatewayUrl(nextGatewayUrl);
         setToken(nextToken);
         setSelectedAdapterTypeState(nextAdapterType);
-        setAdapterProfiles(mergedProfiles);
-        setHasLastKnownGoodState(Boolean(lastKnownGoodForSelectedAdapter?.url));
+        setAdapterProfiles(resolvedGatewayProfiles.profiles);
+        setHasLastKnownGoodState(Boolean(resolvedGatewayProfiles.lastKnownGoodForSelected?.url));
       } catch (err) {
         if (!cancelled) {
           const message = err instanceof Error ? err.message : "Failed to load gateway settings.";
@@ -919,21 +880,29 @@ export const useGatewayConnection = (
     setConnectErrorCode(null);
     retryAttemptRef.current = 0;
     wasManualDisconnectRef.current = false;
-    if (selectedAdapterType === "custom") {
+    if (
+      selectedAdapterType === "custom" ||
+      selectedAdapterType === "local" ||
+      selectedAdapterType === "claw3d"
+    ) {
       setStatus("connecting");
       try {
         await settingsCoordinator.flushPending();
         await probeCustomRuntime(gatewayUrl);
-        setDetectedAdapterType("custom");
+        setDetectedAdapterType(selectedAdapterType);
         setStatus("connected");
         setConnectErrorCode(null);
-        gatewayDebugLog("connect:custom-success", { gatewayUrl });
+        gatewayDebugLog("connect:runtime-success", {
+          selectedAdapterType,
+          gatewayUrl,
+        });
       } catch (err) {
         setStatus("disconnected");
         setDetectedAdapterType(null);
         setConnectErrorCode("studio.custom_runtime_probe_failed");
         setError(formatGatewayError(err));
-        gatewayDebugLog("connect:custom-failed", {
+        gatewayDebugLog("connect:runtime-failed", {
+          selectedAdapterType,
           message: err instanceof Error ? err.message : String(err),
         });
       }
@@ -991,15 +960,16 @@ export const useGatewayConnection = (
           : "openclaw";
       setDetectedAdapterType(nextDetectedAdapterType);
       setHasLastKnownGoodState(nextDetectedAdapterType === selectedAdapterType);
+      // Flush immediately (debounce=0) so lastKnownGood survives a quick refresh.
       settingsCoordinator.schedulePatch({
         gateway: {
           lastKnownGood: {
             url: gatewayUrl.trim(),
-            token,
+            token: token || undefined,
             adapterType: nextDetectedAdapterType,
           },
         },
-      });
+      }, 0);
       gatewayDebugLog("connect:success", {
         selectedAdapterType,
         detectedAdapterType: nextDetectedAdapterType,
@@ -1100,11 +1070,12 @@ export const useGatewayConnection = (
   useEffect(() => {
     if (!settingsLoaded) return;
     setAdapterProfiles((current) => {
-      const nextProfile = {
-        url: gatewayUrl.trim(),
-        token,
-      };
       const existing = current[selectedAdapterType];
+      // Never overwrite a stored token with an empty string — the Studio proxy
+      // injects the real token server-side; an empty token in UI state means
+      // "let the proxy handle it", not "clear the saved token".
+      const nextToken = token || existing?.token || "";
+      const nextProfile = { url: gatewayUrl.trim(), token: nextToken };
       if (
         existing &&
         existing.url === nextProfile.url &&
@@ -1124,11 +1095,15 @@ export const useGatewayConnection = (
     const baseline = loadedGatewaySettings.current;
     if (!baseline) return;
     const nextGatewayUrl = gatewayUrl.trim();
+    // Use undefined for the token in the patch when the in-memory token is empty so
+    // that mergeGatewaySettings / mergeGatewayProfiles treats it as "leave unchanged"
+    // rather than overwriting the persisted token with an empty string.
+    const persistToken = token || undefined;
     const nextProfiles = {
       ...adapterProfiles,
       [selectedAdapterType]: {
         url: nextGatewayUrl,
-        token,
+        token: persistToken,
       },
     };
     if (
@@ -1143,7 +1118,7 @@ export const useGatewayConnection = (
       {
         gateway: {
           url: nextGatewayUrl,
-          token,
+          token: persistToken,
           adapterType: selectedAdapterType,
           profiles: nextProfiles,
         },
@@ -1156,13 +1131,13 @@ export const useGatewayConnection = (
     if (!localGatewayDefaults) {
       return;
     }
-    setGatewayUrl(localGatewayDefaults.url);
-    setToken(localGatewayDefaults.token);
+    setGatewayUrl(localGatewayDefaults.url ?? "");
+    setToken(localGatewayDefaults.token ?? "");
     setAdapterProfiles((current) => ({
       ...current,
       [localGatewayDefaults.adapterType]: {
-        url: localGatewayDefaults.url,
-        token: localGatewayDefaults.token,
+        url: localGatewayDefaults.url ?? "",
+        token: localGatewayDefaults.token ?? "",
       },
     }));
     setSelectedAdapterTypeState(localGatewayDefaults.adapterType);
@@ -1171,18 +1146,31 @@ export const useGatewayConnection = (
   }, [localGatewayDefaults]);
 
   const disconnect = useCallback(() => {
-    gatewayDebugLog("disconnect", { selectedAdapterType });
+    gatewayDebugLog("disconnect", { selectedAdapterType, status });
     setError(null);
     setConnectErrorCode(null);
     wasManualDisconnectRef.current = true;
     setDetectedAdapterType(null);
-    if (selectedAdapterType === "custom") {
+    // Always close an active WebSocket connection regardless of selectedAdapterType.
+    // selectedAdapterType may already reflect the *target* adapter when this runs
+    // (e.g. switching from openclaw → local sets selectedAdapterType before disconnect
+    // is called), so we guard on actual connection state instead.
+    if (status === "connected" || status === "connecting") {
+      client.disconnect();
+      clearGatewayBrowserSessionStorage();
+      return;
+    }
+    if (
+      selectedAdapterType === "custom" ||
+      selectedAdapterType === "local" ||
+      selectedAdapterType === "claw3d"
+    ) {
       setStatus("disconnected");
       return;
     }
     client.disconnect();
     clearGatewayBrowserSessionStorage();
-  }, [client, selectedAdapterType]);
+  }, [client, selectedAdapterType, status]);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -1196,9 +1184,11 @@ export const useGatewayConnection = (
     settingsLoaded &&
     status !== "connected" &&
     (selectedAdapterType === "custom" ||
+      selectedAdapterType === "local" ||
+      selectedAdapterType === "claw3d" ||
       !hasLastKnownGoodState ||
-      !gatewayUrl.trim() ||
-      (selectedAdapterType === "openclaw" && !token.trim()) ||
+      !(gatewayUrl ?? "").trim() ||
+      (selectedAdapterType === "openclaw" && !(token ?? "").trim()) ||
       wasManualDisconnectRef.current ||
       Boolean(error));
 
@@ -1210,6 +1200,7 @@ export const useGatewayConnection = (
     selectedAdapterType,
     detectedAdapterType,
     activeAdapterType,
+    adapterProfiles,
     localGatewayDefaults,
     error,
     connectPromptReady,

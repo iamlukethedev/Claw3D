@@ -2,25 +2,19 @@ import { describe, expect, it } from "vitest";
 
 import { deriveHydrateAgentFleetResult } from "@/features/agents/operations/agentFleetHydrationDerivation";
 import { createDefaultAgentAvatarProfile } from "@/lib/avatars/profile";
-import type { StudioSettings } from "@/lib/studio/settings";
+import { defaultStudioSettings, type StudioSettings } from "@/lib/studio/settings";
 
 describe("deriveHydrateAgentFleetResult", () => {
   it("derives_seeds_and_sync_sets_from_snapshots", () => {
-    const gatewayUrl = "ws://127.0.0.1:18789";
+    const gatewayUrl = "ws://localhost:18789";
 
     const settings: StudioSettings = {
-      version: 1,
-      gateway: null,
-      focused: {},
+      ...defaultStudioSettings(),
       avatars: {
         [gatewayUrl]: {
           "agent-1": createDefaultAgentAvatarProfile("persisted-seed"),
         },
       },
-      deskAssignments: {},
-      analytics: {},
-      voiceReplies: {},
-      office: {},
     };
 
     const result = deriveHydrateAgentFleetResult({
@@ -93,6 +87,9 @@ describe("deriveHydrateAgentFleetResult", () => {
       expect.objectContaining({
         agentId: "agent-1",
         name: "One",
+        runtimeName: "One",
+        identityName: null,
+        sessionDisplayName: "Main",
         sessionKey: "agent:agent-1:main",
         avatarSeed: "persisted-seed",
         avatarProfile: expect.objectContaining({ seed: "persisted-seed" }),

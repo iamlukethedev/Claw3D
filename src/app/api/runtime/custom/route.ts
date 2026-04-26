@@ -84,6 +84,8 @@ export async function POST(request: Request) {
     const runtimeUrl = normalizeRuntimeUrl(payload.runtimeUrl ?? "");
     const pathname = normalizePathname(payload.pathname);
     const method = normalizeMethod(payload.method);
+    // Propagate the browser abort signal so that cancelling the client-side fetch
+    // (e.g. hitting Stop) also cancels the upstream runtime request.
     const response = await fetch(`${runtimeUrl}${pathname}`, {
       method,
       headers: {
@@ -92,6 +94,7 @@ export async function POST(request: Request) {
       },
       body: method === "POST" ? JSON.stringify(payload.body ?? {}) : undefined,
       cache: "no-store",
+      signal: request.signal,
     });
     const text = await response.text();
     return new NextResponse(text, {

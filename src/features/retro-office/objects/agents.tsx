@@ -15,6 +15,8 @@ import type {
 import { AgentModelProps } from "@/features/retro-office/objects/types";
 
 const MAX_NAMEPLATE_TEXT_LENGTH = 10;
+const MAX_SPEECH_BUBBLE_TEXT_LENGTH = 180;
+const MAX_SPEECH_BUBBLE_LINES = 4;
 
 const formatAgentNameplateText = (value: string): string => {
   const normalized = value.replace(/\s+/g, " ").trim();
@@ -22,6 +24,27 @@ const formatAgentNameplateText = (value: string): string => {
   if (normalized.length <= MAX_NAMEPLATE_TEXT_LENGTH) return normalized;
   const [firstName] = normalized.split(" ");
   return firstName || normalized;
+};
+
+const flattenSpeechBubbleMarkdown = (value: string) =>
+  value
+    .replace(/```[\s\S]*?```/g, " [code] ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^>\s*/gm, "")
+    .replace(/^[-*+]\s+/gm, "")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/[*_~]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const clampSpeechBubbleText = (value: string) => {
+  if (value.length <= MAX_SPEECH_BUBBLE_TEXT_LENGTH) {
+    return { text: value, truncated: false };
+  }
+  const slice = value.slice(0, MAX_SPEECH_BUBBLE_TEXT_LENGTH - 1).trimEnd();
+  return { text: `${slice}…`, truncated: true };
 };
 
 export const AgentModel = memo(function AgentModel({
@@ -593,9 +616,13 @@ export const AgentModel = memo(function AgentModel({
         : "...";
   const activeSpeechBubble = showSpeech && Boolean(speechText?.trim());
   const normalizedSpeechBubbleText = activeSpeechBubble
-    ? resolvedSpeechText.replace(/\s+/g, " ").trim()
+    ? flattenSpeechBubbleMarkdown(resolvedSpeechText)
     : resolvedSpeechText;
-  const speechBubbleDisplayText = normalizedSpeechBubbleText;
+  const speechBubblePreview = activeSpeechBubble
+    ? clampSpeechBubbleText(normalizedSpeechBubbleText)
+    : { text: normalizedSpeechBubbleText, truncated: false };
+  const speechBubbleDisplayText = speechBubblePreview.text;
+  const speechBubbleWasTruncated = speechBubblePreview.truncated;
   const speechBubbleTextLength = speechBubbleDisplayText.length;
   const speechBubbleWidth = activeSpeechBubble
     ? Math.min(4.6, Math.max(1.8, 1.55 + speechBubbleTextLength * 0.018))
@@ -612,7 +639,10 @@ export const AgentModel = memo(function AgentModel({
   const estimatedSpeechLines = activeSpeechBubble
     ? Math.max(
         1,
-        Math.ceil(speechBubbleTextLength / estimatedSpeechCharsPerLine),
+        Math.min(
+          MAX_SPEECH_BUBBLE_LINES,
+          Math.ceil(speechBubbleTextLength / estimatedSpeechCharsPerLine),
+        ),
       )
     : 1;
   const speechBubbleHeight = activeSpeechBubble
@@ -1129,6 +1159,22 @@ export const AgentModel = memo(function AgentModel({
       <group ref={speechBubbleRef} visible={false}>
         <Billboard position={[0, 1.45, 0]}>
           {activeSpeechBubble ? (
+            <mesh
+              position={[-speechBubbleWidth * 0.18, -speechBubbleHeight * 0.53, -0.0005]}
+              rotation={[0, 0, Math.PI / 4]}
+              renderOrder={99997}
+            >
+              <planeGeometry args={[0.22, 0.22]} />
+              <meshBasicMaterial
+                color="#1a2030"
+                transparent
+                opacity={0.82}
+                depthTest={false}
+                depthWrite={false}
+              />
+            </mesh>
+          ) : null}
+          {activeSpeechBubble ? (
             <mesh position={[0, 0, -0.0015]} renderOrder={99998}>
               <planeGeometry
                 args={[
@@ -1176,6 +1222,23 @@ export const AgentModel = memo(function AgentModel({
           >
             {speechBubbleDisplayText}
           </Text>
+          {activeSpeechBubble && speechBubbleWasTruncated ? (
+            <Text
+              position={[0, -speechBubbleHeight * 0.34, 0.001]}
+              fontSize={0.09}
+              color="#8ab4ff"
+              anchorX="center"
+              anchorY="middle"
+              maxWidth={speechBubbleMaxWidth}
+              textAlign="center"
+              renderOrder={100001}
+              depthOffset={-10}
+              material-depthTest={false}
+              material-depthWrite={false}
+            >
+              click for full chat
+            </Text>
+          ) : null}
         </Billboard>
       </group>
     </group>

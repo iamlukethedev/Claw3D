@@ -14,7 +14,6 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
   it("returns env-based defaults when CLAW3D_GATEWAY_URL is set and no openclaw.json exists", async () => {
     process.env.CLAW3D_GATEWAY_URL = "ws://my-gateway:18789";
     process.env.CLAW3D_GATEWAY_TOKEN = "my-token";
-    // Point state dir to a non-existent location so openclaw.json is not found
     process.env.OPENCLAW_STATE_DIR = "/tmp/claw3d-test-nonexistent-" + Date.now();
     const { loadLocalGatewayDefaults } = await import(
       "../../src/lib/studio/settings-store"
@@ -59,20 +58,38 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
     expect(result).toBeNull();
   });
 
-  it("prefers openclaw.json over env vars when both exist", async () => {
+  it("prefers env vars over openclaw.json when both exist while preserving the file-backed profile", async () => {
     process.env.CLAW3D_GATEWAY_URL = "ws://env-gateway:18789";
     process.env.CLAW3D_GATEWAY_TOKEN = "env-token";
-    // Use real state dir which has openclaw.json
-    delete process.env.OPENCLAW_STATE_DIR;
+    process.env.CLAW3D_GATEWAY_ADAPTER_TYPE = "hermes";
+
+    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw3d-gateway-defaults-"));
+    process.env.OPENCLAW_STATE_DIR = stateDir;
+    fs.writeFileSync(
+      path.join(stateDir, "openclaw.json"),
+      JSON.stringify({
+        gateway: {
+          port: 18791,
+          auth: { token: "file-token" },
+        },
+      }),
+      "utf8"
+    );
+
     const { loadLocalGatewayDefaults } = await import(
       "../../src/lib/studio/settings-store"
     );
     const result = loadLocalGatewayDefaults();
-    // Should return the file-based defaults, not the env vars
-    if (result) {
-      expect(result.url).not.toBe("ws://env-gateway:18789");
-    }
-    // If no file exists in CI, it falls back to env — that's also correct
+
+    expect(result).toEqual({
+      url: "ws://env-gateway:18789",
+      token: "env-token",
+      adapterType: "hermes",
+      profiles: {
+        hermes: { url: "ws://env-gateway:18789", token: "env-token" },
+        openclaw: { url: "ws://localhost:18791", token: "file-token" },
+      },
+    });
   });
 
   it("uses CLAW3D_GATEWAY_ADAPTER_TYPE for Hermes env defaults", async () => {
@@ -113,7 +130,7 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
     });
   });
 
-  it("merges Hermes adapter defaults into file-backed OpenClaw defaults", async () => {
+  it("prefers Hermes adapter defaults over file-backed OpenClaw defaults while preserving the OpenClaw profile", async () => {
     delete process.env.CLAW3D_GATEWAY_URL;
     delete process.env.CLAW3D_GATEWAY_TOKEN;
     delete process.env.CLAW3D_GATEWAY_ADAPTER_TYPE;
@@ -138,20 +155,20 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
     const result = loadLocalGatewayDefaults();
 
     expect(result).toEqual({
-      url: "ws://localhost:18789",
-      token: "file-token",
-      adapterType: "openclaw",
+      url: "ws://localhost:19444",
+      token: "",
+      adapterType: "hermes",
       profiles: {
-        openclaw: { url: "ws://localhost:18789", token: "file-token" },
         hermes: { url: "ws://localhost:19444", token: "" },
+        openclaw: { url: "ws://localhost:18789", token: "file-token" },
       },
     });
   });
 
-  it("keeps file-backed openclaw profile when CLAW3D_GATEWAY_URL is also set", async () => {
+  it("prefers explicit env adapter defaults over file-backed OpenClaw defaults", async () => {
     process.env.CLAW3D_GATEWAY_URL = "ws://env-gateway:19999";
     process.env.CLAW3D_GATEWAY_TOKEN = "env-token";
-    delete process.env.CLAW3D_GATEWAY_ADAPTER_TYPE;
+    process.env.CLAW3D_GATEWAY_ADAPTER_TYPE = "hermes";
 
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw3d-gateway-defaults-"));
     process.env.OPENCLAW_STATE_DIR = stateDir;
@@ -172,11 +189,12 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
     const result = loadLocalGatewayDefaults();
 
     expect(result).toEqual({
-      url: "ws://localhost:18789",
-      token: "file-token",
-      adapterType: "openclaw",
+      url: "ws://env-gateway:19999",
+      token: "env-token",
+      adapterType: "hermes",
       profiles: {
         openclaw: { url: "ws://localhost:18789", token: "file-token" },
+        hermes: { url: "ws://env-gateway:19999", token: "env-token" },
       },
     });
   });

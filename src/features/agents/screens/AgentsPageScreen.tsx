@@ -864,9 +864,9 @@ const AgentsPageScreen = () => {
     });
   });
   const handleChatSend = useCallback(
-    async (agentId: string, sessionKey: string, message: string) => {
+    async (agentId: string, sessionKey: string, message: string, attachments?: import("@/lib/runtime/types").RuntimeAttachment[]) => {
       stopVoiceReplyPlayback();
-      await handleSend(agentId, sessionKey, message);
+      await handleSend(agentId, sessionKey, message, attachments);
     },
     [handleSend, stopVoiceReplyPlayback]
   );
@@ -1779,11 +1779,12 @@ const AgentsPageScreen = () => {
                           handleThinkingTracesToggle(focusedAgent.agentId, enabled)
                         }
                         onDraftChange={(value) => handleDraftChange(focusedAgent.agentId, value)}
-                        onSend={(message) =>
+                        onSend={(message, attachments) =>
                           handleChatSend(
                             focusedAgent.agentId,
                             focusedAgent.sessionKey,
-                            message
+                            message,
+                            attachments
                           )
                         }
                         onRemoveQueuedMessage={(index) =>

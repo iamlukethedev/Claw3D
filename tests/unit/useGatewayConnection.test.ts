@@ -534,7 +534,23 @@ describe("useGatewayConnection", () => {
     await waitFor(() => {
       expect(screen.getByTestId("activeAdapterType")).toHaveTextContent("hermes");
     });
-    expect(patches).toEqual([]);
+    expect(patches).toHaveLength(1);
+    const firstPatch = patches[0] as {
+      gateway?: {
+        url?: string;
+        token?: string;
+        adapterType?: string;
+        profiles?: Record<string, { url?: string; token?: string }>;
+      };
+    };
+    expect(firstPatch.gateway?.token).toBeUndefined();
+    expect(firstPatch.gateway?.adapterType).toBe("hermes");
+    expect(firstPatch.gateway?.profiles?.openclaw?.token).toBe("");
+    expect(firstPatch.gateway?.profiles?.hermes?.token).toBeUndefined();
+    expect(firstPatch.gateway?.profiles?.demo?.token).toBe("");
+    expect(firstPatch.gateway?.profiles?.local?.token).toBe("");
+    expect(firstPatch.gateway?.profiles?.claw3d?.token).toBe("");
+    expect(firstPatch.gateway?.profiles?.custom?.token).toBe("");
   });
 
   it("prefers_the_saved_selected_adapter_over_a_different_last_known_good_backend", async () => {
@@ -779,7 +795,7 @@ describe("useGatewayConnection", () => {
       gateway: {
         lastKnownGood: {
           url: "wss://remote.example",
-          token: "",
+          token: undefined,
           adapterType: "openclaw",
         },
       },

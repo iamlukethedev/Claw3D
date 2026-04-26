@@ -14,12 +14,23 @@ import {
   normalizeCustomBaseUrl,
   requestCustomRuntime,
 } from "@/lib/runtime/custom/http";
-import type { RuntimeCapability, RuntimeEvent, RuntimeProvider } from "@/lib/runtime/types";
+import {
+  buildAgentHandoffInstruction,
+  buildDirectedAgentMessageInstruction,
+} from "@/lib/runtime/agentMessaging";
+import type {
+  RuntimeCapability,
+  RuntimeEvent,
+  RuntimeProvider,
+  RuntimeProviderId,
+} from "@/lib/runtime/types";
 
 const CUSTOM_RUNTIME_CAPABILITIES: ReadonlySet<RuntimeCapability> = new Set([
   "agents",
   "sessions",
   "chat",
+  "agent-messages",
+  "agent-handoffs",
   "models",
   "agent-roles",
 ]);
@@ -131,6 +142,13 @@ const resolveAssistantTextFromResponse = (payload: unknown): string | null => {
   return text || null;
 };
 
+const isAbortLikeError = (error: unknown, controller?: AbortController | null): boolean => {
+  if (controller?.signal.aborted) return true;
+  return error instanceof DOMException
+    ? error.name === "AbortError"
+    : error instanceof Error && error.name === "AbortError";
+};
+
 const normalizeModelChoices = (registry: CustomRuntimeRegistryResponse | null): string[] => {
   if (!registry || !isRecord(registry.models)) return [];
   return Object.keys(registry.models).map((value) => value.trim()).filter(Boolean);
@@ -218,8 +236,8 @@ const buildSyntheticAgents = (
 };
 
 export class CustomRuntimeProvider implements RuntimeProvider {
-  readonly id = "custom" as const;
-  readonly label = "Custom";
+  readonly id: RuntimeProviderId;
+  readonly label: string;
   readonly capabilities = CUSTOM_RUNTIME_CAPABILITIES;
   readonly metadata;
   private readonly baseUrl: string;
@@ -229,14 +247,24 @@ export class CustomRuntimeProvider implements RuntimeProvider {
 
   constructor(
     readonly client: GatewayClient,
-    runtimeUrl: string
+    runtimeUrl: string,
+    options?: {
+      id?: Extract<RuntimeProviderId, "custom" | "local" | "claw3d">;
+      label?: string;
+      runtimeName?: string;
+      vendor?: string | null;
+      routeProfile?: string | null;
+    }
   ) {
+    this.id = options?.id ?? "custom";
+    this.label = options?.label ?? "Custom";
     this.baseUrl = normalizeCustomBaseUrl(runtimeUrl);
     this.metadata = {
       id: this.id,
       label: this.label,
-      runtimeName: "Custom Runtime",
-      routeProfile: null,
+      runtimeName: options?.runtimeName ?? `${this.label} Runtime`,
+      vendor: options?.vendor ?? null,
+      routeProfile: options?.routeProfile ?? this.id,
     };
   }
 
@@ -264,6 +292,10 @@ export class CustomRuntimeProvider implements RuntimeProvider {
         return (await this.callChatHistory(params)) as T;
       case "chat.send":
         return (await this.callChatSend(params)) as T;
+      case "agents.message":
+        return (await this.callAgentsMessage(params)) as T;
+      case "agents.handoff":
+        return (await this.callAgentsHandoff(params)) as T;
       case "chat.abort":
         return (await this.callChatAbort(params)) as T;
       case "sessions.reset":
@@ -500,6 +532,7 @@ export class CustomRuntimeProvider implements RuntimeProvider {
         runtimeUrl: this.baseUrl,
         pathname: "/v1/chat/completions",
         method: "POST",
+        signal: controller.signal,
         body: {
           model: session.model ?? undefined,
           stream: false,
@@ -530,6 +563,12 @@ export class CustomRuntimeProvider implements RuntimeProvider {
         text: assistantText,
       };
     } catch (error) {
+      if (isAbortLikeError(error, controller)) {
+        return {
+          status: "aborted",
+          runId: runId || null,
+        };
+      }
       const health = await this.fetchHealth().catch(() => null);
       throw new Error(
         buildChatFailureMessage(
@@ -547,6 +586,68 @@ export class CustomRuntimeProvider implements RuntimeProvider {
         }
       }
     }
+  }
+
+  private async callAgentsMessage(rawParams: unknown) {
+    const params = isRecord(rawParams) ? rawParams : {};
+    const targetAgentId =
+      typeof params.targetAgentId === "string" ? params.targetAgentId.trim() : "";
+    const message = typeof params.message === "string" ? params.message.trim() : "";
+    const sourceAgentId =
+      typeof params.sourceAgentId === "string" ? params.sourceAgentId.trim() : "";
+    const sourceLabel =
+      typeof params.sourceLabel === "string" ? params.sourceLabel.trim() : "";
+    const mode =
+      params.mode === "interval" || params.mode === "direct" ? params.mode : "direct";
+    const cadenceHint =
+      typeof params.cadenceHint === "string" ? params.cadenceHint.trim() : "";
+    return this.callChatSend({
+      sessionKey: buildAgentMainSessionKey(targetAgentId, "main"),
+      message: buildDirectedAgentMessageInstruction({
+        targetAgentId,
+        message,
+        sourceAgentId,
+        sourceLabel,
+        mode,
+        cadenceHint,
+      }),
+      idempotencyKey:
+        typeof params.idempotencyKey === "string" ? params.idempotencyKey.trim() : undefined,
+    });
+  }
+
+  private async callAgentsHandoff(rawParams: unknown) {
+    const params = isRecord(rawParams) ? rawParams : {};
+    const targetAgentId =
+      typeof params.targetAgentId === "string" ? params.targetAgentId.trim() : "";
+    const task = typeof params.task === "string" ? params.task.trim() : "";
+    const sourceAgentId =
+      typeof params.sourceAgentId === "string" ? params.sourceAgentId.trim() : "";
+    const sourceLabel =
+      typeof params.sourceLabel === "string" ? params.sourceLabel.trim() : "";
+    const context =
+      typeof params.context === "string" ? params.context.trim() : "";
+    const acceptanceCriteria =
+      typeof params.acceptanceCriteria === "string"
+        ? params.acceptanceCriteria.trim()
+        : "";
+    const deliverables = Array.isArray(params.deliverables)
+      ? params.deliverables.filter((entry): entry is string => typeof entry === "string")
+      : [];
+    return this.callChatSend({
+      sessionKey: buildAgentMainSessionKey(targetAgentId, "main"),
+      message: buildAgentHandoffInstruction({
+        targetAgentId,
+        task,
+        sourceAgentId,
+        sourceLabel,
+        context,
+        acceptanceCriteria,
+        deliverables,
+      }),
+      idempotencyKey:
+        typeof params.idempotencyKey === "string" ? params.idempotencyKey.trim() : undefined,
+    });
   }
 
   private async callChatAbort(rawParams: unknown) {

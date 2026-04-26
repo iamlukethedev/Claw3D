@@ -800,45 +800,47 @@ export const AgentSettingsPanel = ({
           </section>
         ) : null}
 
-        {mode === "advanced" && isOpenClawRuntime ? (
+        {mode === "advanced" ? (
           <>
-            <section className="sidebar-section mt-8" data-testid="agent-settings-control-ui">
-              <h3 className="sidebar-section-title ui-text-danger">Danger Zone</h3>
-              <div className="ui-alert-danger mt-3 rounded-md px-3 py-3 text-[11px]">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  <div className="space-y-1">
-                    <div className="font-medium">Advanced users only.</div>
-                    <div>Open the full OpenClaw Control UI outside Studio.</div>
-                    <div>Changes there can break agent behavior or put Studio out of sync.</div>
+            {isOpenClawRuntime ? (
+              <section className="sidebar-section mt-8" data-testid="agent-settings-control-ui">
+                <h3 className="sidebar-section-title ui-text-danger">Danger Zone</h3>
+                <div className="ui-alert-danger mt-3 rounded-md px-3 py-3 text-[11px]">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <div className="space-y-1">
+                      <div className="font-medium">Advanced users only.</div>
+                      <div>Open the full OpenClaw Control UI outside Studio.</div>
+                      <div>Changes there can break agent behavior or put Studio out of sync.</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              {canOpenControlUi ? (
-                <a
-                  className="sidebar-btn-primary ui-btn-danger mt-3 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-center font-mono text-[10px] font-semibold tracking-[0.06em]"
-                  href={controlUiUrl ?? undefined}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open Full Control UI
-                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                </a>
-              ) : (
-                <>
-                  <button
-                    className="sidebar-btn-primary ui-btn-danger mt-3 inline-flex px-3 py-2.5 font-mono text-[10px] font-semibold tracking-[0.06em] disabled:cursor-not-allowed disabled:opacity-65"
-                    type="button"
-                    disabled
+                {canOpenControlUi ? (
+                  <a
+                    className="sidebar-btn-primary ui-btn-danger mt-3 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-center font-mono text-[10px] font-semibold tracking-[0.06em]"
+                    href={controlUiUrl ?? undefined}
+                    target="_blank"
+                    rel="noreferrer"
                   >
                     Open Full Control UI
-                  </button>
-                  <div className="mt-2 text-[10px] text-muted-foreground/70">
-                    Control UI link unavailable for this gateway.
-                  </div>
-                </>
-              )}
-            </section>
+                    <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                  </a>
+                ) : (
+                  <>
+                    <button
+                      className="sidebar-btn-primary ui-btn-danger mt-3 inline-flex px-3 py-2.5 font-mono text-[10px] font-semibold tracking-[0.06em] disabled:cursor-not-allowed disabled:opacity-65"
+                      type="button"
+                      disabled
+                    >
+                      Open Full Control UI
+                    </button>
+                    <div className="mt-2 text-[10px] text-muted-foreground/70">
+                      Control UI link unavailable for this gateway.
+                    </div>
+                  </>
+                )}
+              </section>
+            ) : null}
 
             {canDelete ? (
               <section className="sidebar-section mt-8">

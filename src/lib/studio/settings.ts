@@ -4,6 +4,14 @@ import type {
   StandupManualEntry,
   StandupScheduleConfig,
 } from "@/lib/office/standup/types";
+import {
+  DEFAULT_ACTIVE_FLOOR_ID,
+  getOfficeFloor,
+  OFFICE_FLOORS,
+  type FloorId,
+  type FloorProvider,
+  resolveActiveOfficeFloorId,
+} from "@/lib/office/floors";
 import type { AgentAvatarProfile } from "@/lib/avatars/profile";
 import { normalizeAgentAvatarProfile } from "@/lib/avatars/profile";
 import {
@@ -23,7 +31,21 @@ export type StudioGatewaySettings = {
   lastKnownGood?: StudioGatewayConnectionState;
 };
 
-export type StudioGatewayAdapterType = "openclaw" | "hermes" | "demo" | "custom";
+export type StudioGatewayAdapterType =
+  | "openclaw"
+  | "hermes"
+  | "demo"
+  | "local"
+  | "claw3d"
+  | "custom";
+export const STUDIO_GATEWAY_ADAPTER_TYPES = [
+  "openclaw",
+  "hermes",
+  "demo",
+  "local",
+  "claw3d",
+  "custom",
+] as const;
 
 export type StudioGatewayProfile = {
   url: string;
@@ -72,6 +94,13 @@ export type StudioGatewayConnectionStatePatch = {
   url?: string | null;
   token?: string | null;
   adapterType?: StudioGatewayAdapterType | null;
+};
+
+export type ResolvedStudioGatewayProfiles = {
+  selectedAdapterType: StudioGatewayAdapterType;
+  activeProfile: StudioGatewayProfile;
+  profiles: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>>;
+  lastKnownGoodForSelected: StudioGatewayConnectionState | null;
 };
 
 export type FocusFilter = "all" | "running" | "approvals";
@@ -189,9 +218,37 @@ export type StudioTaskBoardPreference = TaskBoardPreference;
 export type StudioTaskBoardPreferencePublic = TaskBoardPreference;
 export type StudioTaskBoardPreferencePatch = TaskBoardPreferencePatch;
 
+export type FloorRuntimeConnectionStatus =
+  | "disconnected"
+  | "connecting"
+  | "connected"
+  | "error";
+
+export type StudioFloorRuntimeState = {
+  floorId: FloorId;
+  provider: FloorProvider;
+  runtimeProfileId: string | null;
+  gatewayUrl: string | null;
+  status: FloorRuntimeConnectionStatus;
+  lastKnownGoodAt: number | null;
+  lastErrorCode: string | null;
+  lastErrorMessage: string | null;
+};
+
+export type StudioFloorRuntimeStatePatch = {
+  runtimeProfileId?: string | null;
+  gatewayUrl?: string | null;
+  status?: FloorRuntimeConnectionStatus;
+  lastKnownGoodAt?: number | null;
+  lastErrorCode?: string | null;
+  lastErrorMessage?: string | null;
+};
+
 export type StudioSettings = {
   version: 1;
   gateway: StudioGatewaySettings | null;
+  activeFloorId: FloorId;
+  officeFloors: Record<FloorId, StudioFloorRuntimeState>;
   focused: Record<string, StudioFocusedPreference>;
   avatars: Record<string, StudioAgentAvatars>;
   deskAssignments: Record<string, StudioDeskAssignments>;
@@ -211,6 +268,8 @@ export type StudioSettingsPublic = Omit<StudioSettings, "gateway" | "office" | "
 
 export type StudioSettingsPatch = {
   gateway?: StudioGatewaySettingsPatch | null;
+  activeFloorId?: FloorId | null;
+  officeFloors?: Partial<Record<FloorId, StudioFloorRuntimeStatePatch | null>>;
   focused?: Record<string, Partial<StudioFocusedPreference> | null>;
   avatars?: Record<string, Record<string, AgentAvatarProfile | null> | null>;
   deskAssignments?: Record<string, Record<string, string | null> | null>;
@@ -222,6 +281,11 @@ export type StudioSettingsPatch = {
 };
 
 const SETTINGS_VERSION = 1 as const;
+const DEFAULT_OPENCLAW_GATEWAY_URL = "ws://localhost:18789";
+const DEFAULT_LOCAL_ADAPTER_GATEWAY_URL = "ws://localhost:18789";
+const DEFAULT_LOCAL_RUNTIME_URL = "http://localhost:7770";
+const DEFAULT_CLAW3D_RUNTIME_URL = "http://localhost:3000/api/runtime/custom";
+const DEFAULT_CUSTOM_RUNTIME_URL = "http://localhost:7770";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object");
@@ -254,6 +318,28 @@ const normalizeGatewayUrl = (value: unknown) => {
 const normalizeGatewayKey = (value: unknown) => {
   const key = normalizeGatewayUrl(value);
   return key ? key : null;
+};
+
+const normalizeFloorRuntimeConnectionStatus = (
+  value: unknown,
+  fallback: FloorRuntimeConnectionStatus = "disconnected",
+): FloorRuntimeConnectionStatus => {
+  if (
+    value === "disconnected" ||
+    value === "connecting" ||
+    value === "connected" ||
+    value === "error"
+  ) {
+    return value;
+  }
+  return fallback;
+};
+
+const normalizeOptionalTimestamp = (value: unknown, fallback: number | null = null): number | null => {
+  if (value === null || value === undefined || value === "") {
+    return fallback;
+  }
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 };
 
 const normalizeFocusFilter = (
@@ -360,6 +446,22 @@ export const defaultStudioStandupPreference = (): StudioStandupPreference => ({
 
 export const defaultStudioTaskBoardPreference =
   (): StudioTaskBoardPreference => defaultTaskBoardPreference();
+
+export const defaultStudioFloorRuntimeState = (
+  floorId: FloorId,
+): StudioFloorRuntimeState => {
+  const floor = getOfficeFloor(floorId);
+  return {
+    floorId,
+    provider: floor.provider,
+    runtimeProfileId: floor.runtimeProfileId,
+    gatewayUrl: null,
+    status: "disconnected",
+    lastKnownGoodAt: null,
+    lastErrorCode: null,
+    lastErrorMessage: null,
+  };
+};
 
 const normalizeVoiceReplySpeed = (value: unknown, fallback: number = 1): number => {
   if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
@@ -709,7 +811,14 @@ const normalizeGatewayProfiles = (
 ): Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> | undefined => {
   if (!isRecord(value)) return undefined;
   const profiles: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> = {};
-  for (const adapterType of ["openclaw", "hermes", "demo", "custom"] as const) {
+  for (const adapterType of [
+    "openclaw",
+    "hermes",
+    "demo",
+    "local",
+    "claw3d",
+    "custom",
+  ] as const) {
     const normalized = normalizeGatewayProfile(value[adapterType]);
     if (normalized) {
       profiles[adapterType] = normalized;
@@ -769,7 +878,14 @@ const mergeGatewayProfiles = (
   const next: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> = {
     ...(current ?? {}),
   };
-  for (const adapterType of ["openclaw", "hermes", "demo", "custom"] as const) {
+  for (const adapterType of [
+    "openclaw",
+    "hermes",
+    "demo",
+    "local",
+    "claw3d",
+    "custom",
+  ] as const) {
     const profilePatch = patch[adapterType];
     if (profilePatch === undefined) continue;
     if (profilePatch === null) {
@@ -801,8 +917,8 @@ const mergeGatewayConnectionState = (
   const nextUrl =
     patch.url === undefined ? current?.url ?? "" : normalizeGatewayUrl(patch.url);
   if (!nextUrl) return null;
-  const nextToken =
-    patch.token === undefined ? current?.token ?? "" : coerceString(patch.token);
+  const patchedToken = patch.token === undefined ? undefined : coerceString(patch.token);
+  const nextToken = patchedToken || (current?.token ?? "");
   const nextAdapterType =
     patch.adapterType === undefined
       ? current?.adapterType ?? "openclaw"
@@ -823,11 +939,98 @@ const normalizeGatewayAdapterType = (
     adapterType === "demo" ||
     adapterType === "hermes" ||
     adapterType === "openclaw" ||
+    adapterType === "local" ||
+    adapterType === "claw3d" ||
     adapterType === "custom"
   ) {
     return adapterType;
   }
   return fallback;
+};
+
+export const resolveDefaultStudioGatewayProfile = (
+  adapterType: StudioGatewayAdapterType,
+  localDefaults: StudioGatewaySettings | null = null
+): StudioGatewayProfile => {
+  const explicitProfile = localDefaults?.profiles?.[adapterType];
+  if (explicitProfile?.url) {
+    return {
+      url: explicitProfile.url,
+      token: explicitProfile.token ?? "",
+    };
+  }
+
+  if (localDefaults?.adapterType === adapterType && localDefaults.url?.trim()) {
+    return {
+      url: localDefaults.url,
+      token: localDefaults.token ?? "",
+    };
+  }
+
+  switch (adapterType) {
+    case "claw3d":
+      return { url: DEFAULT_CLAW3D_RUNTIME_URL, token: "" };
+    case "local":
+      return { url: DEFAULT_LOCAL_RUNTIME_URL, token: "" };
+    case "custom":
+      return { url: DEFAULT_CUSTOM_RUNTIME_URL, token: "" };
+    case "hermes":
+    case "demo":
+      return { url: DEFAULT_LOCAL_ADAPTER_GATEWAY_URL, token: "" };
+    case "openclaw":
+    default:
+      return { url: DEFAULT_OPENCLAW_GATEWAY_URL, token: "" };
+  }
+};
+
+export const resolveStudioGatewayProfiles = ({
+  gateway,
+  localDefaults = null,
+}: {
+  gateway: StudioGatewaySettings | null;
+  localDefaults?: StudioGatewaySettings | null;
+}): ResolvedStudioGatewayProfiles => {
+  const selectedAdapterType =
+    gateway?.adapterType ??
+    gateway?.lastKnownGood?.adapterType ??
+    localDefaults?.adapterType ??
+    "openclaw";
+
+  const profiles: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>> = {
+    ...(localDefaults?.profiles ?? {}),
+    ...(gateway?.profiles ?? {}),
+  };
+
+  if (gateway?.url?.trim()) {
+    profiles[selectedAdapterType] = {
+      url: gateway.url,
+      token: gateway.token ?? "",
+    };
+  }
+
+  const lastKnownGoodForSelected =
+    gateway?.lastKnownGood?.adapterType === selectedAdapterType ? gateway.lastKnownGood : null;
+
+  if (!profiles[selectedAdapterType] && lastKnownGoodForSelected?.url) {
+    profiles[selectedAdapterType] = {
+      url: lastKnownGoodForSelected.url,
+      token: lastKnownGoodForSelected.token ?? "",
+    };
+  }
+
+  for (const adapterType of STUDIO_GATEWAY_ADAPTER_TYPES) {
+    if (profiles[adapterType]?.url) continue;
+    profiles[adapterType] = resolveDefaultStudioGatewayProfile(adapterType, localDefaults);
+  }
+
+  return {
+    selectedAdapterType,
+    activeProfile:
+      profiles[selectedAdapterType] ??
+      resolveDefaultStudioGatewayProfile(selectedAdapterType, localDefaults),
+    profiles,
+    lastKnownGoodForSelected,
+  };
 };
 
 const normalizeFocused = (value: unknown): Record<string, StudioFocusedPreference> => {
@@ -1017,9 +1220,55 @@ const normalizeOffice = (value: unknown): Record<string, StudioOfficePreference>
   return office;
 };
 
+const normalizeFloorRuntimeState = (
+  floorId: FloorId,
+  value: unknown,
+  fallback: StudioFloorRuntimeState = defaultStudioFloorRuntimeState(floorId),
+): StudioFloorRuntimeState => {
+  if (!isRecord(value)) return fallback;
+  const floor = getOfficeFloor(floorId);
+  const runtimeProfileIdRaw =
+    value.runtimeProfileId === null || value.runtimeProfileId === undefined
+      ? fallback.runtimeProfileId
+      : coerceString(value.runtimeProfileId);
+  const gatewayUrlRaw =
+    value.gatewayUrl === null || value.gatewayUrl === undefined
+      ? fallback.gatewayUrl
+      : normalizeGatewayUrl(value.gatewayUrl);
+  const lastErrorCodeRaw =
+    value.lastErrorCode === null || value.lastErrorCode === undefined
+      ? fallback.lastErrorCode
+      : coerceString(value.lastErrorCode);
+  const lastErrorMessageRaw =
+    value.lastErrorMessage === null || value.lastErrorMessage === undefined
+      ? fallback.lastErrorMessage
+      : coerceString(value.lastErrorMessage);
+  return {
+    floorId,
+    provider: floor.provider,
+    runtimeProfileId: runtimeProfileIdRaw || null,
+    gatewayUrl: gatewayUrlRaw || null,
+    status: normalizeFloorRuntimeConnectionStatus(value.status, fallback.status),
+    lastKnownGoodAt: normalizeOptionalTimestamp(value.lastKnownGoodAt, fallback.lastKnownGoodAt),
+    lastErrorCode: lastErrorCodeRaw || null,
+    lastErrorMessage: lastErrorMessageRaw || null,
+  };
+};
+
+const normalizeOfficeFloors = (value: unknown): Record<FloorId, StudioFloorRuntimeState> => {
+  const floors = {} as Record<FloorId, StudioFloorRuntimeState>;
+  for (const floor of OFFICE_FLOORS) {
+    const raw = isRecord(value) ? value[floor.id] : undefined;
+    floors[floor.id] = normalizeFloorRuntimeState(floor.id, raw);
+  }
+  return floors;
+};
+
 export const defaultStudioSettings = (): StudioSettings => ({
   version: SETTINGS_VERSION,
   gateway: null,
+  activeFloorId: DEFAULT_ACTIVE_FLOOR_ID,
+  officeFloors: normalizeOfficeFloors(null),
   focused: {},
   avatars: {},
   deskAssignments: {},
@@ -1109,6 +1358,8 @@ export const sanitizeStudioSettings = (
 export const normalizeStudioSettings = (raw: unknown): StudioSettings => {
   if (!isRecord(raw)) return defaultStudioSettings();
   const gateway = normalizeGatewaySettings(raw.gateway);
+  const activeFloorId = resolveActiveOfficeFloorId(coerceString(raw.activeFloorId) as FloorId);
+  const officeFloors = normalizeOfficeFloors(raw.officeFloors);
   const focused = normalizeFocused(raw.focused);
   const avatars = normalizeAvatars(raw.avatars);
   const deskAssignments = normalizeDeskAssignments(raw.deskAssignments);
@@ -1120,6 +1371,8 @@ export const normalizeStudioSettings = (raw: unknown): StudioSettings => {
   return {
     version: SETTINGS_VERSION,
     gateway,
+    activeFloorId,
+    officeFloors,
     focused,
     avatars,
     deskAssignments,
@@ -1137,6 +1390,11 @@ export const mergeStudioSettings = (
 ): StudioSettings => {
   const nextGateway =
     patch.gateway === undefined ? current.gateway : mergeGatewaySettings(current.gateway, patch.gateway);
+  const nextActiveFloorId =
+    patch.activeFloorId === undefined
+      ? current.activeFloorId
+      : resolveActiveOfficeFloorId((patch.activeFloorId ?? DEFAULT_ACTIVE_FLOOR_ID) as FloorId);
+  const nextOfficeFloors = { ...current.officeFloors };
   const nextFocused = { ...current.focused };
   const nextAvatars = { ...current.avatars };
   const nextDeskAssignments = { ...current.deskAssignments };
@@ -1145,6 +1403,25 @@ export const mergeStudioSettings = (
   const nextOffice = { ...current.office };
   const nextStandup = { ...(current.standup ?? {}) };
   const nextTaskBoard = { ...(current.taskBoard ?? {}) };
+  if (patch.officeFloors) {
+    for (const floor of OFFICE_FLOORS) {
+      const floorPatch = patch.officeFloors[floor.id];
+      if (floorPatch === undefined) continue;
+      const fallback = nextOfficeFloors[floor.id] ?? defaultStudioFloorRuntimeState(floor.id);
+      if (floorPatch === null) {
+        nextOfficeFloors[floor.id] = defaultStudioFloorRuntimeState(floor.id);
+        continue;
+      }
+      nextOfficeFloors[floor.id] = normalizeFloorRuntimeState(
+        floor.id,
+        {
+          ...fallback,
+          ...floorPatch,
+        },
+        fallback,
+      );
+    }
+  }
   if (patch.focused) {
     for (const [keyRaw, value] of Object.entries(patch.focused)) {
       const key = normalizeGatewayKey(keyRaw);
@@ -1340,6 +1617,8 @@ export const mergeStudioSettings = (
   return {
     version: SETTINGS_VERSION,
     gateway: nextGateway ?? null,
+    activeFloorId: nextActiveFloorId,
+    officeFloors: nextOfficeFloors,
     focused: nextFocused,
     avatars: nextAvatars,
     deskAssignments: nextDeskAssignments,
@@ -1359,6 +1638,15 @@ export const resolveFocusedPreference = (
   if (!key) return null;
   return settings.focused[key] ?? null;
 };
+
+export const resolveStudioFloorRuntimeState = (
+  settings: StudioSettings | StudioSettingsPublic,
+  floorId: FloorId,
+): StudioFloorRuntimeState => settings.officeFloors[floorId] ?? defaultStudioFloorRuntimeState(floorId);
+
+export const resolveStudioActiveFloorId = (
+  settings: StudioSettings | StudioSettingsPublic,
+): FloorId => resolveActiveOfficeFloorId(settings.activeFloorId);
 
 export const resolveAgentAvatarSeed = (
   settings: StudioSettings | StudioSettingsPublic,

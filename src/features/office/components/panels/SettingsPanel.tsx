@@ -88,6 +88,8 @@ export function SettingsPanel({
   const tokenOptional =
     selectedAdapterType === "hermes" ||
     selectedAdapterType === "demo" ||
+    selectedAdapterType === "local" ||
+    selectedAdapterType === "claw3d" ||
     selectedAdapterType === "custom";
   const [remoteOfficeTokenDraft, setRemoteOfficeTokenDraft] = useState("");
 
@@ -135,6 +137,8 @@ export function SettingsPanel({
             [
               ["demo", "Demo"],
               ["hermes", "Hermes"],
+              ["local", "Local"],
+              ["claw3d", "Claw3D"],
               ["custom", "Custom"],
               ["openclaw", "OpenClaw"],
             ] as const
@@ -166,8 +170,11 @@ export function SettingsPanel({
               value={gatewayUrl ?? ""}
               onChange={(event) => onGatewayUrlChange?.(event.target.value)}
               placeholder={
-                selectedAdapterType === "custom"
+                selectedAdapterType === "custom" ||
+                selectedAdapterType === "local"
                   ? "http://localhost:7770"
+                  : selectedAdapterType === "claw3d"
+                    ? "http://localhost:3000/api/runtime/custom"
                   : "ws://localhost:18789"
               }
               className="w-full rounded-md border border-cyan-500/10 bg-black/25 px-3 py-2 font-mono text-[11px] text-cyan-100 outline-none transition-colors placeholder:text-cyan-100/30 focus:border-cyan-400/30"

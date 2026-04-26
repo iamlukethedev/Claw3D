@@ -13,7 +13,7 @@ import {
 import type { AgentState as AgentRecord } from "@/features/agents/state/store";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Check, ChevronRight, Clock, Mic, Pencil, Square, Trash2, X } from "lucide-react";
+import { Check, ChevronRight, Clock, Mic, Paperclip, Pencil, Square, Trash2, X } from "lucide-react";
 import type { GatewayModelChoice } from "@/lib/gateway/models";
 import type { AgentAvatarProfile } from "@/lib/avatars/profile";
 import { rewriteMediaLinesToMarkdown } from "@/lib/text/media-markdown";
@@ -25,6 +25,7 @@ import type {
   ExecApprovalDecision,
   PendingExecApproval,
 } from "@/features/agents/approvals/types";
+import type { RuntimeAttachment } from "@/lib/runtime/types";
 import {
   buildAgentChatRenderBlocks,
   buildFinalAgentChatItems,
@@ -64,6 +65,76 @@ const EMPTY_CHAT_INTRO_MESSAGES = [
   "What are we working on today?",
   "I'm here and ready. What's the plan?",
 ];
+const TEXT_ATTACHMENT_EXTENSIONS = new Set([
+  "txt",
+  "md",
+  "markdown",
+  "json",
+  "js",
+  "jsx",
+  "ts",
+  "tsx",
+  "py",
+  "rb",
+  "go",
+  "rs",
+  "java",
+  "kt",
+  "sql",
+  "html",
+  "css",
+  "xml",
+  "yaml",
+  "yml",
+  "csv",
+  "log",
+]);
+const MAX_ATTACHMENT_TEXT_CHARS = 12_000;
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+type UploadAttachment = {
+  id: string;
+  name: string;
+  url: string;
+  contentType: string;
+  extractedText?: string;
+};
+
+const isTextAttachmentFile = (file: File): boolean => {
+  const mime = file.type.trim().toLowerCase();
+  if (mime.startsWith("text/")) return true;
+  if (
+    mime.includes("json") ||
+    mime.includes("javascript") ||
+    mime.includes("typescript") ||
+    mime.includes("xml") ||
+    mime.includes("yaml")
+  ) {
+    return true;
+  }
+  const extension = file.name.split(".").pop()?.trim().toLowerCase() ?? "";
+  return extension.length > 0 && TEXT_ATTACHMENT_EXTENSIONS.has(extension);
+};
+
+const buildAttachmentPromptBlock = (fileName: string, content: string): string =>
+  [
+    `[Attached reference: ${fileName}]`,
+    content,
+    `[End attached reference: ${fileName}]`,
+  ].join("\n");
+
+const buildUploadedAttachmentPromptBlock = (attachment: UploadAttachment): string => {
+  const lines = [
+    `[Attached file: ${attachment.name}]`,
+    `URL: ${attachment.url}`,
+    `Content-Type: ${attachment.contentType}`,
+  ];
+  if (attachment.extractedText) {
+    lines.push("", attachment.extractedText);
+  }
+  lines.push(`[End attached file: ${attachment.name}]`);
+  return lines.join("\n");
+};
 
 const stableStringHash = (value: string): number => {
   let hash = 0;
@@ -133,7 +204,7 @@ type AgentChatPanelProps = {
   onToolCallingToggle?: (enabled: boolean) => void;
   onThinkingTracesToggle?: (enabled: boolean) => void;
   onDraftChange: (value: string) => void;
-  onSend: (message: string) => void;
+  onSend: (message: string, attachments: RuntimeAttachment[]) => void;
   onRemoveQueuedMessage?: (index: number) => void;
   onStopRun: () => void;
   onAvatarShuffle: () => void;
@@ -882,6 +953,9 @@ const AgentChatComposer = memo(function AgentChatComposer({
   onChange,
   onKeyDown,
   onSend,
+  onAttachmentFiles,
+  attachments,
+  onRemoveAttachment,
   onVoiceToggle,
   onStop,
   canSend,
@@ -893,6 +967,8 @@ const AgentChatComposer = memo(function AgentChatComposer({
   voiceSupported,
   voiceState,
   voiceError,
+  attachmentStatus,
+  attachmentInputRef,
   queuedMessages,
   onRemoveQueuedMessage,
   inputRef,
@@ -911,6 +987,9 @@ const AgentChatComposer = memo(function AgentChatComposer({
   onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
   onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
   onSend: () => void;
+  onAttachmentFiles: (event: ChangeEvent<HTMLInputElement>) => void;
+  attachments: UploadAttachment[];
+  onRemoveAttachment: (id: string) => void;
   onVoiceToggle?: () => void;
   onStop: () => void;
   canSend: boolean;
@@ -922,6 +1001,8 @@ const AgentChatComposer = memo(function AgentChatComposer({
   voiceSupported: boolean;
   voiceState: VoiceRecorderState;
   voiceError?: string | null;
+  attachmentStatus?: string | null;
+  attachmentInputRef: MutableRefObject<HTMLInputElement | null>;
   queuedMessages: string[];
   onRemoveQueuedMessage?: (index: number) => void;
   inputRef: (el: HTMLTextAreaElement | HTMLInputElement | null) => void;
@@ -1125,7 +1206,43 @@ const AgentChatComposer = memo(function AgentChatComposer({
             </button>
           </div>
         ) : null}
-        {voiceStatusText || voiceError ? (
+        {attachments.length > 0 ? (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {attachments.map((attachment) => {
+              const isImage = attachment.contentType.startsWith("image/");
+              return (
+                <div
+                  key={attachment.id}
+                  className="relative overflow-hidden rounded-lg border border-border/70 bg-card/90"
+                >
+                  {isImage ? (
+                    <img
+                      src={attachment.url}
+                      alt={attachment.name}
+                      className="h-16 w-16 object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center px-2 text-center font-mono text-[10px] text-muted-foreground">
+                      File
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="absolute right-1 top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black"
+                    aria-label={`Remove attachment ${attachment.name}`}
+                    onClick={() => onRemoveAttachment(attachment.id)}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                  <div className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/85 to-transparent px-1 py-0.5 text-[10px] text-white">
+                    {attachment.name}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+        {voiceStatusText || voiceError || attachmentStatus ? (
           <div
             className={`mb-2 rounded-md border px-2.5 py-1.5 font-mono text-[10px] tracking-[0.02em] ${
               voiceError
@@ -1134,10 +1251,18 @@ const AgentChatComposer = memo(function AgentChatComposer({
             }`}
             data-testid="agent-voice-status"
           >
-            {voiceError ?? voiceStatusText}
+            {voiceError ?? voiceStatusText ?? attachmentStatus}
           </div>
         ) : null}
         <div className="flex items-end gap-2">
+          <input
+            ref={attachmentInputRef}
+            type="file"
+            className="hidden"
+            multiple
+            accept=".txt,.md,.markdown,.json,.js,.jsx,.ts,.tsx,.py,.rb,.go,.rs,.java,.kt,.sql,.html,.css,.xml,.yaml,.yml,.csv,.log,.png,.jpg,.jpeg,.gif,.webp,.pdf,text/*,application/json,application/xml,image/*,application/pdf"
+            onChange={onAttachmentFiles}
+          />
           <textarea
             ref={inputRef}
             rows={1}
@@ -1147,6 +1272,19 @@ const AgentChatComposer = memo(function AgentChatComposer({
             onKeyDown={onKeyDown}
             placeholder="type a message"
           />
+          <button
+            className="rounded-md border border-border/70 bg-surface-3 px-2.5 py-2 font-mono text-[11px] font-medium tracking-[0.02em] text-white transition hover:bg-surface-2 hover:text-white disabled:cursor-not-allowed disabled:border-border/30 disabled:bg-muted/20 disabled:text-muted-foreground"
+            type="button"
+            onClick={() => attachmentInputRef.current?.click()}
+            disabled={!canSend}
+            aria-label="Attach files"
+            title="Attach files"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <Paperclip className="h-3.5 w-3.5" />
+              <span>Attach</span>
+            </span>
+          </button>
           {voiceEnabled ? (
             <button
               className={`rounded-md border px-2.5 py-2 font-mono text-[11px] font-medium tracking-[0.02em] transition ${
@@ -1224,7 +1362,10 @@ export const AgentChatPanel = ({
   const [renameSaving, setRenameSaving] = useState(false);
   const [renameDraft, setRenameDraft] = useState(agent.name);
   const [renameError, setRenameError] = useState<string | null>(null);
+  const [attachmentStatus, setAttachmentStatus] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<UploadAttachment[]>([]);
   const draftRef = useRef<HTMLTextAreaElement | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const renameInputRef = useRef<HTMLInputElement | null>(null);
   const renameEditorRef = useRef<HTMLDivElement | null>(null);
   const scrollToBottomNextOutputRef = useRef(false);
@@ -1268,6 +1409,8 @@ export const AgentChatPanel = ({
       };
       plainDraftRef.current = agent.draft;
       setDraftValue(agent.draft);
+      setAttachments([]);
+      setAttachmentStatus(null);
       return;
     }
     if (agent.draft === plainDraftRef.current) return;
@@ -1314,14 +1457,17 @@ export const AgentChatPanel = ({
     (message: string) => {
       if (!canSend) return;
       const trimmed = message.trim();
-      if (!trimmed) return;
+      if (!trimmed && attachments.length === 0) return;
+      const pendingAttachments = attachments.map(({ id: _id, ...rest }) => rest as RuntimeAttachment);
       plainDraftRef.current = "";
       setDraftValue("");
+      setAttachments([]);
+      setAttachmentStatus(null);
       onDraftChange("");
       scrollToBottomNextOutputRef.current = true;
-      onSend(trimmed);
+      onSend(trimmed, pendingAttachments);
     },
-    [canSend, onDraftChange, onSend]
+    [attachments, canSend, onDraftChange, onSend]
   );
 
   const chatItems = useMemo(
@@ -1375,7 +1521,7 @@ export const AgentChatPanel = ({
     () => resolveEmptyChatIntroMessage(agent.agentId, agent.sessionEpoch),
     [agent.agentId, agent.sessionEpoch]
   );
-  const sendDisabled = !canSend || !draftValue.trim();
+  const sendDisabled = !canSend || (!draftValue.trim() && attachments.length === 0);
 
   const handleComposerChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -1401,6 +1547,64 @@ export const AgentChatPanel = ({
   const handleComposerSend = useCallback(() => {
     handleSend(draftValue);
   }, [draftValue, handleSend]);
+
+  const handleAttachmentFiles = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.target.files ?? []);
+      event.target.value = "";
+      if (files.length === 0) return;
+      const oversized = files.filter((file) => file.size > MAX_UPLOAD_BYTES);
+      const supported = files.filter((file) => file.size <= MAX_UPLOAD_BYTES);
+      if (supported.length === 0) {
+        setAttachmentStatus("All selected files exceeded the 10 MB upload limit.");
+        return;
+      }
+      try {
+        const uploaded = await Promise.all(
+          supported.map(async (file) => {
+            const formData = new FormData();
+            formData.append("file", file);
+            const response = await fetch("/api/files/upload", {
+              method: "POST",
+              body: formData,
+            });
+            const payload = (await response.json()) as Record<string, unknown>;
+            if (!response.ok) {
+              const message =
+                typeof payload.error === "string"
+                  ? payload.error
+                  : `Failed to upload ${file.name}.`;
+              throw new Error(message);
+            }
+            return {
+              id: String(payload.id ?? ""),
+              name: String(payload.name ?? file.name),
+              url: String(payload.url ?? ""),
+              contentType: String(payload.contentType ?? file.type ?? "application/octet-stream"),
+              extractedText:
+                typeof payload.extractedText === "string" ? payload.extractedText : undefined,
+            } satisfies UploadAttachment;
+          })
+        );
+        setAttachments((current) => [...current, ...uploaded]);
+        const statusParts = [`Uploaded ${uploaded.length} file${uploaded.length === 1 ? "" : "s"}.`];
+        if (oversized.length > 0) {
+          statusParts.push(`${oversized.length} oversized file${oversized.length === 1 ? "" : "s"} skipped.`);
+        }
+        setAttachmentStatus(statusParts.join(" "));
+        scrollToBottomNextOutputRef.current = true;
+      } catch (error) {
+        setAttachmentStatus(
+          error instanceof Error ? error.message : "Failed to read one or more attachments."
+        );
+      }
+    },
+    []
+  );
+
+  const handleRemoveAttachment = useCallback((id: string) => {
+    setAttachments((current) => current.filter((attachment) => attachment.id !== id));
+  }, []);
 
   const handleVoiceToggle = useCallback(
     () => {
@@ -1654,6 +1858,9 @@ export const AgentChatPanel = ({
             onChange={handleComposerChange}
             onKeyDown={handleComposerKeyDown}
             onSend={handleComposerSend}
+            onAttachmentFiles={handleAttachmentFiles}
+            attachments={attachments}
+            onRemoveAttachment={handleRemoveAttachment}
             onVoiceToggle={handleVoiceToggle}
             onStop={onStopRun}
             canSend={canSend}
@@ -1665,6 +1872,8 @@ export const AgentChatPanel = ({
             voiceSupported={voiceSupported}
             voiceState={voiceState}
             voiceError={voiceError}
+            attachmentStatus={attachmentStatus}
+            attachmentInputRef={attachmentInputRef}
             queuedMessages={agent.queuedMessages ?? []}
             onRemoveQueuedMessage={onRemoveQueuedMessage}
             modelOptions={modelOptionsWithFallback.map((option) => ({

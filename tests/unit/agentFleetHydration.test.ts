@@ -2,25 +2,19 @@ import { describe, expect, it, vi } from "vitest";
 
 import { hydrateAgentFleetFromGateway } from "@/features/agents/operations/agentFleetHydration";
 import { createDefaultAgentAvatarProfile } from "@/lib/avatars/profile";
-import type { StudioSettings } from "@/lib/studio/settings";
+import { defaultStudioSettings, type StudioSettings } from "@/lib/studio/settings";
 
 describe("hydrateAgentFleetFromGateway", () => {
   it("maps_gateway_results_into_seeds_and_selects_latest_assistant_agent", async () => {
-    const gatewayUrl = "ws://127.0.0.1:18789";
+    const gatewayUrl = "ws://localhost:18789";
 
     const settings: StudioSettings = {
-      version: 1,
-      gateway: null,
-      focused: {},
+      ...defaultStudioSettings(),
       avatars: {
         [gatewayUrl]: {
           "agent-1": createDefaultAgentAvatarProfile("persisted-seed"),
         },
       },
-      deskAssignments: {},
-      analytics: {},
-      voiceReplies: {},
-      office: {},
     };
 
     const call = vi.fn(async (method: string, params: unknown) => {

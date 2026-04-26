@@ -9,13 +9,8 @@ import { POST } from "@/app/api/gateway/skills/remove/route";
 
 const ORIGINAL_ENV = { ...process.env };
 
-vi.mock("node:child_process", async () => {
-  const actual = await vi.importActual<typeof import("node:child_process")>(
-    "node:child_process"
-  );
+vi.mock("node:child_process", () => {
   return {
-    default: actual,
-    ...actual,
     spawnSync: vi.fn(),
   };
 });
