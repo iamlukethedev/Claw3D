@@ -28,6 +28,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { SettingsPanel } from "@/features/office/components/panels/SettingsPanel";
+import type { OfficeStateAnimationMapping } from "@/lib/office/stateMappingConfig";
 import { AtmImmersiveScreen } from "@/features/office/screens/AtmImmersiveScreen";
 import { GithubImmersiveScreen } from "@/features/office/screens/GithubImmersiveScreen";
 import { KanbanImmersiveScreen } from "@/features/office/screens/KanbanImmersiveScreen";
@@ -2276,6 +2277,7 @@ export function RetroOffice3D({
   remoteOfficeStatusText = "Remote office disabled.",
   remoteLayoutSnapshot = null,
   remoteOfficeTokenConfigured = false,
+  stateAnimationMappings = [],
   voiceRepliesEnabled = false,
   voiceRepliesVoiceId = null,
   voiceRepliesSpeed = 1,
@@ -2287,6 +2289,7 @@ export function RetroOffice3D({
   onRemoteOfficePresenceUrlChange,
   onRemoteOfficeGatewayUrlChange,
   onRemoteOfficeTokenChange,
+  onStateAnimationMappingsChange,
   onVoiceRepliesToggle,
   onVoiceRepliesVoiceChange,
   onVoiceRepliesSpeedChange,
@@ -2390,6 +2393,7 @@ export function RetroOffice3D({
   remoteOfficeStatusText?: string;
   remoteLayoutSnapshot?: OfficeLayoutSnapshot | null;
   remoteOfficeTokenConfigured?: boolean;
+  stateAnimationMappings?: OfficeStateAnimationMapping[];
   voiceRepliesEnabled?: boolean;
   voiceRepliesVoiceId?: string | null;
   voiceRepliesSpeed?: number;
@@ -2403,6 +2407,7 @@ export function RetroOffice3D({
   onRemoteOfficePresenceUrlChange?: (url: string) => void;
   onRemoteOfficeGatewayUrlChange?: (url: string) => void;
   onRemoteOfficeTokenChange?: (token: string) => void;
+  onStateAnimationMappingsChange?: (mappings: OfficeStateAnimationMapping[]) => void;
   onVoiceRepliesToggle?: (enabled: boolean) => void;
   onVoiceRepliesVoiceChange?: (voiceId: string | null) => void;
   onVoiceRepliesSpeedChange?: (speed: number) => void;
@@ -7131,6 +7136,10 @@ export function RetroOffice3D({
                 }
                 onRemoteOfficeTokenChange={(token) =>
                   onRemoteOfficeTokenChange?.(token)
+                }
+                stateAnimationMappings={stateAnimationMappings}
+                onStateAnimationMappingsChange={(mappings) =>
+                  onStateAnimationMappingsChange?.(mappings)
                 }
                 voiceRepliesEnabled={voiceRepliesEnabled}
                 voiceRepliesVoiceId={voiceRepliesVoiceId}

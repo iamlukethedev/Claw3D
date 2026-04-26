@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { CURATED_ELEVENLABS_VOICES } from "@/lib/voiceReply/catalog";
 import type { StudioGatewayAdapterType } from "@/lib/studio/settings";
+import type { OfficeStateAnimationMapping } from "@/lib/office/stateMappingConfig";
+import { StateAnimationMappingsEditor } from "@/features/office/components/panels/StateAnimationMappingsEditor";
 
 type SettingsPanelProps = {
   gatewayStatus?: string;
@@ -19,6 +21,8 @@ type SettingsPanelProps = {
   officeTitle: string;
   officeTitleLoaded: boolean;
   onOfficeTitleChange: (title: string) => void;
+  stateAnimationMappings: OfficeStateAnimationMapping[];
+  onStateAnimationMappingsChange: (mappings: OfficeStateAnimationMapping[]) => void;
   remoteOfficeEnabled: boolean;
   remoteOfficeSourceKind: "presence_endpoint" | "openclaw_gateway";
   remoteOfficeLabel: string;
@@ -56,6 +60,8 @@ export function SettingsPanel({
   officeTitle,
   officeTitleLoaded,
   onOfficeTitleChange,
+  stateAnimationMappings,
+  onStateAnimationMappingsChange,
   remoteOfficeEnabled,
   remoteOfficeSourceKind,
   remoteOfficeLabel,
@@ -226,6 +232,10 @@ export function SettingsPanel({
           </div>
         </div>
       </div>
+      <StateAnimationMappingsEditor
+        mappings={stateAnimationMappings}
+        onChange={onStateAnimationMappingsChange}
+      />
       <div className="mt-3 rounded-lg border border-cyan-500/10 bg-black/20 px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div>

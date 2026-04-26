@@ -1329,6 +1329,7 @@ export function OfficeScreen({
     remoteOfficeGatewayUrl,
     remoteOfficeTokenConfigured,
     setTitle: setOfficeTitle,
+    setStateAnimationMappings,
     setRemoteOfficeEnabled,
     setRemoteOfficeSourceKind,
     setRemoteOfficeLabel,
@@ -3292,6 +3293,61 @@ export function OfficeScreen({
     textMessageByAgentId,
     workingUntilByAgentId,
   } = officeAnimationState;
+  const configuredWorkflowHoldMaps = useMemo(
+    () =>
+      stateAnimationMappings.length > 0
+        ? buildOfficeStateAnimationMappingResult({
+            agents: state.agents,
+            animationState: officeAnimationState,
+            mappings: stateAnimationMappings,
+            nowMs: animationNowMs,
+          })
+        : null,
+    [animationNowMs, officeAnimationState, state.agents, stateAnimationMappings],
+  );
+  const workflowGithubHoldByAgentId = useMemo(
+    () => {
+      const configuredGithubHolds =
+        configuredWorkflowHoldMaps?.githubHoldByAgentId ?? {};
+      const skillGithubHolds = buildOfficeSkillTriggerHoldMaps(
+        skillTriggers.movementTargetByAgentId,
+      ).githubHoldByAgentId;
+      return {
+        ...Object.fromEntries(
+          Object.entries(officeAnimationState.githubHoldByAgentId).filter(
+            ([agentId]) => !configuredGithubHolds[agentId],
+          ),
+        ),
+        ...skillGithubHolds,
+      };
+    },
+    [
+      configuredWorkflowHoldMaps?.githubHoldByAgentId,
+      officeAnimationState.githubHoldByAgentId,
+      skillTriggers.movementTargetByAgentId,
+    ],
+  );
+  const workflowQaHoldByAgentId = useMemo(
+    () => {
+      const configuredQaHolds = configuredWorkflowHoldMaps?.qaHoldByAgentId ?? {};
+      const skillQaHolds = buildOfficeSkillTriggerHoldMaps(
+        skillTriggers.movementTargetByAgentId,
+      ).qaHoldByAgentId;
+      return {
+        ...Object.fromEntries(
+          Object.entries(officeAnimationState.qaHoldByAgentId).filter(
+            ([agentId]) => !configuredQaHolds[agentId],
+          ),
+        ),
+        ...skillQaHolds,
+      };
+    },
+    [
+      configuredWorkflowHoldMaps?.qaHoldByAgentId,
+      officeAnimationState.qaHoldByAgentId,
+      skillTriggers.movementTargetByAgentId,
+    ],
+  );
   const immediateGymHoldByAgentId = useMemo(
     () => ({
       ...marketplaceGymHoldByAgentId,
@@ -3344,15 +3400,15 @@ export function OfficeScreen({
 
   const activeGithubReviewAgentId = useMemo(
     () =>
-      state.agents.find((agent) => githubHoldByAgentId[agent.agentId])
+      state.agents.find((agent) => workflowGithubHoldByAgentId[agent.agentId])
         ?.agentId ?? null,
-    [githubHoldByAgentId, state.agents],
+    [workflowGithubHoldByAgentId, state.agents],
   );
   const activeQaTestingAgentId = useMemo(
     () =>
-      state.agents.find((agent) => qaHoldByAgentId[agent.agentId])?.agentId ??
+      state.agents.find((agent) => workflowQaHoldByAgentId[agent.agentId])?.agentId ??
       null,
-    [qaHoldByAgentId, state.agents],
+    [workflowQaHoldByAgentId, state.agents],
   );
   useEffect(() => {
     setGithubReviewAgentId(activeGithubReviewAgentId);
@@ -4835,11 +4891,13 @@ export function OfficeScreen({
           remoteOfficeStatusText={remoteOfficeStatusText}
           remoteLayoutSnapshot={remoteOfficeLayoutSnapshot}
           remoteOfficeTokenConfigured={remoteOfficeTokenConfigured}
+          stateAnimationMappings={stateAnimationMappings}
           voiceRepliesEnabled={voiceRepliesEnabled}
           voiceRepliesVoiceId={voiceRepliesVoiceId}
           voiceRepliesSpeed={voiceRepliesSpeed}
           voiceRepliesLoaded={voiceRepliesLoaded}
           onOfficeTitleChange={setOfficeTitle}
+          onStateAnimationMappingsChange={setStateAnimationMappings}
           onRemoteOfficeEnabledChange={setRemoteOfficeEnabled}
           onRemoteOfficeSourceKindChange={setRemoteOfficeSourceKind}
           onRemoteOfficeLabelChange={setRemoteOfficeLabel}
