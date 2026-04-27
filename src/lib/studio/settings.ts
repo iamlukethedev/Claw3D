@@ -148,6 +148,16 @@ export type StudioVoiceRepliesPreferencePatch = {
   speed?: number;
 };
 
+export type StudioOfficeSoundPreference = {
+  enabled: boolean;
+  volume: number;
+};
+
+export type StudioOfficeSoundPreferencePatch = {
+  enabled?: boolean;
+  volume?: number;
+};
+
 export type StudioOfficePreference = {
   title: string;
   stateAnimationMappings: OfficeStateAnimationMapping[];
@@ -262,6 +272,7 @@ export type StudioSettings = {
   deskAssignments: Record<string, StudioDeskAssignments>;
   analytics: Record<string, StudioAnalyticsPreference>;
   voiceReplies: Record<string, StudioVoiceRepliesPreference>;
+  officeSound: Record<string, StudioOfficeSoundPreference>;
   office: Record<string, StudioOfficePreference>;
   standup?: Record<string, StudioStandupPreference>;
   taskBoard?: Record<string, StudioTaskBoardPreference>;
@@ -270,6 +281,7 @@ export type StudioSettings = {
 export type StudioSettingsPublic = Omit<StudioSettings, "gateway" | "office" | "standup"> & {
   gateway: StudioGatewaySettingsPublic | null;
   office: Record<string, StudioOfficePreferencePublic>;
+  officeSound: Record<string, StudioOfficeSoundPreference>;
   standup?: Record<string, StudioStandupPreferencePublic>;
   taskBoard?: Record<string, StudioTaskBoardPreferencePublic>;
 };
@@ -283,6 +295,7 @@ export type StudioSettingsPatch = {
   deskAssignments?: Record<string, Record<string, string | null> | null>;
   analytics?: Record<string, StudioAnalyticsPreferencePatch | null>;
   voiceReplies?: Record<string, StudioVoiceRepliesPreferencePatch | null>;
+  officeSound?: Record<string, StudioOfficeSoundPreferencePatch | null>;
   office?: Record<string, StudioOfficePreferencePatch | null>;
   standup?: Record<string, StudioStandupPreferencePatch | null>;
   taskBoard?: Record<string, StudioTaskBoardPreferencePatch | null>;
@@ -420,6 +433,12 @@ export const defaultStudioVoiceRepliesPreference =
     speed: 1,
   });
 
+export const defaultStudioOfficeSoundPreference =
+  (): StudioOfficeSoundPreference => ({
+    enabled: false,
+    volume: 0.45,
+  });
+
 export const defaultStudioStandupScheduleConfig = (): StandupScheduleConfig => ({
   enabled: false,
   cronExpr: "0 9 * * 1-5",
@@ -474,6 +493,11 @@ export const defaultStudioFloorRuntimeState = (
 const normalizeVoiceReplySpeed = (value: unknown, fallback: number = 1): number => {
   if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
   return Math.min(1.2, Math.max(0.7, value));
+};
+
+const normalizeOfficeSoundVolume = (value: unknown, fallback: number = 0.45): number => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  return Math.min(1, Math.max(0, value));
 };
 
 const normalizeOptionalIsoString = (
@@ -1175,6 +1199,30 @@ const normalizeVoiceReplies = (
   return voiceReplies;
 };
 
+const normalizeOfficeSoundPreference = (
+  value: unknown,
+  fallback: StudioOfficeSoundPreference = defaultStudioOfficeSoundPreference()
+): StudioOfficeSoundPreference => {
+  if (!isRecord(value)) return fallback;
+  return {
+    enabled: typeof value.enabled === "boolean" ? value.enabled : fallback.enabled,
+    volume: normalizeOfficeSoundVolume(value.volume, fallback.volume),
+  };
+};
+
+const normalizeOfficeSound = (
+  value: unknown
+): Record<string, StudioOfficeSoundPreference> => {
+  if (!isRecord(value)) return {};
+  const officeSound: Record<string, StudioOfficeSoundPreference> = {};
+  for (const [gatewayKeyRaw, soundRaw] of Object.entries(value)) {
+    const gatewayKey = normalizeGatewayKey(gatewayKeyRaw);
+    if (!gatewayKey) continue;
+    officeSound[gatewayKey] = normalizeOfficeSoundPreference(soundRaw);
+  }
+  return officeSound;
+};
+
 const normalizeOfficePreference = (
   value: unknown,
   fallback: StudioOfficePreference = defaultStudioOfficePreference()
@@ -1289,6 +1337,7 @@ export const defaultStudioSettings = (): StudioSettings => ({
   deskAssignments: {},
   analytics: {},
   voiceReplies: {},
+  officeSound: {},
   office: {},
   standup: {},
   taskBoard: {},
@@ -1380,6 +1429,7 @@ export const normalizeStudioSettings = (raw: unknown): StudioSettings => {
   const deskAssignments = normalizeDeskAssignments(raw.deskAssignments);
   const analytics = normalizeAnalytics(raw.analytics);
   const voiceReplies = normalizeVoiceReplies(raw.voiceReplies);
+  const officeSound = normalizeOfficeSound(raw.officeSound);
   const office = normalizeOffice(raw.office);
   const standup = normalizeStandup(raw.standup);
   const taskBoard = normalizeTaskBoard(raw.taskBoard);
@@ -1393,6 +1443,7 @@ export const normalizeStudioSettings = (raw: unknown): StudioSettings => {
     deskAssignments,
     analytics,
     voiceReplies,
+    officeSound,
     office,
     standup,
     taskBoard,
@@ -1415,6 +1466,7 @@ export const mergeStudioSettings = (
   const nextDeskAssignments = { ...current.deskAssignments };
   const nextAnalytics = { ...current.analytics };
   const nextVoiceReplies = { ...current.voiceReplies };
+  const nextOfficeSound = { ...current.officeSound };
   const nextOffice = { ...current.office };
   const nextStandup = { ...(current.standup ?? {}) };
   const nextTaskBoard = { ...(current.taskBoard ?? {}) };
@@ -1541,6 +1593,25 @@ export const mergeStudioSettings = (
       );
     }
   }
+  if (patch.officeSound) {
+    for (const [gatewayKeyRaw, officeSoundPatch] of Object.entries(patch.officeSound)) {
+      const gatewayKey = normalizeGatewayKey(gatewayKeyRaw);
+      if (!gatewayKey) continue;
+      if (officeSoundPatch === null) {
+        delete nextOfficeSound[gatewayKey];
+        continue;
+      }
+      const fallback =
+        nextOfficeSound[gatewayKey] ?? defaultStudioOfficeSoundPreference();
+      nextOfficeSound[gatewayKey] = normalizeOfficeSoundPreference(
+        {
+          ...fallback,
+          ...officeSoundPatch,
+        },
+        fallback,
+      );
+    }
+  }
   if (patch.office) {
     for (const [gatewayKeyRaw, officePatch] of Object.entries(patch.office)) {
       const gatewayKey = normalizeGatewayKey(gatewayKeyRaw);
@@ -1639,6 +1710,7 @@ export const mergeStudioSettings = (
     deskAssignments: nextDeskAssignments,
     analytics: nextAnalytics,
     voiceReplies: nextVoiceReplies,
+    officeSound: nextOfficeSound,
     office: nextOffice,
     standup: nextStandup,
     taskBoard: nextTaskBoard,
@@ -1709,6 +1781,15 @@ export const resolveVoiceRepliesPreference = (
   const gatewayKey = normalizeGatewayKey(gatewayUrl);
   if (!gatewayKey) return defaultStudioVoiceRepliesPreference();
   return settings.voiceReplies[gatewayKey] ?? defaultStudioVoiceRepliesPreference();
+};
+
+export const resolveOfficeSoundPreference = (
+  settings: StudioSettings | StudioSettingsPublic,
+  gatewayUrl: string
+): StudioOfficeSoundPreference => {
+  const gatewayKey = normalizeGatewayKey(gatewayUrl);
+  if (!gatewayKey) return defaultStudioOfficeSoundPreference();
+  return settings.officeSound[gatewayKey] ?? defaultStudioOfficeSoundPreference();
 };
 
 export const resolveOfficePreference = (

@@ -39,10 +39,15 @@ type SettingsPanelProps = {
   voiceRepliesVoiceId: string | null;
   voiceRepliesSpeed: number;
   voiceRepliesLoaded: boolean;
+  officeSoundEnabled: boolean;
+  officeSoundVolume: number;
+  officeSoundLoaded: boolean;
   onVoiceRepliesToggle: (enabled: boolean) => void;
   onVoiceRepliesVoiceChange: (voiceId: string | null) => void;
   onVoiceRepliesSpeedChange: (speed: number) => void;
   onVoiceRepliesPreview: (voiceId: string | null, voiceName: string) => void;
+  onOfficeSoundToggle: (enabled: boolean) => void;
+  onOfficeSoundVolumeChange: (volume: number) => void;
 };
 
 export function SettingsPanel({
@@ -78,10 +83,15 @@ export function SettingsPanel({
   voiceRepliesVoiceId,
   voiceRepliesSpeed,
   voiceRepliesLoaded,
+  officeSoundEnabled,
+  officeSoundVolume,
+  officeSoundLoaded,
   onVoiceRepliesToggle,
   onVoiceRepliesVoiceChange,
   onVoiceRepliesSpeedChange,
   onVoiceRepliesPreview,
+  onOfficeSoundToggle,
+  onOfficeSoundVolumeChange,
 }: SettingsPanelProps) {
   const normalizedGatewayUrl = gatewayUrl?.trim() ?? "";
   const normalizedGatewayToken = gatewayToken ?? "";
@@ -236,6 +246,59 @@ export function SettingsPanel({
         mappings={stateAnimationMappings}
         onChange={onStateAnimationMappingsChange}
       />
+      <div className="ui-settings-row mt-3 flex min-h-[72px] items-center justify-between gap-6 rounded-lg border border-cyan-500/10 bg-black/20 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            role="switch"
+            aria-label="Office sound cues"
+            aria-checked={officeSoundEnabled}
+            className={`ui-switch self-center ${officeSoundEnabled ? "ui-switch--on" : ""}`}
+            onClick={() => onOfficeSoundToggle(!officeSoundEnabled)}
+            disabled={!officeSoundLoaded}
+          >
+            <span className="ui-switch-thumb" />
+          </button>
+          <div className="flex flex-col">
+            <span className="text-[11px] font-medium text-white">Office sound cues</span>
+            <span className="text-[10px] text-white/80">
+              Play subtle cues for runs, errors, and external events.
+            </span>
+          </div>
+        </div>
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-200/70">
+          {officeSoundLoaded ? (officeSoundEnabled ? "On" : "Off") : "Loading"}
+        </span>
+      </div>
+      <div className="mt-3 rounded-lg border border-cyan-500/10 bg-black/20 px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-medium text-white">Sound volume</div>
+            <div className="mt-1 text-[10px] text-white/75">
+              Browser audio starts after the first user gesture.
+            </div>
+          </div>
+          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-200/70">
+            {Math.round(officeSoundVolume * 100)}%
+          </span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          value={officeSoundVolume}
+          disabled={!officeSoundLoaded}
+          onChange={(event) =>
+            onOfficeSoundVolumeChange(Number.parseFloat(event.target.value))
+          }
+          className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-cyan-500/15 accent-cyan-400"
+        />
+        <div className="mt-1 flex items-center justify-between text-[10px] text-white/45">
+          <span>Muted</span>
+          <span>Louder</span>
+        </div>
+      </div>
       <div className="mt-3 rounded-lg border border-cyan-500/10 bg-black/20 px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div>

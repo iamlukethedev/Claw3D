@@ -185,6 +185,7 @@ import {
 } from "@/features/onboarding";
 import { useFinalizedAssistantReplyListener } from "@/hooks/useFinalizedAssistantReplyListener";
 import { useStudioOfficePreference } from "@/hooks/useStudioOfficePreference";
+import { useStudioOfficeSoundPreference } from "@/hooks/useStudioOfficeSoundPreference";
 import { isRemoteOfficeAgentId } from "@/features/retro-office/core/district";
 import { useStudioVoiceRepliesPreference } from "@/hooks/useStudioVoiceRepliesPreference";
 import {
@@ -192,6 +193,7 @@ import {
   type VoiceSendPayload,
 } from "@/hooks/useVoiceRecorder";
 import { useVoiceReplyPlayback } from "@/hooks/useVoiceReplyPlayback";
+import { useOfficeSoundEffects } from "@/features/office/hooks/useOfficeSoundEffects";
 import {
   buildOfficeAnimationState,
   clearOfficeAnimationTriggerHold,
@@ -1375,6 +1377,17 @@ export function OfficeScreen({
     setSpeed: setVoiceRepliesSpeed,
   } = useStudioVoiceRepliesPreference({
     gatewayUrl,
+    settingsCoordinator,
+  });
+  const {
+    loaded: officeSoundLoaded,
+    enabled: officeSoundEnabled,
+    volume: officeSoundVolume,
+    setEnabled: setOfficeSoundEnabled,
+    setVolume: setOfficeSoundVolume,
+  } = useStudioOfficeSoundPreference({
+    gatewayUrl,
+    storageKey: selectedAdapterType,
     settingsCoordinator,
   });
   const {
@@ -3138,7 +3151,14 @@ export function OfficeScreen({
   const {
     events: externalOfficeEvents,
     feedEvents: externalOfficeFeedEvents,
+    latestNewEvent: latestExternalOfficeEvent,
   } = useOfficeExternalEvents();
+  useOfficeSoundEffects({
+    enabled: officeSoundEnabled,
+    volume: officeSoundVolume,
+    runLog,
+    latestExternalEvent: latestExternalOfficeEvent,
+  });
   const operationsFeedEvents = useMemo(
     () => [...externalOfficeFeedEvents, ...feedEvents],
     [externalOfficeFeedEvents, feedEvents],
@@ -4903,12 +4923,17 @@ export function OfficeScreen({
           remoteLayoutSnapshot={remoteOfficeLayoutSnapshot}
           remoteOfficeTokenConfigured={remoteOfficeTokenConfigured}
           stateAnimationMappings={stateAnimationMappings}
+          officeSoundEnabled={officeSoundEnabled}
+          officeSoundLoaded={officeSoundLoaded}
+          officeSoundVolume={officeSoundVolume}
           voiceRepliesEnabled={voiceRepliesEnabled}
           voiceRepliesVoiceId={voiceRepliesVoiceId}
           voiceRepliesSpeed={voiceRepliesSpeed}
           voiceRepliesLoaded={voiceRepliesLoaded}
           onOfficeTitleChange={setOfficeTitle}
           onStateAnimationMappingsChange={setStateAnimationMappings}
+          onOfficeSoundToggle={setOfficeSoundEnabled}
+          onOfficeSoundVolumeChange={setOfficeSoundVolume}
           onRemoteOfficeEnabledChange={setRemoteOfficeEnabled}
           onRemoteOfficeSourceKindChange={setRemoteOfficeSourceKind}
           onRemoteOfficeLabelChange={setRemoteOfficeLabel}

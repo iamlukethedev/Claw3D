@@ -212,6 +212,35 @@ describe("studio settings normalization", () => {
     ]);
   });
 
+  it("normalizes and merges office sound preferences per gateway", () => {
+    const normalized = normalizeStudioSettings({
+      officeSound: {
+        " [REDACTED] ": {
+          enabled: true,
+          volume: 2,
+        },
+      },
+    });
+
+    expect(normalized.officeSound["[REDACTED]"]).toEqual({
+      enabled: true,
+      volume: 1,
+    });
+
+    const merged = mergeStudioSettings(normalized, {
+      officeSound: {
+        "[REDACTED]": {
+          volume: 0.25,
+        },
+      },
+    });
+
+    expect(merged.officeSound["[REDACTED]"]).toEqual({
+      enabled: true,
+      volume: 0.25,
+    });
+  });
+
   it("merges office title patches", () => {
     const current = normalizeStudioSettings({
       office: {

@@ -2278,6 +2278,9 @@ export function RetroOffice3D({
   remoteLayoutSnapshot = null,
   remoteOfficeTokenConfigured = false,
   stateAnimationMappings = [],
+  officeSoundEnabled = false,
+  officeSoundVolume = 0.45,
+  officeSoundLoaded = false,
   voiceRepliesEnabled = false,
   voiceRepliesVoiceId = null,
   voiceRepliesSpeed = 1,
@@ -2290,6 +2293,8 @@ export function RetroOffice3D({
   onRemoteOfficeGatewayUrlChange,
   onRemoteOfficeTokenChange,
   onStateAnimationMappingsChange,
+  onOfficeSoundToggle,
+  onOfficeSoundVolumeChange,
   onVoiceRepliesToggle,
   onVoiceRepliesVoiceChange,
   onVoiceRepliesSpeedChange,
@@ -2394,6 +2399,9 @@ export function RetroOffice3D({
   remoteLayoutSnapshot?: OfficeLayoutSnapshot | null;
   remoteOfficeTokenConfigured?: boolean;
   stateAnimationMappings?: OfficeStateAnimationMapping[];
+  officeSoundEnabled?: boolean;
+  officeSoundVolume?: number;
+  officeSoundLoaded?: boolean;
   voiceRepliesEnabled?: boolean;
   voiceRepliesVoiceId?: string | null;
   voiceRepliesSpeed?: number;
@@ -2408,6 +2416,8 @@ export function RetroOffice3D({
   onRemoteOfficeGatewayUrlChange?: (url: string) => void;
   onRemoteOfficeTokenChange?: (token: string) => void;
   onStateAnimationMappingsChange?: (mappings: OfficeStateAnimationMapping[]) => void;
+  onOfficeSoundToggle?: (enabled: boolean) => void;
+  onOfficeSoundVolumeChange?: (volume: number) => void;
   onVoiceRepliesToggle?: (enabled: boolean) => void;
   onVoiceRepliesVoiceChange?: (voiceId: string | null) => void;
   onVoiceRepliesSpeedChange?: (speed: number) => void;
@@ -7140,6 +7150,13 @@ export function RetroOffice3D({
                 stateAnimationMappings={stateAnimationMappings}
                 onStateAnimationMappingsChange={(mappings) =>
                   onStateAnimationMappingsChange?.(mappings)
+                }
+                officeSoundEnabled={officeSoundEnabled}
+                officeSoundVolume={officeSoundVolume}
+                officeSoundLoaded={officeSoundLoaded}
+                onOfficeSoundToggle={(enabled) => onOfficeSoundToggle?.(enabled)}
+                onOfficeSoundVolumeChange={(volume) =>
+                  onOfficeSoundVolumeChange?.(volume)
                 }
                 voiceRepliesEnabled={voiceRepliesEnabled}
                 voiceRepliesVoiceId={voiceRepliesVoiceId}
