@@ -224,6 +224,9 @@ Alternative with SSH:
 3. Set `STUDIO_ACCESS_TOKEN` if Studio binds to a public host.
 4. Configure the gateway URL and token inside Studio.
 
+For Entra ID / Azure AD deployments with nginx, Let's Encrypt, and oauth2-proxy,
+see [`docs/deployment/entra-oauth2-proxy.md`](docs/deployment/entra-oauth2-proxy.md).
+
 ### Studio on LAN or Tailscale for other devices
 
 1. Start Studio with `HOST=0.0.0.0` (or a specific LAN/Tailscale host).
@@ -296,6 +299,7 @@ See [`.env.example`](.env.example) for the full local development template.
 - [`docs/pi-chat-streaming.md`](docs/pi-chat-streaming.md): gateway runtime streaming and transcript rendering.
 - [`docs/permissions-sandboxing.md`](docs/permissions-sandboxing.md): Studio permissions and OpenClaw behavior.
 - [`docs/hermes-gateway.md`](docs/hermes-gateway.md): Hermes adapter setup, capabilities, and current limitations.
+- [`docs/deployment/entra-oauth2-proxy.md`](docs/deployment/entra-oauth2-proxy.md): Entra ID, oauth2-proxy, nginx, and TLS deployment recipe.
 
 ## Current Limitations
 
