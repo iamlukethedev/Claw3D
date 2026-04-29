@@ -20,6 +20,40 @@ type CustomRuntimeProxyInput = {
   method?: "GET" | "POST";
   body?: unknown;
   signal?: AbortSignal;
+  timeoutMs?: number;
+};
+
+const createTimeoutSignal = (
+  signal: AbortSignal | undefined,
+  timeoutMs: number | undefined
+): { signal: AbortSignal | undefined; cleanup: () => void; timedOut: () => boolean } => {
+  if (!timeoutMs) {
+    return { signal, cleanup: () => {}, timedOut: () => false };
+  }
+  const controller = new AbortController();
+  let didTimeout = false;
+  const timeoutId = window.setTimeout(() => {
+    didTimeout = true;
+    controller.abort(new DOMException("Custom runtime request timed out.", "TimeoutError"));
+  }, timeoutMs);
+  const abortFromParent = () => {
+    controller.abort(signal?.reason);
+  };
+  if (signal) {
+    if (signal.aborted) {
+      abortFromParent();
+    } else {
+      signal.addEventListener("abort", abortFromParent, { once: true });
+    }
+  }
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      window.clearTimeout(timeoutId);
+      signal?.removeEventListener("abort", abortFromParent);
+    },
+    timedOut: () => didTimeout,
+  };
 };
 
 export async function requestCustomRuntime<T = unknown>({
@@ -28,26 +62,42 @@ export async function requestCustomRuntime<T = unknown>({
   method = "GET",
   body,
   signal,
+  timeoutMs,
 }: CustomRuntimeProxyInput): Promise<T> {
   const normalizedRuntimeUrl = normalizeCustomBaseUrl(runtimeUrl);
   if (!normalizedRuntimeUrl) {
     throw new Error("Custom runtime URL is not configured.");
   }
-  const response = await fetch("/api/runtime/custom", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    cache: "no-store",
-    signal,
-    body: JSON.stringify({
-      runtimeUrl: normalizedRuntimeUrl,
-      pathname,
-      method,
-      body,
-    }),
-  });
+  const timeout = createTimeoutSignal(signal, timeoutMs);
+  let response: Response;
+  try {
+    response = await fetch("/api/runtime/custom", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      cache: "no-store",
+      signal: timeout.signal,
+      body: JSON.stringify({
+        runtimeUrl: normalizedRuntimeUrl,
+        pathname,
+        method,
+        body,
+      }),
+    });
+  } catch (error) {
+    if (
+      timeout.timedOut() &&
+      error instanceof DOMException &&
+      (error.name === "AbortError" || error.name === "TimeoutError")
+    ) {
+      throw new Error("Custom runtime request timed out.");
+    }
+    throw error;
+  } finally {
+    timeout.cleanup();
+  }
   if (!response.ok) {
     const text = await response.text();
     throw new Error(
@@ -70,5 +120,5 @@ export async function fetchCustomRuntimeJson<T = unknown>(
 }
 
 export async function probeCustomRuntime(runtimeUrl: string): Promise<void> {
-  await fetchCustomRuntimeJson(runtimeUrl, "/health");
+  await requestCustomRuntime({ runtimeUrl, pathname: "/health", method: "GET", timeoutMs: 4_000 });
 }

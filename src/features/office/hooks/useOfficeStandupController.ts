@@ -113,6 +113,9 @@ const everyoneArrived = (meeting: StandupMeeting | null) => {
 const isMeetingActive = (meeting: StandupMeeting | null) =>
   meeting?.phase === "gathering" || meeting?.phase === "in_progress";
 
+const hasSameJsonShape = <T,>(left: T, right: T) =>
+  JSON.stringify(left) === JSON.stringify(right);
+
 export type OfficeStandupController = {
   config: StudioStandupPreferencePublic | null;
   meeting: StandupMeeting | null;
@@ -161,7 +164,9 @@ export const useOfficeStandupController = (params: {
         `/api/office/standup/config?gatewayUrl=${encodeURIComponent(gatewayUrl)}`,
         { cache: "no-store" }
       );
-      setConfig(payload.config);
+      setConfig((current) =>
+        current && hasSameJsonShape(current, payload.config) ? current : payload.config
+      );
     })();
     configRefreshInFlightRef.current = task.finally(() => {
       configRefreshInFlightRef.current = null;

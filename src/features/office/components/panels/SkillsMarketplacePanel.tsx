@@ -29,6 +29,7 @@ const FILTER_LABELS: Record<MarketplaceFilter, string> = {
   "setup-required": "Needs setup",
   "built-in": "Built-in",
   workspace: "Workspace",
+  community: "Community",
   extra: "Community",
   other: "Other",
 };
@@ -121,7 +122,7 @@ export function SkillsMarketplacePanel({
     const normalizedQuery = query.trim().toLowerCase();
     const visibleCollectionIds: SkillMarketplaceCollectionId[] =
       activeFilter === "all"
-        ? ["claw3d", "built-in", "installed", "workspace", "extra", "other"]
+        ? ["claw3d", "built-in", "installed", "workspace", "community", "extra", "other"]
         : [activeFilter];
     return collections
       .filter((collection) => visibleCollectionIds.includes(collection.id))
@@ -162,6 +163,7 @@ export function SkillsMarketplacePanel({
       "setup-required": 0,
       "built-in": 0,
       workspace: 0,
+      community: 0,
       extra: 0,
       other: 0,
     };

@@ -42,6 +42,7 @@ const resolveStorePath = () => {
 };
 
 const trimString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+const preserveString = (value: unknown) => (typeof value === "string" ? value : "");
 
 const normalizeStringArray = (value: unknown): string[] =>
   Array.isArray(value)
@@ -71,14 +72,15 @@ const normalizeTaskRecord = (value: unknown): SharedTaskRecord | null => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
   const id = trimString(record.id);
-  const title = trimString(record.title);
+  const rawTitle = preserveString(record.title);
+  const title = rawTitle.trim();
   const createdAt = trimString(record.createdAt);
   const updatedAt = trimString(record.updatedAt);
   if (!id || !title || !createdAt || !updatedAt) return null;
   return {
     id,
-    title,
-    description: trimString(record.description),
+    title: rawTitle,
+    description: preserveString(record.description),
     status: isTaskBoardStatus(record.status) ? record.status : "todo",
     source: isTaskBoardSource(record.source) ? record.source : "claw3d_manual",
     sourceEventId: trimString(record.sourceEventId) || null,
@@ -141,6 +143,7 @@ const MAX_DESCRIPTION_LENGTH = 5_000;
 const MAX_NOTE_LENGTH = 2_000;
 const MAX_NOTES_COUNT = 50;
 const MAX_TASKS = 500;
+const MAX_HISTORY_ENTRIES = 100;
 
 const writeStore = (store: SharedTaskStore) => {
   const storePath = resolveStorePath();
@@ -177,7 +180,7 @@ const appendHistory = (
       },
     ];
   }
-  const prior = existing.history ?? [];
+  const prior = (existing.history ?? []).slice(-MAX_HISTORY_ENTRIES + 1);
   if (existing.isArchived !== next.isArchived && next.isArchived) {
     return [
       ...prior,
@@ -233,8 +236,14 @@ export const upsertSharedTask = (
 
   const next: SharedTaskRecord = {
     id: task.id.trim(),
-    title: truncateField(task.title.trim() || existing?.title || "Untitled task", MAX_TITLE_LENGTH),
-    description: truncateField(task.description?.trim() ?? existing?.description ?? "", MAX_DESCRIPTION_LENGTH),
+    title: truncateField(
+      typeof task.title === "string" && task.title.trim() ? task.title : existing?.title || "Untitled task",
+      MAX_TITLE_LENGTH,
+    ),
+    description: truncateField(
+      typeof task.description === "string" ? task.description : existing?.description ?? "",
+      MAX_DESCRIPTION_LENGTH,
+    ),
     status: isTaskBoardStatus(rawStatus) ? rawStatus : "todo",
     source: isTaskBoardSource(rawSource) ? rawSource : "claw3d_manual",
     sourceEventId: task.sourceEventId ?? existing?.sourceEventId ?? null,

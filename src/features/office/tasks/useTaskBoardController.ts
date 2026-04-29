@@ -940,7 +940,7 @@ export const useTaskBoardController = ({
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       void refreshSharedTasks();
-    }, 4_000);
+    }, 15_000);
     return () => {
       window.clearInterval(intervalId);
     };
