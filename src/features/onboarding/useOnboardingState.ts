@@ -57,7 +57,7 @@ export const useOnboardingState = (): OnboardingStateReturn => {
   }, []);
 
   return {
-    showOnboarding: completed === false,
+    showOnboarding: false,
     completeOnboarding,
     resetOnboarding,
   };
