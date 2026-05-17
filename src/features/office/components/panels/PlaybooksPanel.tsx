@@ -1,5 +1,6 @@
 "use client";
 
+import { T } from "@/lib/i18n/TranslationProvider";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AgentState } from "@/features/agents/state/store";
@@ -392,7 +393,7 @@ export function PlaybooksPanel({
         <div className="flex items-center justify-between gap-2">
           <div>
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/70">
-              Playbooks
+              <T id="panel.playbooks" />
             </div>
             <div className="mt-1 font-mono text-[11px] text-white/40">
               Launch reusable schedules for the whole headquarters.

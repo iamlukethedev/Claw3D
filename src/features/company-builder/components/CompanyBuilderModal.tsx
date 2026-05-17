@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GitBranch, Plus, Sparkles, Trash2, Wand2, X } from "lucide-react";
 import { AgentAvatarPreview3D } from "@/features/agents/components/AgentAvatarPreview3D";
 import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
+import { T, useTranslation } from "@/lib/i18n/TranslationProvider";
 import { createDefaultAgentAvatarProfile } from "@/lib/avatars/profile";
 import type {
   CompanyBuilderInput,
@@ -103,6 +104,7 @@ export function CompanyBuilderModal({
   onGeneratePlan,
   onCreateCompany,
 }: CompanyBuilderModalProps) {
+  const { t } = useTranslation();
   const [input, setInput] = useState<CompanyBuilderInput>({
     businessDescription: initialInput?.businessDescription ?? "",
     improvedBrief: initialInput?.improvedBrief ?? "",
@@ -192,7 +194,7 @@ export function CompanyBuilderModal({
               <Sparkles className="h-4 w-4" />
               Company Builder
             </div>
-            <h2 className="mt-1 text-lg font-semibold">Design an AI company from one prompt</h2>
+            <h2 className="mt-1 text-lg font-semibold"><T id="company.modal_heading" fallback="Design an AI company from one prompt" /></h2>
             <p className="mt-1 text-sm text-white/55">
               Uses your connected runtime
               {plannerAgentName ? ` via ${plannerAgentName}.` : "."}
@@ -287,7 +289,7 @@ export function CompanyBuilderModal({
                       disabled={busy}
                     >
                       <Wand2 className="h-3 w-3" />
-                      {input.businessDescription.trim() ? "Edit prompt" : "Describe company"}
+                      {input.businessDescription.trim() ? t("company.edit_prompt", "Edit prompt") : t("company.describe_company", "Describe company")}
                     </button>
                   </div>
                   <div className="text-sm leading-6 text-white/70">
@@ -436,7 +438,7 @@ export function CompanyBuilderModal({
                     disabled={busy}
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    Add role
+                    <T id="company.add_role" fallback="Add role" />
                   </button>
                 </div>
 
@@ -684,11 +686,9 @@ export function CompanyBuilderModal({
               <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center">
                 <div className="max-w-md space-y-3">
                   <Sparkles className="mx-auto h-8 w-8 text-cyan-300/70" />
-                  <p className="text-lg font-semibold text-white">No company generated yet</p>
+                  <p className="text-lg font-semibold text-white"><T id="company.no_generated" fallback="No company generated yet" /></p>
                   <p className="text-sm text-white/55">
-                    Start by describing the company. Claw3D will create the improved brief
-                    automatically, then you can generate and edit the org structure before anything
-                    is created.
+                    <T id="company.no_generated_desc" fallback="Start by describing the company. Claw3D will create the improved brief automatically, then you can generate and edit the org structure before anything is created." />
                   </p>
                 </div>
               </div>

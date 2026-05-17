@@ -4,6 +4,7 @@ import type { GatewayStatus } from "@/lib/gateway/GatewayClient";
 import { isLocalGatewayUrl } from "@/lib/gateway/local-gateway";
 import type { StudioGatewayAdapterType, StudioGatewaySettings } from "@/lib/studio/settings";
 import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
+import { T } from "@/lib/i18n/TranslationProvider";
 
 type GatewayConnectScreenProps = {
   gatewayUrl: string;
@@ -87,15 +88,15 @@ export const GatewayConnectScreen = ({
   };
   const statusCopy = useMemo(() => {
     if (status === "connecting" && isLocal) {
-      return `Local gateway detected on port ${localPort}. Connecting…`;
+      return <T id="status.local_gateway_found" fallback={`Local gateway detected on port ${localPort}. Connecting…`} />;
     }
     if (status === "connecting") {
-      return "Connecting to remote gateway…";
+      return <T id="status.connecting_remote" fallback="Connecting to remote gateway…" />;
     }
     if (isLocal) {
-      return "No local gateway found.";
+      return <T id="status.local_gateway_not_found" fallback="No local gateway found." />;
     }
-    return "Not connected to a gateway.";
+    return <T id="gateway.not_connected" fallback="Not connected to a gateway." />;
   }, [isLocal, localPort, status]);
   const selectedAdapterHint = useMemo(() => {
     switch (selectedAdapterType) {
@@ -165,7 +166,7 @@ export const GatewayConnectScreen = ({
   const remoteForm = (
     <div className="mt-2.5 flex flex-col gap-3">
       <label className="flex flex-col gap-1 text-[11px] font-medium text-foreground/90">
-        Upstream URL
+        <T id="gateway.upstream_url" fallback="Upstream URL" />
         <input
           className="ui-input h-10 rounded-md px-4 font-sans text-sm text-foreground outline-none"
           type="text"
@@ -184,7 +185,7 @@ export const GatewayConnectScreen = ({
       </div>
 
       <label className="flex flex-col gap-1 text-[11px] font-medium text-foreground/90">
-        {tokenOptional ? "Upstream token (optional)" : "Upstream token"}
+        {tokenOptional ? <T id="gateway.upstream_token_optional" fallback="Upstream token (optional)" /> : <T id="gateway.upstream_token" fallback="Upstream token" />}
         <div className="relative">
           <input
             className="ui-input h-10 w-full rounded-md px-4 pr-10 font-sans text-sm text-foreground outline-none"
@@ -215,21 +216,20 @@ export const GatewayConnectScreen = ({
         onClick={onConnect}
         disabled={connectDisabled || !gatewayUrl.trim()}
       >
-        {connectLabel}
+        {status === "connecting" ? <T id="gateway.connecting" fallback="Connecting…" /> : <T id="gateway.connect" fallback="Connect" />}
       </button>
 
       {status === "connecting" ? (
         <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
           <RunningAvatarLoader size={16} trackWidth={32} inline />
-          Connecting…
+          <T id="gateway.connecting" fallback="Connecting…" />
         </div>
       ) : null}
       {error ? <p className="ui-text-danger text-xs leading-snug">{error}</p> : null}
       {showApprovalHint && selectedAdapterType === "openclaw" ? (
         <div className="rounded-md border border-border bg-muted/40 px-3 py-3 text-xs text-muted-foreground">
           <p className="leading-snug">
-            If the first connection attempt did not work, go to your OpenClaw computer and approve this
-            device:
+            <T id="gateway.approval_hint" fallback="If the first connection attempt did not work, go to your OpenClaw computer and approve this device:" />
           </p>
           <code className="mt-2 block overflow-x-auto whitespace-nowrap rounded-md bg-[var(--command-bg)] px-2.5 py-2 font-mono text-[11px] text-[var(--command-fg)]">
             openclaw devices approve --latest
@@ -257,16 +257,16 @@ export const GatewayConnectScreen = ({
       <div className="ui-card px-4 py-5 sm:px-6">
         <div>
           <p className="font-mono text-[10px] font-medium tracking-[0.06em] text-muted-foreground">
-            Remote gateway (recommended)
+            <T id="gateway.remote_section" fallback="Remote gateway (recommended)" />
           </p>
           <p className="mt-2 text-sm text-foreground/90">
-            Choose a backend, then connect to its gateway URL.
+            <T id="gateway.backend_choose" fallback="Choose a backend, then connect to its gateway URL." />
           </p>
           <p className="mt-2 font-mono text-[11px] text-muted-foreground">
-            Selected backend: {selectedAdapterType} | Active backend: {activeAdapterType}
+            <T id="gateway.selected_backend" fallback="Selected backend" />: {selectedAdapterType} | <T id="gateway.active_backend" fallback="Active backend" />: {activeAdapterType}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Each backend keeps its own saved URL and token.
+            <T id="gateway.each_backend_hint" fallback="Each backend keeps its own saved URL and token." />
           </p>
           <p className="mt-2 text-xs leading-snug text-muted-foreground">
             {selectedAdapterHint}
@@ -277,42 +277,42 @@ export const GatewayConnectScreen = ({
               className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
               onClick={useDemoPreset}
             >
-              Demo backend
+              <T id="gateway.backend_demo" fallback="Demo backend" />
             </button>
             <button
               type="button"
               className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
               onClick={useHermesPreset}
             >
-              Hermes backend
+              <T id="gateway.backend_hermes" fallback="Hermes backend" />
             </button>
             <button
               type="button"
               className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
               onClick={useLocalPreset}
             >
-              Local runtime
+              <T id="gateway.backend_local" fallback="Local runtime" />
             </button>
             <button
               type="button"
               className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
               onClick={useClaw3dPreset}
             >
-              Claw3D runtime
+              <T id="gateway.backend_claw3d" fallback="Claw3D runtime" />
             </button>
             <button
               type="button"
               className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
               onClick={useCustomPreset}
             >
-              Custom backend
+              <T id="gateway.backend_custom" fallback="Custom backend" />
             </button>
             <button
               type="button"
               className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
               onClick={useOpenClawPreset}
             >
-              OpenClaw backend
+              <T id="gateway.backend_openclaw" fallback="OpenClaw backend" />
             </button>
           </div>
         </div>
@@ -322,47 +322,36 @@ export const GatewayConnectScreen = ({
       <div className="ui-card px-4 py-4 sm:px-6 sm:py-5">
         <div className="space-y-1.5">
           <p className="font-mono text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
-            Run locally (optional)
+            <T id="gateway.run_locally_section" fallback="Run locally (optional)" />
           </p>
           <p className="text-sm text-foreground/90">
-            Start a local gateway process on this machine, then connect.
+            <T id="gateway.run_locally_desc" fallback="Start a local gateway process on this machine, then connect." />
           </p>
         </div>
         <div className="mt-3 space-y-3">
           {commandField}
           <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
-            <p className="text-xs font-medium text-foreground">Just want to see the office?</p>
+            <p className="text-xs font-medium text-foreground"><T id="gateway.see_office_hint" fallback="Just want to see the office?" /></p>
             <p className="mt-1 text-xs leading-snug text-muted-foreground">
-              Run <span className="font-mono text-foreground">{localDemoCommand}</span> to start a built-in mock gateway with demo agents.
-              Then choose <span className="font-mono text-foreground">Demo backend</span> and connect.
+              <T id="gateway.see_office_desc" fallback="Run `npm run demo-gateway` to start a built-in mock gateway with demo agents. Then choose Demo backend and connect." />
             </p>
           </div>
           <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
-            <p className="text-xs font-medium text-foreground">Using Hermes locally?</p>
+            <p className="text-xs font-medium text-foreground"><T id="gateway.hermes_local_hint" fallback="Using Hermes locally?" /></p>
             <p className="mt-1 text-xs leading-snug text-muted-foreground">
-              Run <span className="font-mono text-foreground">npm run hermes-adapter</span>, then choose
-              <span className="font-mono text-foreground"> Hermes backend</span>. The default local URL is
-              <span className="font-mono text-foreground"> ws://localhost:18789</span>.
+              <T id="gateway.hermes_local_desc" fallback="Run `npm run hermes-adapter`, then choose Hermes backend. The default local URL is ws://localhost:18789." />
             </p>
           </div>
           <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
-            <p className="text-xs font-medium text-foreground">Using a local or custom runtime?</p>
+            <p className="text-xs font-medium text-foreground"><T id="gateway.local_runtime_hint" fallback="Using a local or custom runtime?" /></p>
             <p className="mt-1 text-xs leading-snug text-muted-foreground">
-              Choose <span className="font-mono text-foreground">Local runtime</span>,
-              <span className="font-mono text-foreground"> Claw3D runtime</span>, or
-              <span className="font-mono text-foreground"> Custom backend</span> and point the URL at
-              your orchestrator or runtime boundary. These profiles already preserve separate saved URLs
-              and tokens, but transport-specific chat handoff still needs a follow-up slice.
+              <T id="gateway.local_runtime_desc" fallback="Choose Local runtime, Claw3D runtime, or Custom backend and point the URL at your orchestrator or runtime boundary." />
             </p>
           </div>
           <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
-            <p className="text-xs font-medium text-foreground">Opening Claw3D from another machine?</p>
+            <p className="text-xs font-medium text-foreground"><T id="gateway.remote_access_hint" fallback="Opening Claw3D from another machine?" /></p>
             <p className="mt-1 text-xs leading-snug text-muted-foreground">
-              Start Studio with <span className="font-mono text-foreground">HOST=0.0.0.0</span> (or a
-              specific LAN/Tailscale host) and set
-              <span className="font-mono text-foreground"> STUDIO_ACCESS_TOKEN</span> before exposing it
-              beyond localhost. Gateway settings are stored on the Studio host, but OpenClaw device approval
-              remains per browser/device.
+              <T id="gateway.remote_access_desc" fallback="Start Studio with HOST=0.0.0.0 (or a specific LAN/Tailscale host) and set STUDIO_ACCESS_TOKEN before exposing it beyond localhost. Gateway settings are stored on the Studio host, but OpenClaw device approval remains per browser/device." />
             </p>
           </div>
           {localGatewayDefaults ? (
@@ -379,7 +368,7 @@ export const GatewayConnectScreen = ({
                   className="ui-btn-secondary h-9 w-full px-3 text-xs font-semibold tracking-[0.05em]"
                   onClick={onUseLocalDefaults}
                 >
-                  Use local defaults
+                  <T id="gateway.use_local_defaults" fallback="Use local defaults" />
                 </button>
               </div>
             </div>

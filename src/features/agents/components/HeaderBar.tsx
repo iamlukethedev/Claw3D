@@ -3,6 +3,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import type { GatewayStatus } from "@/lib/gateway/GatewayClient";
 import { Plug } from "lucide-react";
 import { resolveGatewayStatusBadgeClass } from "./colorSemantics";
+import { T, useTranslation } from '@/lib/i18n/TranslationProvider';
 
 type HeaderBarProps = {
   status: GatewayStatus;
@@ -15,6 +16,7 @@ export const HeaderBar = ({
   onConnectionSettings,
   showConnectionSettings = true,
 }: HeaderBarProps) => {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -40,16 +42,16 @@ export const HeaderBar = ({
     <div className="ui-topbar relative z-[180]">
       <div className="grid h-10 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 sm:px-4 md:px-5">
         <div aria-hidden="true" />
-        <p className="truncate text-sm font-semibold tracking-[0.01em] text-foreground">Claw3D</p>
+        <p className="truncate text-sm font-semibold tracking-[0.01em] text-foreground"><T id="header.app_title" fallback="Claw3D" /></p>
         <div className="flex items-center justify-end gap-1">
           {status !== "disconnected" ? (
             <span
               className={`ui-chip px-2 py-0.5 font-mono text-[9px] font-semibold tracking-[0.08em] ${resolveGatewayStatusBadgeClass(status)}`}
               data-testid="gateway-status-indicator"
               data-status={status}
-              aria-label={`Gateway ${status}`}
+              aria-label={t('header.gateway_connection', '閘道器連線')}
             >
-              {status === "connecting" ? "Connecting" : "Connected"}
+              {status === "connecting" ? t('header.connecting', '連線中') : t('header.connected', '已連線')}
             </span>
           ) : null}
           <ThemeToggle />
@@ -64,7 +66,7 @@ export const HeaderBar = ({
                 onClick={() => setMenuOpen((prev) => !prev)}
               >
                 <Plug className="h-3.5 w-3.5" />
-                <span className="sr-only">Open studio menu</span>
+                <span className="sr-only">{t('header.open_studio_menu', '開啟 Studio 選單')}</span>
               </button>
               {menuOpen ? (
                 <div className="ui-card ui-menu-popover absolute right-0 top-9 z-[260] min-w-44 p-1">
@@ -77,7 +79,7 @@ export const HeaderBar = ({
                     }}
                     data-testid="gateway-settings-toggle"
                   >
-                    Gateway connection
+                    {t('header.gateway_connection', '閘道器連線')}
                   </button>
                 </div>
               ) : null}

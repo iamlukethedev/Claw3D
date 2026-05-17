@@ -5,6 +5,7 @@ import type { AgentState } from "@/features/agents/state/store";
 import { TaskBoardView } from "@/features/office/tasks/TaskBoardView";
 import type { TaskBoardCard, TaskBoardStatus } from "@/features/office/tasks/types";
 import type { CronJobSummary } from "@/lib/cron/types";
+import { T, useTranslation } from "@/lib/i18n/TranslationProvider";
 
 export function TaskBoardPanel({
   agents,
@@ -37,10 +38,12 @@ export function TaskBoardPanel({
   onDeleteCard: (cardId: string) => void;
   onRefreshCronJobs: () => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <TaskBoardView
-      title="Kanban"
-      subtitle="Manual tasks, inferred requests, and scheduled playbooks."
+      title={t("taskboard.title", "看板")}
+      subtitle={t("taskboard.subtitle", "手動任務、推斷請求與排程劇本。")}
       agents={agents}
       cardsByStatus={cardsByStatus}
       selectedCard={selectedCard}

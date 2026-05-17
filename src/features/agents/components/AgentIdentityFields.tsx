@@ -1,5 +1,7 @@
 "use client";
 
+import { T, useTranslation } from '@/lib/i18n/TranslationProvider';
+
 export type AgentIdentityValues = {
   name: string;
   creature: string;
@@ -21,14 +23,15 @@ export function AgentIdentityFields({
   disabled = false,
   onChange,
 }: AgentIdentityFieldsProps) {
+  const { t } = useTranslation();
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <label className="flex flex-col gap-2 text-xs text-muted-foreground">
-        Name
+        <T id="agent.identity.name" fallback="名稱" />
         <input
           className={inputClassName}
           value={values.name}
-          placeholder="e.g. Luke"
+          placeholder={t('agent.identity.name_placeholder', '例如 小明')}
           disabled={disabled}
           onChange={(event) => {
             onChange("name", event.target.value);
@@ -36,11 +39,11 @@ export function AgentIdentityFields({
         />
       </label>
       <label className="flex flex-col gap-2 text-xs text-muted-foreground">
-        Role
+        <T id="agent.identity.role" fallback="角色" />
         <input
           className={inputClassName}
           value={values.creature}
-          placeholder="e.g. Product Designer"
+          placeholder={t('agent.identity.role_placeholder', '例如 產品設計師')}
           disabled={disabled}
           onChange={(event) => {
             onChange("creature", event.target.value);
@@ -48,11 +51,11 @@ export function AgentIdentityFields({
         />
       </label>
       <label className="flex flex-col gap-2 text-xs text-muted-foreground">
-        Vibe
+        <T id="agent.identity.vibe" fallback="風格" />
         <input
           className={inputClassName}
           value={values.vibe}
-          placeholder="e.g. Calm, sharp, and helpful"
+          placeholder={t('agent.identity.vibe_placeholder', '例如 冷靜、敏銳、樂於助人')}
           disabled={disabled}
           onChange={(event) => {
             onChange("vibe", event.target.value);
@@ -60,11 +63,11 @@ export function AgentIdentityFields({
         />
       </label>
       <label className="flex flex-col gap-2 text-xs text-muted-foreground">
-        Emoji
+        <T id="agent.identity.emoji" fallback="表情符號" />
         <input
           className={inputClassName}
           value={values.emoji}
-          placeholder="e.g. ✨"
+          placeholder={t('agent.identity.emoji_placeholder', '例如 ✨')}
           disabled={disabled}
           onChange={(event) => {
             onChange("emoji", event.target.value);

@@ -12,6 +12,7 @@ import {
   type FloorProvider,
 } from "@/lib/office/floors";
 import type { FloorRosterState } from "@/lib/office/floorRoster";
+import { T, useTranslation } from "@/lib/i18n/TranslationProvider";
 
 const DIRECTORY_COLLAPSED_STORAGE_KEY = "claw3d.officeFloorNav.directoryCollapsed";
 
@@ -23,23 +24,15 @@ type OfficeFloorNavProps = {
   activeAdapterType?: FloorProvider | null;
 };
 
-const PROVIDER_LABEL: Record<FloorProvider, string> = {
-  demo: "Demo",
-  openclaw: "OpenClaw",
-  hermes: "Hermes",
-  paperclip: "Paperclip",
-  custom: "Custom",
-  local: "Local",
-  claw3d: "Claw3D",
-};
-
 const renderFloorButton = (params: {
   floor: FloorDefinition;
   activeFloorId: FloorId;
   floorRosterCache: Record<FloorId, FloorRosterState>;
   onSelectFloor: (floorId: FloorId) => void;
+  providerLabel: Record<FloorProvider, string>;
+  t: (key: string, fallback?: string) => string;
 }) => {
-  const { floor, activeFloorId, floorRosterCache, onSelectFloor } = params;
+  const { floor, activeFloorId, floorRosterCache, onSelectFloor, providerLabel, t } = params;
   const active = floor.id === activeFloorId;
   const rosterState = floorRosterCache[floor.id];
   const rosterCount = rosterState?.entries.length ?? 0;
@@ -59,12 +52,12 @@ const renderFloorButton = (params: {
         floor.enabled ? "cursor-pointer" : "cursor-not-allowed opacity-45",
       ].join(" ")}
       aria-pressed={active}
-      aria-label={`Select ${floor.label}`}
+      aria-label={t("floor.select_label", `Select ${floor.label}`).replace("${floor.label}", floor.label)}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45">
-            {floor.zone === "outside" ? "Destination" : "Floor"}
+            {floor.zone === "outside" ? t("floor.destination", "目的地") : t("floor.floor", "樓層")}
           </div>
           <div className="truncate text-sm font-semibold text-white">{floor.label}</div>
         </div>
@@ -76,17 +69,19 @@ const renderFloorButton = (params: {
               : "border-white/10 bg-white/5 text-white/55",
           ].join(" ")}
         >
-          {PROVIDER_LABEL[floor.provider]}
+          {providerLabel[floor.provider]}
         </span>
       </div>
       <div className="mt-2 flex items-center justify-between gap-2 font-mono text-[10px] text-white/45">
         <span>{floor.shortLabel}</span>
         {floor.enabled ? (
           <span>
-            roster {rosterCount} | {rosterStatus}
+            {t("floor.roster_status", "roster %{count} | %{status}")
+              .replace("%{count}", String(rosterCount))
+              .replace("%{status}", rosterStatus)}
           </span>
         ) : (
-          <span>Locked</span>
+          <span><T id="floor.locked" fallback="已鎖定" /></span>
         )}
       </div>
     </button>
@@ -99,6 +94,7 @@ export function OfficeFloorNav({
   onSelectFloor,
   activeAdapterType,
 }: OfficeFloorNavProps) {
+  const { t } = useTranslation();
   const availableFloors = listAvailableFloorsForAdapter(activeAdapterType ?? null);
   const buildingFloors = availableFloors.filter((f) => f.zone === "building");
   const outsideFloors = availableFloors.filter((f) => f.zone === "outside");
@@ -137,6 +133,16 @@ export function OfficeFloorNav({
     });
   };
 
+  const PROVIDER_LABEL: Record<FloorProvider, string> = {
+    demo: t("floor.provider_demo", "Demo"),
+    openclaw: t("floor.provider_openclaw", "OpenClaw"),
+    hermes: t("floor.provider_hermes", "Hermes"),
+    paperclip: t("floor.provider_paperclip", "Paperclip"),
+    custom: t("floor.provider_custom", "自訂"),
+    local: t("floor.provider_local", "本機"),
+    claw3d: t("floor.provider_claw3d", "Claw3D"),
+  };
+
   return (
     <aside className="pointer-events-none fixed left-4 top-24 z-40 flex w-[240px] max-w-[calc(100vw-2rem)] flex-col gap-3">
       <section className="pointer-events-auto rounded-2xl border border-amber-400/20 bg-black/78 p-3 shadow-2xl backdrop-blur">
@@ -147,10 +153,12 @@ export function OfficeFloorNav({
           aria-expanded={!directoryCollapsed}
           aria-controls="office-floor-directory-body"
           aria-label={
-            directoryCollapsed ? "Expand building directory" : "Collapse building directory"
+            directoryCollapsed
+              ? t("floor.expand", "展開建築目錄")
+              : t("floor.collapse", "收合建築目錄")
           }
         >
-          <span>Building Directory</span>
+          <span><T id="floor.directory" fallback="建築目錄" /></span>
           {directoryCollapsed ? (
             <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
           ) : (
@@ -164,22 +172,22 @@ export function OfficeFloorNav({
                 type="button"
                 className="rounded border border-amber-500/20 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-amber-100/80 transition-colors hover:border-amber-400/45 hover:text-amber-50"
                 onClick={() => onSelectFloor(getAdjacentEnabledOfficeFloorId(activeFloor.id, -1))}
-                aria-label="Switch to previous enabled floor"
+                aria-label={t("floor.prev_aria", "Switch to previous enabled floor")}
               >
-                Prev
+                <T id="floor.prev" fallback="上一個" />
               </button>
               <button
                 type="button"
                 className="rounded border border-amber-500/20 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-amber-100/80 transition-colors hover:border-amber-400/45 hover:text-amber-50"
                 onClick={() => onSelectFloor(getAdjacentEnabledOfficeFloorId(activeFloor.id, 1))}
-                aria-label="Switch to next enabled floor"
+                aria-label={t("floor.next_aria", "Switch to next enabled floor")}
               >
-                Next
+                <T id="floor.next" fallback="下一個" />
               </button>
             </div>
             <div className="mt-3 flex flex-col gap-2">
               <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
-                Building
+                <T id="floor.building" fallback="建築" />
               </div>
               {buildingFloors.map((floor) =>
                 renderFloorButton({
@@ -187,13 +195,15 @@ export function OfficeFloorNav({
                   activeFloorId: displayActiveFloorId,
                   floorRosterCache,
                   onSelectFloor,
+                  providerLabel: PROVIDER_LABEL,
+                  t,
                 }),
               )}
             </div>
             {outsideFloors.length > 0 ? (
               <div className="mt-4 flex flex-col gap-2">
                 <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
-                  Outside
+                  <T id="floor.outside" fallback="外部" />
                 </div>
                 {outsideFloors.map((floor) =>
                   renderFloorButton({
@@ -201,6 +211,8 @@ export function OfficeFloorNav({
                     activeFloorId: displayActiveFloorId,
                     floorRosterCache,
                     onSelectFloor,
+                    providerLabel: PROVIDER_LABEL,
+                    t,
                   }),
                 )}
               </div>
@@ -211,13 +223,15 @@ export function OfficeFloorNav({
 
       <section className="pointer-events-auto rounded-2xl border border-white/10 bg-black/68 px-3 py-2 shadow-xl backdrop-blur">
         <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/45">
-          Current Floor
+          <T id="floor.current" fallback="目前樓層" />
         </div>
         <div className="mt-1 text-sm font-semibold text-white">{activeFloor.label}</div>
         <div className="mt-1 flex items-center justify-between gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-white/45">
           <span>{PROVIDER_LABEL[activeFloor.provider]}</span>
           <span>
-            roster {activeRoster?.entries.length ?? 0} | {activeRoster?.status ?? "idle"}
+            {t("floor.roster_status", "roster %{count} | %{status}")
+              .replace("%{count}", String(activeRoster?.entries.length ?? 0))
+              .replace("%{status}", activeRoster?.status ?? "idle")}
           </span>
         </div>
       </section>

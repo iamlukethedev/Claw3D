@@ -7,6 +7,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import type { RuntimeAgentMessageMode } from "@/lib/runtime/agentMessaging";
+import { T, useTranslation } from "@/lib/i18n/TranslationProvider";
 
 export type RemoteAgentChatMessage = {
   id: string;
@@ -65,18 +66,19 @@ export const RemoteAgentChatPanel = memo(function RemoteAgentChatPanel({
   onSend,
   onHandoff,
 }: RemoteAgentChatPanelProps) {
+  const { t } = useTranslation();
   const [draftValue, setDraftValue] = useState(draft);
   const feedRef = useRef<HTMLDivElement | null>(null);
   const sendDisabled = !canSend || sending || handoffing || !draftValue.trim();
   const handoffDisabled = !canSend || sending || handoffing || !draftValue.trim();
   const helperText = useMemo(() => {
     if (disabledReason?.trim()) return disabledReason.trim();
-    if (sending) return "Forwarding your message to the remote gateway.";
+    if (sending) return t("remote_chat.forwarding", "正在將您的訊息轉送至遠端閘道器。");
     if (mode === "interval") {
-      return "Interval thread. Use this for ongoing coordination and checkpoints.";
+      return t("remote_chat.mode_interval_desc", "間隔執行緒。用於持續協調與檢查點。");
     }
-    return "Direct relay. Remote replies are not mirrored here yet.";
-  }, [disabledReason, mode, sending]);
+    return t("remote_chat.mode_direct_desc", "直接中繼。遠端回覆尚未鏡像至此處。");
+  }, [disabledReason, mode, sending, t]);
 
   useEffect(() => {
     setDraftValue(draft);
@@ -109,7 +111,7 @@ export const RemoteAgentChatPanel = memo(function RemoteAgentChatPanel({
     <div className="flex min-h-0 flex-1 flex-col bg-[#0e0a04]">
       <div className="border-b border-white/10 px-4 py-3">
         <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300/70">
-          Remote Agent
+          <T id="remote_chat.title" fallback="遠端 Agent" />
         </div>
         <div className="mt-1 text-sm font-medium text-white">{agentName}</div>
         <div className="mt-2 font-mono text-[11px] text-white/45">{helperText}</div>
@@ -118,7 +120,7 @@ export const RemoteAgentChatPanel = memo(function RemoteAgentChatPanel({
       <div ref={feedRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
           <div className="rounded border border-dashed border-white/10 bg-black/10 px-3 py-3 font-mono text-[11px] text-white/35">
-            Send a plain-text note to this remote agent.
+            <T id="remote_chat.empty" fallback="傳送純文字備註至此遠端 Agent。" />
           </div>
         ) : (
           messages.map((message) => (
@@ -163,7 +165,9 @@ export const RemoteAgentChatPanel = memo(function RemoteAgentChatPanel({
                     : "border-white/10 bg-black/10 text-white/55 hover:border-cyan-400/25 hover:text-cyan-50"
                 }`}
               >
-                {entry}
+                {entry === "direct"
+                  ? t("remote_chat.mode_direct", "直接")
+                  : t("remote_chat.mode_interval", "間隔")}
               </button>
             );
           })}
@@ -176,31 +180,33 @@ export const RemoteAgentChatPanel = memo(function RemoteAgentChatPanel({
             onDraftChange(nextValue);
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Message the remote agent."
+          placeholder={t("remote_chat.text_placeholder", "向遠端 Agent 傳送訊息。")}
           className="min-h-[92px] w-full resize-none rounded border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none transition focus:border-cyan-400/50"
         />
         <div className="mt-3 grid gap-2">
           <textarea
             value={handoffContext}
             onChange={(event) => onHandoffContextChange(event.target.value)}
-            placeholder="Handoff context"
+            placeholder={t("remote_chat.handoff_placeholder", "交接內容")}
             className="min-h-[68px] w-full resize-none rounded border border-white/10 bg-black/20 px-3 py-2 text-xs text-white outline-none transition focus:border-amber-400/40"
           />
           <input
             value={handoffDeliverables}
             onChange={(event) => onHandoffDeliverablesChange(event.target.value)}
-            placeholder="Deliverables, comma-separated"
+            placeholder={t("remote_chat.deliverables_placeholder", "交付項目（逗號分隔）")}
             className="h-10 w-full rounded border border-white/10 bg-black/20 px-3 text-xs text-white outline-none transition focus:border-amber-400/40"
           />
           <input
             value={handoffAcceptance}
             onChange={(event) => onHandoffAcceptanceChange(event.target.value)}
-            placeholder="Acceptance criteria"
+            placeholder={t("remote_chat.acceptance_placeholder", "驗收標準")}
             className="h-10 w-full rounded border border-white/10 bg-black/20 px-3 text-xs text-white outline-none transition focus:border-amber-400/40"
           />
         </div>
         <div className="mt-3 flex items-center justify-between gap-3">
-          <div className="font-mono text-[10px] text-white/35">Enter sends. Shift+Enter adds a line.</div>
+          <div className="font-mono text-[10px] text-white/35">
+            <T id="remote_chat.enter_hint" fallback="Enter 發送。Shift+Enter 換行。" />
+          </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -208,7 +214,9 @@ export const RemoteAgentChatPanel = memo(function RemoteAgentChatPanel({
               disabled={handoffDisabled}
               className="rounded border border-amber-400/30 bg-amber-500/8 px-3 py-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-amber-100 transition hover:border-amber-300/55 hover:bg-amber-500/12 disabled:cursor-not-allowed disabled:opacity-45"
             >
-              {handoffing ? "Handing off..." : "Handoff"}
+              {handoffing
+                ? t("remote_chat.handoff_progress", "交接中…")
+                : t("remote_chat.handoff_btn", "交接")}
             </button>
             <button
               type="button"
@@ -216,7 +224,9 @@ export const RemoteAgentChatPanel = memo(function RemoteAgentChatPanel({
               disabled={sendDisabled}
               className="rounded border border-cyan-400/40 bg-cyan-500/10 px-3 py-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-cyan-100 transition hover:border-cyan-300/60 hover:bg-cyan-500/15 disabled:cursor-not-allowed disabled:opacity-45"
             >
-              {sending ? "Sending..." : "Send"}
+              {sending
+                ? t("remote_chat.sending", "發送中…")
+                : t("remote_chat.send", "發送")}
             </button>
           </div>
         </div>

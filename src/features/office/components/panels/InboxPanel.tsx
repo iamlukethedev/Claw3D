@@ -3,15 +3,7 @@
 import { useMemo } from "react";
 
 import type { AgentState } from "@/features/agents/state/store";
-
-const formatRelativeTime = (timestampMs: number | null) => {
-  if (!timestampMs) return "No output yet";
-  const deltaMs = Date.now() - timestampMs;
-  if (deltaMs < 60_000) return "Just now";
-  if (deltaMs < 3_600_000) return `${Math.max(1, Math.floor(deltaMs / 60_000))}m ago`;
-  if (deltaMs < 86_400_000) return `${Math.max(1, Math.floor(deltaMs / 3_600_000))}h ago`;
-  return `${Math.max(1, Math.floor(deltaMs / 86_400_000))}d ago`;
-};
+import { T, useTranslation } from '@/lib/i18n/TranslationProvider';
 
 export function InboxPanel({
   agents,
@@ -20,6 +12,17 @@ export function InboxPanel({
   agents: AgentState[];
   onSelectAgent: (agentId: string) => void;
 }) {
+  const { t } = useTranslation();
+
+  const formatRelativeTime = (timestampMs: number | null) => {
+    if (!timestampMs) return t('inbox.time_no_output', '尚無輸出');
+    const deltaMs = Date.now() - timestampMs;
+    if (deltaMs < 60_000) return t('inbox.time_just_now', '剛剛');
+    if (deltaMs < 3_600_000) return t('inbox.time_min_ago', '%{n} 分鐘前').replace('%{n}', String(Math.max(1, Math.floor(deltaMs / 60_000))));
+    if (deltaMs < 86_400_000) return t('inbox.time_hour_ago', '%{n} 小時前').replace('%{n}', String(Math.max(1, Math.floor(deltaMs / 3_600_000))));
+    return t('inbox.time_day_ago', '%{n} 天前').replace('%{n}', String(Math.max(1, Math.floor(deltaMs / 86_400_000))));
+  };
+
   const sortedAgents = useMemo(
     () =>
       [...agents].sort(

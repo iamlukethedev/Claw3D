@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 
+import { T, useTranslation } from '@/lib/i18n/TranslationProvider';
+
 import type { SkillStatusReport } from "@/lib/skills/types";
 import {
   buildAgentSkillsAllowlistSet,
@@ -25,19 +27,6 @@ type AgentSkillsPanelProps = {
   onOpenSystemSetup: (skillKey?: string) => void;
 };
 
-const FILTERS: Array<{ id: SkillRowFilter; label: string }> = [
-  { id: "all", label: "All" },
-  { id: "ready", label: "Ready" },
-  { id: "setup-required", label: "Setup required" },
-  { id: "not-supported", label: "Not supported" },
-];
-
-const DISPLAY_LABELS: Record<AgentSkillDisplayState, string> = {
-  ready: "Ready",
-  "setup-required": "Setup required",
-  "not-supported": "Not supported",
-};
-
 const DISPLAY_CLASSES: Record<AgentSkillDisplayState, string> = {
   ready: "ui-badge-status-running",
   "setup-required": "ui-badge-status-error",
@@ -46,22 +35,23 @@ const DISPLAY_CLASSES: Record<AgentSkillDisplayState, string> = {
 
 const resolveHint = (
   skill: SkillStatusReport["skills"][number],
-  displayState: AgentSkillDisplayState
+  displayState: AgentSkillDisplayState,
+  t: (key: string, fallback: string) => string
 ): string | null => {
   if (displayState === "ready") {
     return null;
   }
   if (displayState === "not-supported") {
     if (skill.blockedByAllowlist) {
-      return "Blocked by bundled skills policy.";
+      return t('skills.hint_bundled', '受捆綁技能政策限制。');
     }
-    return buildSkillMissingDetails(skill).find((line) => line.startsWith("Requires OS:")) ?? "Not supported.";
+    return buildSkillMissingDetails(skill).find((line) => line.startsWith("Requires OS:")) ?? t('skills.hint_not_supported', '不支援。');
   }
   const readiness = deriveSkillReadinessState(skill);
   if (readiness === "disabled-globally") {
-    return "Disabled globally. Enable it in System setup.";
+    return t('skills.hint_disabled', '已全域停用。請在系統設定中啟用。');
   }
-  return buildSkillMissingDetails(skill)[0] ?? "Requires setup in System setup.";
+  return buildSkillMissingDetails(skill)[0] ?? t('skills.hint_setup_required', '需要在系統設定中設定。');
 };
 
 export const AgentSkillsPanel = ({
@@ -74,6 +64,21 @@ export const AgentSkillsPanel = ({
   onSetSkillEnabled,
   onOpenSystemSetup,
 }: AgentSkillsPanelProps) => {
+  const { t } = useTranslation();
+
+  const FILTERS: Array<{ id: SkillRowFilter; label: string }> = [
+    { id: "all", label: t('skills.filter_all', '全部') },
+    { id: "ready", label: t('skills.filter_ready', '就緒') },
+    { id: "setup-required", label: t('skills.filter_setup_required', '需要設定') },
+    { id: "not-supported", label: t('skills.filter_not_supported', '不支援') },
+  ];
+
+  const DISPLAY_LABELS: Record<AgentSkillDisplayState, string> = {
+    ready: t('skills.label_ready', '就緒'),
+    "setup-required": t('skills.label_setup_required', '需要設定'),
+    "not-supported": t('skills.label_not_supported', '不支援'),
+  };
+
   const [skillsFilter, setSkillsFilter] = useState("");
   const [rowFilter, setRowFilter] = useState<SkillRowFilter>("all");
 
@@ -142,24 +147,24 @@ export const AgentSkillsPanel = ({
   return (
     <section className="sidebar-section" data-testid="agent-settings-skills">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="sidebar-section-title">Skills</h3>
+        <h3 className="sidebar-section-title"><T id="skills.section_title" fallback="技能" /></h3>
         <div className="font-mono text-[10px] text-muted-foreground">
           {enabledCount}/{skillEntries.length}
         </div>
       </div>
-      <div className="mt-2 text-[11px] text-muted-foreground">Skill access controls apply to this agent.</div>
+      <div className="mt-2 text-[11px] text-muted-foreground"><T id="skills.section_desc" fallback="技能存取控制適用於此 Agent。" /></div>
       {accessMode === "selected" ? (
         <div className="mt-2 text-[10px] text-muted-foreground/80">
-          This agent is using selected skills only.
+          <T id="skills.using_selected" fallback="此 Agent 僅使用選定的技能。" />
         </div>
       ) : null}
       <div className="mt-3">
         <input
           value={skillsFilter}
           onChange={(event) => setSkillsFilter(event.target.value)}
-          placeholder="Search skills"
+          placeholder={t('skills.search_placeholder', '搜尋技能')}
           className="w-full rounded-md border border-border/60 bg-surface-1 px-3 py-2 text-[11px] text-foreground outline-none transition focus:border-border"
-          aria-label="Search skills"
+          aria-label={t('skills.search_placeholder', '搜尋技能')}
         />
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
@@ -181,12 +186,12 @@ export const AgentSkillsPanel = ({
           );
         })}
       </div>
-      {skillsLoading ? <div className="mt-3 text-[11px] text-muted-foreground">Loading skills...</div> : null}
+      {skillsLoading ? <div className="mt-3 text-[11px] text-muted-foreground"><T id="skills.loading" fallback="載入技能中…" /></div> : null}
       {!skillsLoading && skillsError ? (
         <div className="ui-alert-danger mt-3 rounded-md px-3 py-2 text-xs">{skillsError}</div>
       ) : null}
       {!skillsLoading && !skillsError && filteredRows.length === 0 ? (
-        <div className="mt-3 text-[11px] text-muted-foreground">No matching skills.</div>
+        <div className="mt-3 text-[11px] text-muted-foreground"><T id="skills.empty" fallback="找不到符合的技能。" /></div>
       ) : null}
       {!skillsLoading && !skillsError && filteredRows.length > 0 ? (
         <div className="mt-3 flex flex-col gap-2">
@@ -215,7 +220,7 @@ export const AgentSkillsPanel = ({
                   <div className="mt-1 text-[10px] text-muted-foreground/70">{entry.skill.description}</div>
                   {entry.displayState !== "ready" ? (
                     <div className="mt-1 text-[10px] text-muted-foreground/80">
-                      {resolveHint(entry.skill, entry.displayState)}
+                      {resolveHint(entry.skill, entry.displayState, t)}
                     </div>
                   ) : null}
                 </div>
@@ -241,7 +246,7 @@ export const AgentSkillsPanel = ({
                         onOpenSystemSetup(entry.skill.skillKey);
                       }}
                     >
-                      Open System Setup
+                      {t('skills.open_system_setup', '開啟系統設定')}
                     </button>
                   ) : null}
                 </div>

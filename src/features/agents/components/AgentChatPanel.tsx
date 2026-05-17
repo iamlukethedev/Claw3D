@@ -1,3 +1,4 @@
+import { T, useTranslation } from '@/lib/i18n/TranslationProvider';
 import {
   memo,
   useCallback,
@@ -230,6 +231,7 @@ const ExecApprovalCard = memo(function ExecApprovalCard({
   approval: PendingExecApproval;
   onResolve?: (id: string, decision: ExecApprovalDecision) => void;
 }) {
+  const { t } = useTranslation();
   const disabled = approval.resolving || !onResolve;
   return (
     <div
@@ -237,15 +239,20 @@ const ExecApprovalCard = memo(function ExecApprovalCard({
       data-testid={`exec-approval-card-${approval.id}`}
     >
       <div className="type-meta">
-        Exec approval required
+        <T id="exec.approval_required" fallback="Exec approval required" />
       </div>
       <div className="mt-2 rounded-md bg-surface-3 px-2 py-1.5 shadow-2xs">
         <div className="font-mono text-[10px] font-semibold text-foreground">{approval.command}</div>
       </div>
       <div className="mt-2 grid gap-1 text-[11px] text-muted-foreground sm:grid-cols-2">
-        <div>Host: {approval.host ?? "unknown"}</div>
-        <div>Expires: {formatApprovalExpiry(approval.expiresAtMs)}</div>
-        {approval.cwd ? <div className="sm:col-span-2">CWD: {approval.cwd}</div> : null}
+        <div>{t('exec.host', 'Host:')} {approval.host ?? "unknown"}</div>
+        <div>{t('exec.expires', 'Expires:')} {Number.isFinite(approval.expiresAtMs) && approval.expiresAtMs > 0 ? new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(approval.expiresAtMs)) : t('common.unknown', 'Unknown')}</div>
+        {approval.cwd ? <div className="sm:col-span-2">{t('exec.cwd', 'CWD:')} {approval.cwd}</div> : null}
       </div>
       {approval.error ? (
         <div className="ui-alert-danger mt-2 rounded-md px-2 py-1 text-[11px] shadow-2xs">
@@ -260,7 +267,7 @@ const ExecApprovalCard = memo(function ExecApprovalCard({
           disabled={disabled}
           aria-label={`Allow once for exec approval ${approval.id}`}
         >
-          Allow once
+          {t('exec.allow_once', 'Allow once')}
         </button>
         <button
           type="button"
@@ -269,7 +276,7 @@ const ExecApprovalCard = memo(function ExecApprovalCard({
           disabled={disabled}
           aria-label={`Always allow for exec approval ${approval.id}`}
         >
-          Always allow
+          {t('exec.always_allow', 'Always allow')}
         </button>
         <button
           type="button"
@@ -278,7 +285,7 @@ const ExecApprovalCard = memo(function ExecApprovalCard({
           disabled={disabled}
           aria-label={`Deny exec approval ${approval.id}`}
         >
-          Deny
+          {t('exec.deny', 'Deny')}
         </button>
       </div>
     </div>
@@ -339,6 +346,7 @@ const ThinkingDetailsRow = memo(function ThinkingDetailsRow({
   durationMs?: number;
   showTyping?: boolean;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const traceEvents = (() => {
     if (events && events.length > 0) return events;
@@ -368,7 +376,7 @@ const ThinkingDetailsRow = memo(function ThinkingDetailsRow({
         <ChevronRight className="h-3 w-3 shrink-0 transition group-open:rotate-90" />
         <span className="flex min-w-0 items-center gap-2">
           <span className="font-mono text-[10px] font-medium tracking-[0.02em]">
-            Thinking (internal)
+            <T id="chat.thinking_internal" fallback="Thinking (internal)" />
           </span>
           {typeof durationMs === "number" ? (
             <span className="inline-flex items-center gap-1 font-mono text-[10px] font-medium tracking-[0.02em] text-muted-foreground/80">
@@ -416,11 +424,12 @@ const UserMessageCard = memo(function UserMessageCard({
   text: string;
   timestampMs?: number;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="ui-chat-user-card w-full max-w-[70ch] self-end overflow-hidden rounded-[var(--radius-small)] bg-[color:var(--chat-user-bg)]">
       <div className="flex items-center justify-between gap-3 bg-[color:var(--chat-user-header-bg)] px-3 py-2 dark:px-3.5 dark:py-2.5">
         <div className="type-meta min-w-0 truncate font-mono text-foreground/90">
-          You
+          {t('chat.you', 'You')}
         </div>
         {typeof timestampMs === "number" ? (
           <time className="type-meta shrink-0 rounded-md bg-surface-3 px-2 py-0.5 font-mono text-muted-foreground/70">
@@ -460,6 +469,7 @@ const AssistantMessageCard = memo(function AssistantMessageCard({
   contentText?: string | null;
   streaming?: boolean;
 }) {
+  const { t } = useTranslation();
   const resolvedTimestamp = typeof timestampMs === "number" ? timestampMs : null;
   const hasThinking = Boolean(
     (thinkingEvents?.length ?? 0) > 0 ||
@@ -503,7 +513,7 @@ const AssistantMessageCard = memo(function AssistantMessageCard({
             data-testid="agent-typing-indicator"
           >
             <span className="font-mono text-[10px] font-medium tracking-[0.02em]">
-              Thinking
+              <T id="chat.thinking" fallback="Thinking" />
             </span>
             <span className="typing-dots" aria-hidden="true">
               <span />
@@ -521,7 +531,7 @@ const AssistantMessageCard = memo(function AssistantMessageCard({
                 data-testid="agent-typing-indicator"
               >
                 <span className="font-mono text-[10px] font-medium tracking-[0.02em]">
-                  Thinking
+                  <T id="chat.thinking" fallback="Thinking" />
                 </span>
                 <span className="typing-dots" aria-hidden="true">
                   <span />
@@ -595,6 +605,7 @@ const AssistantIntroCard = memo(function AssistantIntroCard({
   name: string;
   title: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="w-full self-start">
       <div className={`relative w-full ${ASSISTANT_MAX_WIDTH_DEFAULT_CLASS} ${ASSISTANT_GUTTER_CLASS}`}>
@@ -615,7 +626,7 @@ const AssistantIntroCard = memo(function AssistantIntroCard({
         <div className="ui-chat-assistant-card mt-2">
           <div className="text-[14px] leading-[1.65] text-foreground">{title}</div>
           <div className="mt-2 font-mono text-[10px] tracking-[0.03em] text-muted-foreground/80">
-            Try describing a task, bug, or question to get started.
+            {t('chat.start_title', 'Try describing a task, bug, or question to get started.')}
           </div>
         </div>
       </div>
@@ -723,6 +734,7 @@ const AgentChatTranscript = memo(function AgentChatTranscript({
   onResolveExecApproval?: (id: string, decision: ExecApprovalDecision) => void;
   emptyStateTitle: string;
 }) {
+  const { t } = useTranslation();
   const chatRef = useRef<HTMLDivElement | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
   const scrollFrameRef = useRef<number | null>(null);
@@ -848,15 +860,16 @@ const AgentChatTranscript = memo(function AgentChatTranscript({
           {historyMaybeTruncated && isAtTop ? (
             <div className="-mx-1 flex items-center justify-between gap-3 rounded-md bg-surface-2 px-3 py-2 shadow-2xs">
               <div className="type-meta min-w-0 truncate font-mono text-muted-foreground">
-                Showing most recent {typeof historyFetchedCount === "number" ? historyFetchedCount : "?"} messages
-                {typeof historyFetchLimit === "number" ? ` (limit ${historyFetchLimit})` : ""}
+                {t('chat.history_limit', 'Showing most recent %{shown} messages (limit %{limit})')
+                  .replace('%{shown}', String(typeof historyFetchedCount === "number" ? historyFetchedCount : "?"))
+                  .replace('%{limit}', String(typeof historyFetchLimit === "number" ? historyFetchLimit : ""))}
               </div>
               <button
                 type="button"
                 className="shrink-0 rounded-md border border-border/70 bg-surface-3 px-3 py-1.5 font-mono text-[12px] font-medium tracking-[0.02em] text-foreground transition hover:bg-surface-2"
                 onClick={onLoadMoreHistory}
               >
-                Load more
+                {t('chat.load_more', 'Load more')}
               </button>
             </div>
           ) : null}
@@ -918,9 +931,9 @@ const AgentChatTranscript = memo(function AgentChatTranscript({
             setPinned(true);
             scrollChatToBottom();
           }}
-          aria-label="Jump to latest"
+          aria-label={t('chat.jump_to_latest', 'Jump to latest')}
         >
-          Jump to latest
+          {t('chat.jump_to_latest', 'Jump to latest')}
         </button>
       ) : null}
     </div>
@@ -1017,15 +1030,16 @@ const AgentChatComposer = memo(function AgentChatComposer({
   onToolCallingToggle: (enabled: boolean) => void;
   onThinkingTracesToggle: (enabled: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const stopReason = stopDisabledReason?.trim() ?? "";
   const stopDisabled = !canSend || stopBusy || Boolean(stopReason);
-  const stopAriaLabel = stopReason ? `Stop unavailable: ${stopReason}` : "Stop";
+  const stopAriaLabel = stopReason ? `Stop unavailable: ${stopReason}` : t('chat.stop', 'Stop');
   const voiceBusy = voiceState === "requesting" || voiceState === "transcribing";
   const voiceRecording = voiceState === "recording";
   const voiceDisabled = voiceRecording ? false : !voiceEnabled || !voiceSupported || !canSend || voiceBusy;
   const voiceLabel =
     voiceState === "recording"
-      ? "Stop"
+      ? t('chat.stop', 'Stop')
       : voiceState === "transcribing"
         ? "..."
         : voiceState === "requesting"
@@ -1033,46 +1047,46 @@ const AgentChatComposer = memo(function AgentChatComposer({
           : "Mic";
   const voiceStatusText =
     voiceState === "recording"
-      ? "Recording. Tap stop to send."
+      ? t('chat.voice_recording', 'Recording. Tap stop to send.')
       : voiceState === "transcribing"
-        ? "Transcribing your voice note."
+        ? t('chat.voice_transcribing', 'Transcribing your voice note.')
         : voiceState === "requesting"
-          ? "Requesting microphone access."
+          ? t('chat.voice_requesting_mic', 'Requesting microphone access.')
           : !voiceSupported && voiceEnabled
-            ? "This browser does not support microphone recording."
+            ? t('chat.voice_not_supported', 'This browser does not support microphone recording.')
             : null;
   const modelSelectedLabel = useMemo(() => {
-    if (modelOptions.length === 0) return "No models found";
+    if (modelOptions.length === 0) return t('chat.no_models', 'No models found');
     return modelOptions.find((option) => option.value === modelValue)?.label ?? modelValue;
-  }, [modelOptions, modelValue]);
+  }, [modelOptions, modelValue, t]);
   const modelSelectWidthCh = Math.max(11, Math.min(44, modelSelectedLabel.length + 6));
   const thinkingSelectedLabel = useMemo(() => {
     switch (thinkingValue) {
       case "off":
-        return "Off";
+        return t('chat.reasoning_off', 'Off');
       case "minimal":
-        return "Minimal";
+        return t('chat.reasoning_minimal', 'Minimal');
       case "low":
-        return "Low";
+        return t('chat.reasoning_low', 'Low');
       case "medium":
-        return "Medium";
+        return t('chat.reasoning_medium', 'Medium');
       case "high":
-        return "High";
+        return t('chat.reasoning_high', 'High');
       case "xhigh":
-        return "XHigh";
+        return t('chat.reasoning_xhigh', 'XHigh');
       default:
-        return "Default";
+        return t('chat.reasoning_default', 'Default');
     }
-  }, [thinkingValue]);
+  }, [thinkingValue, t]);
   const thinkingSelectWidthCh = Math.max(9, Math.min(22, thinkingSelectedLabel.length + 6));
   return (
     <>
       <div className="mb-1.5 flex items-center justify-between gap-2 px-1">
         <div className="flex min-w-0 items-center gap-2">
-          <InlineHoverTooltip text="Choose model">
+          <InlineHoverTooltip text={t('chat.choose_model', 'Choose model')}>
             <select
               className="ui-input ui-control-important h-6 min-w-0 rounded-md border-white/10 px-1.5 text-[10px] font-semibold text-white"
-              aria-label="Model"
+              aria-label={t('chat.choose_model', 'Model')}
               value={modelValue}
               style={{ ...CHAT_SELECT_STYLE, width: `${modelSelectWidthCh}ch` }}
               onChange={(event) => {
@@ -1082,7 +1096,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
               }}
             >
               {modelOptions.length === 0 ? (
-                <option value="">No models found</option>
+                <option value="">{t('chat.no_models', 'No models found')}</option>
               ) : null}
               {modelOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -1092,10 +1106,10 @@ const AgentChatComposer = memo(function AgentChatComposer({
             </select>
           </InlineHoverTooltip>
           {allowThinking ? (
-            <InlineHoverTooltip text="Select reasoning effort">
+            <InlineHoverTooltip text={t('chat.select_reasoning', 'Select reasoning effort')}>
               <select
                 className="ui-input ui-control-important h-6 rounded-md border-white/10 px-1.5 text-[10px] font-semibold text-white"
-                aria-label="Thinking"
+                aria-label={t('chat.select_reasoning', 'Thinking')}
                 value={thinkingValue}
                 style={{ ...CHAT_SELECT_STYLE, width: `${thinkingSelectWidthCh}ch` }}
                 onChange={(event) => {
@@ -1103,23 +1117,23 @@ const AgentChatComposer = memo(function AgentChatComposer({
                   onThinkingChange(nextValue ? nextValue : null);
                 }}
               >
-                <option value="">Default</option>
-                <option value="off">Off</option>
-                <option value="minimal">Minimal</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="xhigh">XHigh</option>
+                <option value="">{t('chat.reasoning_default', 'Default')}</option>
+                <option value="off">{t('chat.reasoning_off', 'Off')}</option>
+                <option value="minimal">{t('chat.reasoning_minimal', 'Minimal')}</option>
+                <option value="low">{t('chat.reasoning_low', 'Low')}</option>
+                <option value="medium">{t('chat.reasoning_medium', 'Medium')}</option>
+                <option value="high">{t('chat.reasoning_high', 'High')}</option>
+                <option value="xhigh">{t('chat.reasoning_xhigh', 'XHigh')}</option>
               </select>
             </InlineHoverTooltip>
           ) : null}
         </div>
         <div className="hidden">
-          <span className="font-mono tracking-[0.02em]">Show</span>
+          <span className="font-mono tracking-[0.02em]">{t('chat.show', 'Show')}</span>
           <button
             type="button"
             role="switch"
-            aria-label="Show tool calls"
+            aria-label={t('chat.tools', 'Show tool calls')}
             aria-checked={toolCallingEnabled}
             className={`inline-flex h-5 items-center rounded-sm border px-1.5 font-mono text-[10px] tracking-[0.01em] transition ${
               toolCallingEnabled
@@ -1128,12 +1142,12 @@ const AgentChatComposer = memo(function AgentChatComposer({
             }`}
             onClick={() => onToolCallingToggle(!toolCallingEnabled)}
           >
-            Tools
+            {t('chat.tools', 'Tools')}
           </button>
           <button
             type="button"
             role="switch"
-            aria-label="Show thinking"
+            aria-label={t('chat.thinking', 'Show thinking')}
             aria-checked={showThinkingTraces}
             className={`inline-flex h-5 items-center rounded-sm border px-1.5 font-mono text-[10px] tracking-[0.01em] transition ${
               showThinkingTraces
@@ -1142,7 +1156,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
             }`}
             onClick={() => onThinkingTracesToggle(!showThinkingTraces)}
           >
-            Thinking
+            {t('chat.thinking', 'Thinking')}
           </button>
         </div>
       </div>
@@ -1164,7 +1178,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
                   className="flex w-full min-w-0 max-w-full items-center gap-1 overflow-hidden rounded-md border border-border/70 bg-card/80 px-2 py-1 text-[11px] text-foreground"
                 >
                   <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
-                    Queued
+                    {t('chat.queued', 'Queued')}
                   </span>
                   <span
                     className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
@@ -1192,7 +1206,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
                 disabled
                 className="invisible rounded-md border border-border/70 bg-surface-3 px-3 py-2 font-mono text-[12px] font-medium tracking-[0.02em] text-foreground"
               >
-                {stopBusy ? "Stopping" : "Stop"}
+                {stopBusy ? t('chat.stopping', 'Stopping') : t('chat.stop', 'Stop')}
               </button>
             ) : null}
             <button
@@ -1202,7 +1216,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
               disabled
               className="ui-btn-primary ui-btn-send invisible px-3 py-2 font-mono text-[12px] font-medium tracking-[0.02em]"
             >
-              Send
+              {t('chat.send', 'Send')}
             </button>
           </div>
         ) : null}
@@ -1223,7 +1237,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
                     />
                   ) : (
                     <div className="flex h-16 w-16 items-center justify-center px-2 text-center font-mono text-[10px] text-muted-foreground">
-                      File
+                      {t('chat.file_placeholder', 'File')}
                     </div>
                   )}
                   <button
@@ -1270,19 +1284,19 @@ const AgentChatComposer = memo(function AgentChatComposer({
             className="chat-composer-input min-h-[64px] flex-1 resize-none border-0 bg-transparent px-0 py-1 text-[15px] leading-6 text-foreground outline-none shadow-none transition placeholder:text-muted-foreground/65 focus:outline-none focus-visible:outline-none focus-visible:ring-0"
             onChange={onChange}
             onKeyDown={onKeyDown}
-            placeholder="type a message"
+            placeholder={t('chat.type_placeholder', 'type a message')}
           />
           <button
             className="rounded-md border border-border/70 bg-surface-3 px-2.5 py-2 font-mono text-[11px] font-medium tracking-[0.02em] text-white transition hover:bg-surface-2 hover:text-white disabled:cursor-not-allowed disabled:border-border/30 disabled:bg-muted/20 disabled:text-muted-foreground"
             type="button"
             onClick={() => attachmentInputRef.current?.click()}
             disabled={!canSend}
-            aria-label="Attach files"
-            title="Attach files"
+            aria-label={t('chat.attach', 'Attach files')}
+            title={t('chat.attach', 'Attach files')}
           >
             <span className="inline-flex items-center gap-1.5">
               <Paperclip className="h-3.5 w-3.5" />
-              <span>Attach</span>
+              <span>{t('chat.attach', 'Attach')}</span>
             </span>
           </button>
           {voiceEnabled ? (
@@ -1296,8 +1310,8 @@ const AgentChatComposer = memo(function AgentChatComposer({
               onClick={onVoiceToggle}
               disabled={voiceDisabled}
               data-testid="agent-voice-toggle"
-              aria-label={voiceRecording ? "Stop voice recording" : "Start voice recording"}
-              title={voiceRecording ? "Stop voice recording" : "Start voice recording"}
+              aria-label={voiceRecording ? t('chat.stop', 'Stop voice recording') : t('chat.voice_recording', 'Start voice recording')}
+              title={voiceRecording ? t('chat.stop', 'Stop voice recording') : t('chat.voice_recording', 'Start voice recording')}
             >
               <span className="inline-flex items-center gap-1.5">
                 {voiceRecording ? <Square className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
@@ -1314,7 +1328,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
                 disabled={stopDisabled}
                 aria-label={stopAriaLabel}
               >
-                {stopBusy ? "Stopping" : "Stop"}
+                {stopBusy ? t('chat.stopping', 'Stopping') : t('chat.stop', 'Stop')}
               </button>
             </span>
           ) : null}
@@ -1324,7 +1338,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
             onClick={onSend}
             disabled={sendDisabled}
           >
-            Send
+            {t('chat.send', 'Send')}
           </button>
         </div>
       </div>
@@ -1356,6 +1370,7 @@ export const AgentChatPanel = ({
   onResolveExecApproval,
   onVoiceSend,
 }: AgentChatPanelProps) => {
+  const { t } = useTranslation();
   const [draftValue, setDraftValue] = useState(agent.draft);
   const [newSessionBusy, setNewSessionBusy] = useState(false);
   const [renameEditing, setRenameEditing] = useState(false);
@@ -1556,7 +1571,7 @@ export const AgentChatPanel = ({
       const oversized = files.filter((file) => file.size > MAX_UPLOAD_BYTES);
       const supported = files.filter((file) => file.size <= MAX_UPLOAD_BYTES);
       if (supported.length === 0) {
-        setAttachmentStatus("All selected files exceeded the 10 MB upload limit.");
+        setAttachmentStatus(t('chat.upload_error_size', 'All selected files exceeded the 10 MB upload limit.'));
         return;
       }
       try {
@@ -1573,7 +1588,7 @@ export const AgentChatPanel = ({
               const message =
                 typeof payload.error === "string"
                   ? payload.error
-                  : `Failed to upload ${file.name}.`;
+                  : t('chat.upload_error_file', 'Failed to upload %{name}.').replace('%{name}', file.name);
               throw new Error(message);
             }
             return {
@@ -1587,15 +1602,15 @@ export const AgentChatPanel = ({
           })
         );
         setAttachments((current) => [...current, ...uploaded]);
-        const statusParts = [`Uploaded ${uploaded.length} file${uploaded.length === 1 ? "" : "s"}.`];
+        const statusParts = [t('chat.upload_success', 'Uploaded %{n} files.').replace('%{n}', String(uploaded.length))];
         if (oversized.length > 0) {
-          statusParts.push(`${oversized.length} oversized file${oversized.length === 1 ? "" : "s"} skipped.`);
+          statusParts.push(t('chat.upload_oversized', '%{n} oversized files skipped.').replace('%{n}', String(oversized.length)));
         }
         setAttachmentStatus(statusParts.join(" "));
         scrollToBottomNextOutputRef.current = true;
       } catch (error) {
         setAttachmentStatus(
-          error instanceof Error ? error.message : "Failed to read one or more attachments."
+          error instanceof Error ? error.message : t('chat.upload_read_error', 'Failed to read one or more attachments.')
         );
       }
     },
@@ -1819,7 +1834,7 @@ export const AgentChatPanel = ({
               }}
               disabled={newSessionDisabled}
             >
-              {newSessionBusy ? "Starting..." : "New session"}
+              {newSessionBusy ? t('chat.starting', 'Starting...') : t('chat.new_session', 'New session')}
             </button>
           </div>
         </div>

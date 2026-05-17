@@ -1,4 +1,5 @@
 import { Building2, Sparkles, Users, Wand2 } from "lucide-react";
+import { T, useTranslation } from "@/lib/i18n/TranslationProvider";
 
 export type CompanyStepProps = {
   connected: boolean;
@@ -11,6 +12,7 @@ export const CompanyStep = ({
   agentCount,
   onOpenCompanyBuilder,
 }: CompanyStepProps) => {
+  const { t } = useTranslation();
   const canOpenBuilder = connected && agentCount > 0;
 
   return (
@@ -21,10 +23,9 @@ export const CompanyStep = ({
             <Building2 className="h-5 w-5 text-amber-300" />
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-white">Bootstrap your company with AI</p>
+            <p className="text-sm font-semibold text-white"><T id="company.bootstrap_title" fallback="用 AI 啟動您的公司" /></p>
             <p className="text-xs leading-5 text-white/60">
-              Describe what your company does and Claw3D can turn that into a full org structure
-              with specialized agents, working files, and role instructions.
+              <T id="company.bootstrap_desc" fallback="描述您的公司業務，Claw3D 可將其轉化為完整的組織結構，包含角色、職責與交接流程。" />
             </p>
           </div>
         </div>
@@ -34,22 +35,25 @@ export const CompanyStep = ({
         {[
           {
             icon: Sparkles,
-            title: "Improve the brief",
-            description: "Use your connected runtime to sharpen the company prompt.",
+            key: "improve",
+            title: t("company.step_improve", "優化簡報"),
+            description: t("company.step_improve_desc", "使用已連線的執行時期來強化公司提示詞。"),
           },
           {
             icon: Users,
-            title: "Generate the team",
-            description: "Get a practical org chart with roles, responsibilities, and handoffs.",
+            key: "generate",
+            title: t("company.step_generate", "產生團隊"),
+            description: t("company.step_generate_desc", "取得實用的組織圖，包含角色、職責與交接流程。"),
           },
           {
             icon: Wand2,
-            title: "Create everything",
-            description: "Write agent files and create the team directly in the connected runtime.",
+            key: "create",
+            title: t("company.step_create", "建立全部"),
+            description: t("company.step_create_desc", "撰寫 Agent 檔案並直接在已連線的執行時期中建立團隊。"),
           },
-        ].map(({ icon: Icon, title, description }) => (
+        ].map(({ icon: Icon, key, title, description }) => (
           <div
-            key={title}
+            key={key}
             className="rounded-md border border-white/8 bg-white/[0.02] px-3 py-3"
           >
             <Icon className="h-4 w-4 text-white/70" />
@@ -68,13 +72,12 @@ export const CompanyStep = ({
               onClick={onOpenCompanyBuilder}
             >
               <Sparkles className="h-3.5 w-3.5" />
-              Open Company Builder
+              <T id="company.open_builder" fallback="開啟公司建構器" />
             </button>
           </div>
         ) : (
           <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-xs text-amber-100/80">
-            Connect to a runtime and keep at least one planning agent available to generate the
-            company with AI.
+            <T id="company.connect_hint" fallback="請先連線到執行時期，並保留至少一個規劃 Agent 可用。" />
           </div>
         )}
       </div>

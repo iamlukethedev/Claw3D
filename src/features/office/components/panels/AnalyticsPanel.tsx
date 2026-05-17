@@ -3,6 +3,7 @@
 import { useMemo, useRef } from "react";
 
 import { CalendarDays } from "lucide-react";
+import { T, useTranslation } from '@/lib/i18n/TranslationProvider';
 
 import type { AgentState } from "@/features/agents/state/store";
 import { useApprovalMetrics } from "@/features/office/hooks/useApprovalMetrics";
@@ -126,7 +127,8 @@ export function AnalyticsPanel({
   gatewayUrl: string;
   settingsCoordinator: StudioSettingsCoordinator;
   onSelectAgent: (agentId: string) => void;
-}) {
+  }) {
+  const { t } = useTranslation();
   const {
     startDate,
     setStartDate,
@@ -169,31 +171,31 @@ export function AnalyticsPanel({
     <section className="flex h-full min-h-0 flex-col">
       <div className="border-b border-cyan-500/10 px-4 py-3">
         <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/70">
-          Analytics
+          <T id="analytics.title" fallback="分析" />
         </div>
         <div className="mt-1 font-mono text-[11px] text-white/40">
-          Real usage, spend, and agent trust metrics for headquarters.
+          <T id="analytics.subtitle" fallback="實際用量、支出與 Agent 信任指標。" />
         </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         <div className="grid grid-cols-2 gap-2">
-          <DatePickerField label="Start" value={startDate} onChange={setStartDate} />
-          <DatePickerField label="End" value={endDate} onChange={setEndDate} />
+          <DatePickerField label={t('analytics.start', '開始')} value={startDate} onChange={setStartDate} />
+          <DatePickerField label={t('analytics.end', '結束')} value={endDate} onChange={setEndDate} />
         </div>
 
         <div className="mt-2 flex items-center justify-between gap-2">
           <div className="font-mono text-[10px] text-white/35">
             {usage.lastRefreshedAt
-              ? `Last refresh ${new Date(usage.lastRefreshedAt).toLocaleTimeString()}`
-              : "No analytics snapshot yet"}
+              ? t('analytics.last_refresh', '尚無分析快照').replace('%{time}', new Date(usage.lastRefreshedAt).toLocaleTimeString())
+              : t('analytics.no_snapshot', '尚無分析快照')}
           </div>
           <button
             type="button"
             onClick={() => void usage.refresh()}
             className="rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-200 transition-colors hover:border-cyan-400/40 hover:text-cyan-100"
           >
-            Refresh
+            <T id="analytics.refresh" fallback="重新整理" />
           </button>
         </div>
 
@@ -213,30 +215,30 @@ export function AnalyticsPanel({
           </div>
         ) : settingsLoaded ? (
           <div className="mt-3 rounded border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 font-mono text-[11px] text-emerald-100">
-            Budgets are within threshold.
+            <T id="analytics.budget_ok" fallback="預算在閾值內。" />
           </div>
         ) : null}
 
         <div className="mt-4 grid grid-cols-2 gap-2">
           <StatCard
-            label="Total Spend"
+            label={t('analytics.total_spend', '總支出')}
             value={formatCurrency(usage.totals.totalCost)}
-            hint="Selected range."
+            hint={t('analytics.total_spend', '總支出')}
           />
           <StatCard
-            label="Total Tokens"
+            label={t('analytics.total_tokens', '總 Token 數')}
             value={formatNumber(usage.totals.totalTokens)}
-            hint="Input + output + cache."
+            hint={t('analytics.total_tokens', '總 Token 數')}
           />
           <StatCard
-            label="Success Rate"
+            label={t('analytics.success_rate', '成功率')}
             value={formatPercent(performance.fleet.successRate)}
-            hint="Completed runs only."
+            hint={t('analytics.success_rate', '成功率')}
           />
           <StatCard
-            label="Avg Runtime"
+            label={t('analytics.avg_runtime', '平均執行時間')}
             value={formatDuration(performance.fleet.avgRuntimeMs)}
-            hint="Session-local run history."
+            hint={t('analytics.avg_runtime', '平均執行時間')}
           />
         </div>
 
@@ -246,43 +248,43 @@ export function AnalyticsPanel({
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <label className="flex flex-col gap-1">
-              <span className="font-mono text-[10px] text-white/35">Daily USD</span>
+              <span className="font-mono text-[10px] text-white/35">{t('analytics.daily_usd', '每日 USD')}</span>
               <input
                 value={formatBudgetInput(budgets.dailySpendLimitUsd)}
                 onChange={(event) =>
                   updateBudget("dailySpendLimitUsd", parseBudgetInput(event.target.value))
                 }
-                placeholder="No limit"
+                placeholder={t('analytics.no_limit', '無限制')}
                 inputMode="decimal"
                 className="rounded border border-white/10 bg-black/50 px-2 py-2 font-mono text-[11px] text-white/80 outline-none placeholder:text-white/20"
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="font-mono text-[10px] text-white/35">Monthly USD</span>
+              <span className="font-mono text-[10px] text-white/35">{t('analytics.monthly_usd', '每月 USD')}</span>
               <input
                 value={formatBudgetInput(budgets.monthlySpendLimitUsd)}
                 onChange={(event) =>
                   updateBudget("monthlySpendLimitUsd", parseBudgetInput(event.target.value))
                 }
-                placeholder="No limit"
+                placeholder={t('analytics.no_limit', '無限制')}
                 inputMode="decimal"
                 className="rounded border border-white/10 bg-black/50 px-2 py-2 font-mono text-[11px] text-white/80 outline-none placeholder:text-white/20"
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="font-mono text-[10px] text-white/35">Per-agent USD</span>
+              <span className="font-mono text-[10px] text-white/35">{t('analytics.per_agent_usd', '每 Agent USD')}</span>
               <input
                 value={formatBudgetInput(budgets.perAgentSoftLimitUsd)}
                 onChange={(event) =>
                   updateBudget("perAgentSoftLimitUsd", parseBudgetInput(event.target.value))
                 }
-                placeholder="Soft limit"
+                placeholder={t('analytics.soft_limit', '軟限制')}
                 inputMode="decimal"
                 className="rounded border border-white/10 bg-black/50 px-2 py-2 font-mono text-[11px] text-white/80 outline-none placeholder:text-white/20"
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="font-mono text-[10px] text-white/35">Alert threshold %</span>
+              <span className="font-mono text-[10px] text-white/35">{t('analytics.alert_threshold', '警示閾值 %')}</span>
               <input
                 value={String(budgets.alertThresholdPct)}
                 onChange={(event) =>
@@ -300,13 +302,13 @@ export function AnalyticsPanel({
 
         <div className="mt-5 rounded border border-white/8 bg-white/[0.03] px-3 py-3">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/35">
-            Daily Cost
+            <T id="analytics.daily_cost" fallback="每日成本" />
           </div>
           {usage.loading ? (
-            <div className="mt-3 font-mono text-[11px] text-white/40">Loading usage data.</div>
+            <div className="mt-3 font-mono text-[11px] text-white/40"><T id="analytics.loading_usage" fallback="正在載入用量資料。" /></div>
           ) : usage.costDaily.length === 0 ? (
             <div className="mt-3 font-mono text-[11px] text-white/35">
-              No cost data in the selected range.
+              <T id="analytics.no_cost_data" fallback="選定範圍內無成本資料。" />
             </div>
           ) : (
             <div className="mt-3 flex items-end gap-1">
@@ -335,7 +337,7 @@ export function AnalyticsPanel({
 
           <div className="mt-4 rounded border border-white/8 bg-black/25 px-3 py-3">
             <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
-              Cost Breakdown
+              <T id="analytics.cost_breakdown" fallback="成本分析" />
             </div>
             <div className="mt-2 space-y-1 font-mono text-[11px] text-white/70">
               <div>Input: {formatCurrency(usage.totals.inputCost)}.</div>
@@ -348,7 +350,7 @@ export function AnalyticsPanel({
 
         <div className="mt-5 rounded border border-white/8 bg-white/[0.03] px-3 py-3">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/35">
-            Top Agents By Spend
+            <T id="analytics.top_agents" fallback="最高支出 Agent" />
           </div>
           <div className="mt-3 space-y-2">
             {usage.aggregates.byAgent.slice(0, 6).map((entry) => (
@@ -365,14 +367,14 @@ export function AnalyticsPanel({
               </button>
             ))}
             {usage.aggregates.byAgent.length === 0 ? (
-              <div className="font-mono text-[11px] text-white/35">No agent spend data yet.</div>
+              <div className="font-mono text-[11px] text-white/35"><T id="analytics.no_agent_data" fallback="尚無 Agent 支出資料。" /></div>
             ) : null}
           </div>
         </div>
 
         <div className="mt-5 rounded border border-white/8 bg-white/[0.03] px-3 py-3">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/35">
-            Model Breakdown
+            <T id="analytics.model_breakdown" fallback="模型分析" />
           </div>
           <div className="mt-3 space-y-2">
             {usage.aggregates.byModel.slice(0, 6).map((entry) => (
@@ -389,35 +391,35 @@ export function AnalyticsPanel({
               </div>
             ))}
             {usage.aggregates.byModel.length === 0 ? (
-              <div className="font-mono text-[11px] text-white/35">No model usage data yet.</div>
+              <div className="font-mono text-[11px] text-white/35"><T id="analytics.no_model_data" fallback="尚無模型用量資料。" /></div>
             ) : null}
           </div>
         </div>
 
         <div className="mt-5 rounded border border-white/8 bg-white/[0.03] px-3 py-3">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/35">
-            Performance
+            <T id="analytics.performance" fallback="效能" />
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <StatCard
-              label="Approvals"
+              label={t('analytics.approvals', '核准')}
               value={formatNumber(approvalMetrics.totals.requestedCount)}
-              hint="Session-local approval requests."
+              hint={t('analytics.approvals', '核准')}
             />
             <StatCard
-              label="Intervention Rate"
+              label={t('analytics.intervention_rate', '介入率')}
               value={formatPercent(performance.fleet.interventionRate)}
-              hint="Approvals per observed run."
+              hint={t('analytics.intervention_rate', '介入率')}
             />
             <StatCard
-              label="Tool Calls"
+              label={t('analytics.tool_calls', '工具呼叫')}
               value={formatNumber(performance.fleet.totalToolCalls)}
-              hint="Current transcript state."
+              hint={t('analytics.tool_calls', '工具呼叫')}
             />
             <StatCard
-              label="Completed Runs"
+              label={t('analytics.completed_runs', '已完成執行')}
               value={formatNumber(performance.fleet.completedRuns)}
-              hint="In-memory office run log."
+              hint={t('analytics.completed_runs', '已完成執行')}
             />
           </div>
 
@@ -434,7 +436,7 @@ export function AnalyticsPanel({
                     {row.agentName}
                   </span>
                   <span className="font-mono text-[10px] text-white/40">
-                    {row.totalRuns} runs
+                    {t('analytics.n_runs', '尚無分析快照').replace('%{n}', String(row.totalRuns))}
                   </span>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 font-mono text-[10px] text-white/55">
@@ -447,7 +449,7 @@ export function AnalyticsPanel({
             ))}
             {performance.rows.length === 0 ? (
               <div className="font-mono text-[11px] text-white/35">
-                No performance data is available yet.
+                <T id="analytics.no_performance_data" fallback="尚無效能資料。" />
               </div>
             ) : null}
           </div>

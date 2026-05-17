@@ -1,5 +1,6 @@
 "use client";
 
+import { T } from "@/lib/i18n/TranslationProvider";
 import type { ReactNode } from "react";
 
 export type HQSidebarTab =
@@ -135,7 +136,7 @@ export function HQSidebar({
                 onClick={onAddAgent}
                 className="mt-3 rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-200 transition-colors hover:border-cyan-400/40 hover:text-cyan-100"
               >
-                Add Agent
+                <T id="agent.add" fallback="Add Agent" />
               </button>
             ) : null}
             {!railOnly && onOpenCompanyBuilder ? (
@@ -144,7 +145,7 @@ export function HQSidebar({
                 onClick={onOpenCompanyBuilder}
                 className="mt-2 rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-emerald-200 transition-colors hover:border-emerald-400/40 hover:text-emerald-100"
               >
-                Build Company
+                <T id="company.build" fallback="Build Company" />
               </button>
             ) : null}
             {railOnly ? (
@@ -153,7 +154,7 @@ export function HQSidebar({
                 onClick={() => onTabChange("inbox")}
                 className="mt-3 rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-200 transition-colors hover:border-cyan-400/40 hover:text-cyan-100"
               >
-                Back To HQ
+                <T id="nav.back_to_hq" fallback="Back To HQ" />
               </button>
             ) : null}
           </div>
@@ -182,7 +183,7 @@ export function HQSidebar({
                         : "text-white/45 hover:bg-white/5 hover:text-white/80"
                     }`}
                   >
-                    <span>{TAB_LABELS[tab]}</span>
+                    <span><T id={`panel.${tab}`} /></span>
                     {showBadge ? (
                       <span className="rounded bg-cyan-500/15 px-1.5 py-0.5 text-[10px] text-cyan-300" aria-label={`${inboxCount} unread`}>
                         {inboxCount}
