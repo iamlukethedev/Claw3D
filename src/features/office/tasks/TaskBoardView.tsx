@@ -2,6 +2,7 @@
 
 import type { DragEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import { T, useTranslation } from '@/lib/i18n/TranslationProvider';
 
 import type { AgentState } from "@/features/agents/state/store";
 import type { CronJobSummary } from "@/lib/cron/types";
@@ -23,12 +24,12 @@ const STATUS_ORDER: TaskBoardStatus[] = [
   "done",
 ];
 
-const formatRelativeTime = (value: string | null) => {
-  if (!value) return "No activity";
+const formatRelativeTime = (value: string | null, t?: (key: string, fallback?: string) => string) => {
+  if (!value) return t ? t('taskboard.no_activity', '無活動') : "No activity";
   const at = Date.parse(value);
-  if (!Number.isFinite(at)) return "No activity";
+  if (!Number.isFinite(at)) return t ? t('taskboard.no_activity', '無活動') : "No activity";
   const delta = Math.max(0, Date.now() - at);
-  if (delta < 60_000) return "Just now";
+  if (delta < 60_000) return t ? t('taskboard.time_just_now', '剛剛') : "Just now";
   if (delta < 3_600_000) return `${Math.max(1, Math.floor(delta / 60_000))}m ago`;
   if (delta < 86_400_000) return `${Math.max(1, Math.floor(delta / 3_600_000))}h ago`;
   return `${Math.max(1, Math.floor(delta / 86_400_000))}d ago`;
@@ -88,6 +89,7 @@ export function TaskBoardView({
   onDeleteCard: (cardId: string) => void;
   onRefreshCronJobs: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <section className="flex h-full min-h-0 flex-col bg-transparent text-white">
       <div className="border-b border-cyan-500/10 bg-[#070b11]/22 px-4 py-3 backdrop-blur-[1px]">
@@ -104,7 +106,7 @@ export function TaskBoardView({
               onClick={onRefreshCronJobs}
               className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-white/70 transition-colors hover:border-white/20 hover:text-white"
             >
-              {cronLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : "Refresh"}
+              {cronLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <T id="taskboard.refresh" fallback="重新整理" />}
             </button>
             <button
               type="button"
@@ -112,7 +114,7 @@ export function TaskBoardView({
               className="inline-flex items-center gap-1 rounded border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-100 transition-colors hover:border-cyan-400/50 hover:text-white"
             >
               <Plus className="h-3.5 w-3.5" />
-              New Task
+              <T id="taskboard.new_task" fallback="新增任務" />
             </button>
           </div>
         </div>
@@ -134,7 +136,7 @@ export function TaskBoardView({
             </summary>
             <div className="mt-2 grid gap-1 text-white/80">
               <div>
-                Last request: {taskCaptureDebug.lastTitle ?? "None yet."}
+                {t('taskboard.last_request', '尚無請求').replace('%{title}', taskCaptureDebug.lastTitle ?? "無")}
               </div>
               <div>
                 Last task id: {taskCaptureDebug.lastTaskId ?? "-"}
@@ -187,7 +189,7 @@ export function TaskBoardView({
                   <div className="border-b border-white/8 px-3 py-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/50">
-                        {STATUS_LABELS[status]}
+                        {status === "todo" ? t('taskboard.status_todo', '待辦') : status === "in_progress" ? t('taskboard.status_in_progress', '進行中') : status === "blocked" ? t('taskboard.status_blocked', '受阻') : status === "review" ? t('taskboard.status_review', '審查中') : t('taskboard.status_done', '完成')}
                       </div>
                       <div className="rounded bg-white/8 px-1.5 py-0.5 font-mono text-[10px] text-white/60">
                         {cards.length}
@@ -197,7 +199,7 @@ export function TaskBoardView({
                   <div className="flex-1 space-y-2 overflow-y-auto p-3">
                     {cards.length === 0 ? (
                       <div className="rounded border border-dashed border-white/10 px-3 py-4 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-white/25">
-                        Drop a card here.
+                        <T id="taskboard.drop_card" fallback="將卡片拖曳至此處。" />
                       </div>
                     ) : (
                       cards.map((card) => (
@@ -241,12 +243,12 @@ export function TaskBoardView({
                             </div>
                           ) : null}
                           <div className="mt-3 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-white/38">
-                            <span>{card.assignedAgentId ?? "Unassigned"}</span>
-                            {card.runId ? <span>Run linked.</span> : null}
-                            {card.playbookJobId ? <span>Playbook linked.</span> : null}
+                            <span>{card.assignedAgentId ?? t('taskboard.unassigned', '未指派')}</span>
+                            {card.runId ? <span><T id="taskboard.run_linked" fallback="已連結執行。" /></span> : null}
+                            {card.playbookJobId ? <span><T id="taskboard.playbook_linked" fallback="已連結劇本。" /></span> : null}
                           </div>
                           <div className="mt-2 font-mono text-[10px] text-white/32">
-                            {formatRelativeTime(card.lastActivityAt ?? card.updatedAt)}
+                            {formatRelativeTime(card.lastActivityAt ?? card.updatedAt, t)}
                           </div>
                         </button>
                       ))
@@ -262,20 +264,20 @@ export function TaskBoardView({
           <aside className="flex min-h-0 flex-col border-l border-white/8 bg-black/25">
             <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
               <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/45">
-                Task Details
+                <T id="taskboard.detail_title" fallback="任務詳細資訊" />
               </div>
               <button
                 type="button"
                 onClick={() => onSelectCard(null)}
                 className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40 hover:text-white/70"
               >
-                Close
+                <T id="taskboard.close" fallback="關閉" />
               </button>
             </div>
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
               <label className="flex flex-col gap-1">
                 <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
-                  Title
+                  <T id="taskboard.title_label" fallback="標題" />
                 </span>
                 <input
                   value={selectedCard.title}
@@ -288,7 +290,7 @@ export function TaskBoardView({
 
               <label className="flex flex-col gap-1">
                 <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
-                  Description
+                  <T id="taskboard.description_label" fallback="說明" />
                 </span>
                 <textarea
                   rows={4}
@@ -302,7 +304,7 @@ export function TaskBoardView({
 
               <label className="flex flex-col gap-1">
                 <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
-                  Status
+                  <T id="taskboard.status_label" fallback="狀態" />
                 </span>
                 <select
                   value={selectedCard.status}
@@ -313,7 +315,7 @@ export function TaskBoardView({
                 >
                   {STATUS_ORDER.map((status) => (
                     <option key={status} value={status}>
-                      {STATUS_LABELS[status]}
+                      {status === "todo" ? t('taskboard.status_todo', '待辦') : status === "in_progress" ? t('taskboard.status_in_progress', '進行中') : status === "blocked" ? t('taskboard.status_blocked', '受阻') : status === "review" ? t('taskboard.status_review', '審查中') : t('taskboard.status_done', '完成')}
                     </option>
                   ))}
                 </select>
@@ -321,7 +323,7 @@ export function TaskBoardView({
 
               <label className="flex flex-col gap-1">
                 <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
-                  Assigned agent
+                  <T id="taskboard.assigned_label" fallback="指派 Agent" />
                 </span>
                 <select
                   value={selectedCard.assignedAgentId ?? ""}
@@ -332,7 +334,7 @@ export function TaskBoardView({
                   }
                   className="rounded border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none"
                 >
-                  <option value="">Unassigned</option>
+                  <option value="">{t('taskboard.unassigned_option', '未指派')}</option>
                   {agents.map((agent) => (
                     <option key={agent.agentId} value={agent.agentId}>
                       {agent.name || agent.agentId}
@@ -343,7 +345,7 @@ export function TaskBoardView({
 
               <label className="flex flex-col gap-1">
                 <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
-                  Linked active run
+                  <T id="taskboard.linked_run" fallback="已連結執行中" />
                 </span>
                 <select
                   value={selectedCard.runId ?? ""}
@@ -352,7 +354,7 @@ export function TaskBoardView({
                   }
                   className="rounded border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none"
                 >
-                  <option value="">No linked run</option>
+                  <option value="">{t('taskboard.no_linked_run', '無已連結執行')}</option>
                   {activeRuns.map((run) => (
                     <option key={run.runId} value={run.runId}>
                       {run.label}
@@ -363,7 +365,7 @@ export function TaskBoardView({
 
               <label className="flex flex-col gap-1">
                 <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
-                  Linked playbook
+                  <T id="taskboard.linked_playbook" fallback="已連結劇本" />
                 </span>
                 <select
                   value={selectedCard.playbookJobId ?? ""}
@@ -374,7 +376,7 @@ export function TaskBoardView({
                   }
                   className="rounded border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none"
                 >
-                  <option value="">No linked playbook</option>
+                  <option value="">{t('taskboard.no_linked_playbook', '無已連結劇本')}</option>
                   {cronJobs.map((job) => (
                     <option key={job.id} value={job.id}>
                       {job.name}
@@ -385,7 +387,7 @@ export function TaskBoardView({
 
               <label className="flex flex-col gap-1">
                 <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
-                  Channel
+                  <T id="taskboard.channel" fallback="頻道" />
                 </span>
                 <input
                   value={selectedCard.channel ?? ""}
@@ -400,7 +402,7 @@ export function TaskBoardView({
 
               <label className="flex flex-col gap-1">
                 <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
-                  Notes
+                  <T id="taskboard.notes" fallback="備註" />
                 </span>
                 <textarea
                   rows={3}
@@ -429,7 +431,7 @@ export function TaskBoardView({
                 className="inline-flex items-center gap-2 rounded border border-rose-500/25 bg-rose-500/10 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-rose-100 transition-colors hover:border-rose-400/50 hover:text-white"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                Delete Task
+                <T id="taskboard.delete" fallback="刪除任務" />
               </button>
             </div>
           </aside>

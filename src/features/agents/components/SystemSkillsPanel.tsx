@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 
+import { T, useTranslation } from '@/lib/i18n/TranslationProvider';
+
 import { AgentSkillsSetupModal } from "@/features/agents/components/AgentSkillsSetupModal";
 import {
   buildSkillMissingDetails,
@@ -34,21 +36,6 @@ type SystemSkillsPanelProps = {
   onSaveSkillApiKey: (skillKey: string) => Promise<void> | void;
 };
 
-const READINESS_FILTERS: Array<{ id: ReadinessFilter; label: string }> = [
-  { id: "all", label: "All" },
-  { id: "ready", label: "Ready" },
-  { id: "needs-setup", label: "Needs setup" },
-  { id: "unavailable", label: "Unavailable" },
-  { id: "disabled-globally", label: "Disabled globally" },
-];
-
-const READINESS_LABELS = {
-  ready: "Ready",
-  "needs-setup": "Needs setup",
-  unavailable: "Unavailable",
-  "disabled-globally": "Disabled globally",
-} as const;
-
 const READINESS_CLASSES = {
   ready: "ui-badge-status-running",
   "needs-setup": "ui-badge-status-error",
@@ -58,21 +45,22 @@ const READINESS_CLASSES = {
 
 const resolveReadinessHint = (
   skill: SkillStatusReport["skills"][number],
-  readiness: SkillReadinessState
+  readiness: SkillReadinessState,
+  t: (key: string, fallback: string) => string
 ): string | null => {
   if (readiness === "ready") {
     return null;
   }
   if (readiness === "disabled-globally") {
-    return "Disabled globally for all agents.";
+    return t('skills.hint_disabled', '已全域停用。請在系統設定中啟用。');
   }
   if (readiness === "unavailable") {
     if (skill.blockedByAllowlist) {
-      return "Blocked by bundled skills policy.";
+      return t('skills.hint_bundled', '受捆綁技能政策限制。');
     }
-    return buildSkillMissingDetails(skill)[0] ?? "Unavailable on this system.";
+    return buildSkillMissingDetails(skill)[0] ?? t('skills.hint_unavailable', '此系統無法使用。');
   }
-  return buildSkillMissingDetails(skill)[0] ?? "Requires setup.";
+  return buildSkillMissingDetails(skill)[0] ?? t('skills.hint_setup_required', '需要在系統設定中設定。');
 };
 
 export const SystemSkillsPanel = ({
@@ -92,6 +80,22 @@ export const SystemSkillsPanel = ({
   onSkillApiKeyChange,
   onSaveSkillApiKey,
 }: SystemSkillsPanelProps) => {
+  const { t } = useTranslation();
+
+  const READINESS_FILTERS: Array<{ id: ReadinessFilter; label: string }> = [
+    { id: "all", label: t('skills.filter_all', '全部') },
+    { id: "ready", label: t('skills.filter_ready', '就緒') },
+    { id: "needs-setup", label: t('skills.filter_setup_required', '需要設定') },
+    { id: "disabled-globally", label: t('skills.filter_disabled', '已全域停用') },
+  ];
+
+  const READINESS_LABELS = {
+    ready: t('skills.label_ready', '就緒'),
+    "needs-setup": t('skills.label_needs_setup', '需要設定'),
+    unavailable: t('skills.label_unavailable', '無法使用'),
+    "disabled-globally": t('skills.label_disabled', '已全域停用'),
+  } as const;
+
   const [skillsFilter, setSkillsFilter] = useState("");
   const [readinessFilter, setReadinessFilter] = useState<ReadinessFilter>("all");
   const [setupSkillKey, setSetupSkillKey] = useState<string | null>(null);
@@ -170,11 +174,11 @@ export const SystemSkillsPanel = ({
   return (
     <section className="sidebar-section" data-testid="agent-settings-system-skills">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="sidebar-section-title">System skill setup</h3>
+        <h3 className="sidebar-section-title"><T id="system_skills.title" fallback="系統技能設定" /></h3>
         <div className="font-mono text-[10px] text-muted-foreground">{skillEntries.length}</div>
       </div>
       <div className="mt-2 text-[11px] text-muted-foreground">
-        Changes here affect all agents on this gateway.
+        <T id="system_skills.desc" fallback="此處的變更將影響此閘道器上的所有 Agent。" />
       </div>
       {defaultAgentScopeWarning ? (
         <div className="mt-3 rounded-md border border-border/60 bg-surface-1/65 px-3 py-2 text-[10px] text-muted-foreground/82">
@@ -183,7 +187,7 @@ export const SystemSkillsPanel = ({
       ) : null}
       {setupQueue.length > 0 ? (
         <div className="mt-3 rounded-md border border-border/60 bg-surface-1/65 px-3 py-3">
-          <div className="text-[10px] font-semibold text-foreground/85">Needs setup ({setupQueue.length})</div>
+          <div className="text-[10px] font-semibold text-foreground/85">{t('skills.setup_queue', '需要設定（%{n}）').replace('%{n}', String(setupQueue.length))}</div>
           <div className="mt-2 flex flex-col gap-2">
             {setupQueue.slice(0, 5).map((entry) => (
               <div
@@ -200,7 +204,7 @@ export const SystemSkillsPanel = ({
                     setSetupSkillKey(entry.skill.skillKey);
                   }}
                 >
-                  Set up
+                  {t('skills.setup_button', '設定')}
                 </button>
               </div>
             ))}
@@ -211,9 +215,9 @@ export const SystemSkillsPanel = ({
         <input
           value={skillsFilter}
           onChange={(event) => setSkillsFilter(event.target.value)}
-          placeholder="Search skills"
+          placeholder={t('skills.search_placeholder', '搜尋技能')}
           className="w-full rounded-md border border-border/60 bg-surface-1 px-3 py-2 text-[11px] text-foreground outline-none transition focus:border-border"
-          aria-label="Search skills"
+          aria-label={t('skills.search_placeholder', '搜尋技能')}
         />
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
@@ -235,12 +239,12 @@ export const SystemSkillsPanel = ({
           );
         })}
       </div>
-      {skillsLoading ? <div className="mt-3 text-[11px] text-muted-foreground">Loading skills...</div> : null}
+      {skillsLoading ? <div className="mt-3 text-[11px] text-muted-foreground"><T id="skills.loading" fallback="載入技能中…" /></div> : null}
       {!skillsLoading && skillsError ? (
         <div className="ui-alert-danger mt-3 rounded-md px-3 py-2 text-xs">{skillsError}</div>
       ) : null}
       {!skillsLoading && !skillsError && filteredRows.length === 0 ? (
-        <div className="mt-3 text-[11px] text-muted-foreground">No matching skills.</div>
+        <div className="mt-3 text-[11px] text-muted-foreground"><T id="skills.empty" fallback="找不到符合的技能。" /></div>
       ) : null}
       {!skillsLoading && !skillsError && filteredRows.length > 0 ? (
         <div className="mt-3 flex flex-col gap-2">
@@ -268,7 +272,7 @@ export const SystemSkillsPanel = ({
                   <div className="mt-1 text-[10px] text-muted-foreground/70">{entry.skill.description}</div>
                   {entry.readiness !== "ready" ? (
                     <div className="mt-1 text-[10px] text-muted-foreground/80">
-                      {resolveReadinessHint(entry.skill, entry.readiness)}
+                      {resolveReadinessHint(entry.skill, entry.readiness, t)}
                     </div>
                   ) : null}
                   {message ? (
@@ -289,7 +293,7 @@ export const SystemSkillsPanel = ({
                       setSetupSkillKey(entry.skill.skillKey);
                     }}
                   >
-                    Configure
+                    {t('common.configure', '設定')}
                   </button>
                 </div>
               </div>

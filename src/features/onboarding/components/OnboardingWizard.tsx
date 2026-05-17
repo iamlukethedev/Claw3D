@@ -21,6 +21,7 @@ import { ConnectStep } from "@/features/onboarding/components/ConnectStep";
 import { AgentsStep } from "@/features/onboarding/components/AgentsStep";
 import { CompanyStep } from "@/features/onboarding/components/CompanyStep";
 import { CompleteStep } from "@/features/onboarding/components/CompleteStep";
+import { T, useTranslation } from "@/lib/i18n/TranslationProvider";
 
 export type OnboardingWizardProps = {
   /** Whether the gateway is currently connected. */
@@ -66,6 +67,7 @@ export const OnboardingWizard = ({
   connectionError,
   connecting,
 }: OnboardingWizardProps) => {
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState<OnboardingStepId>(initialStep);
   const [completedSteps, setCompletedSteps] = useState<Set<OnboardingStepId>>(
     () => new Set(initialCompletedSteps ?? []),
@@ -155,7 +157,7 @@ export const OnboardingWizard = ({
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
           <div>
             <h2 className="text-lg font-semibold text-white">
-              {currentStepDef?.title ?? "Onboarding"}
+              <T id="onboarding.title" fallback={currentStepDef?.title ?? "新手引導"} />
             </h2>
             <p className="mt-0.5 text-xs text-white/60">
               {currentStepDef?.description}
@@ -165,8 +167,8 @@ export const OnboardingWizard = ({
             type="button"
             className="flex h-8 w-8 items-center justify-center rounded-md text-white/50 transition-colors hover:bg-white/10 hover:text-white"
             onClick={onComplete}
-            aria-label="Close onboarding"
-            title="Skip onboarding"
+            aria-label={t("onboarding.close", "關閉引導")}
+            title={t("onboarding.skip", "跳過引導")}
           >
             <X className="h-4 w-4" />
           </button>
@@ -201,13 +203,15 @@ export const OnboardingWizard = ({
                 onClick={goPrev}
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
-                Back
+                <T id="onboarding.back" fallback="上一步" />
               </button>
             ) : null}
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-white/40">
-              {stepIndex + 1} / {totalSteps}
+              {t("onboarding.step_count", "%{n} / %{total}")
+                .replace("%{n}", String(stepIndex + 1))
+                .replace("%{total}", String(totalSteps))}
             </span>
             {currentStep === "complete" ? (
               <button
@@ -215,7 +219,7 @@ export const OnboardingWizard = ({
                 className="inline-flex items-center gap-1.5 rounded-md bg-amber-500 px-4 py-2 text-xs font-semibold text-[#1a1206] transition-colors hover:bg-amber-400"
                 onClick={onComplete}
               >
-                Enter Office
+                <T id="onboarding.enter_office" fallback="進入辦公室" />
               </button>
             ) : (
               <button
@@ -225,8 +229,8 @@ export const OnboardingWizard = ({
                 disabled={!canGoNext}
               >
                 {currentStep === "connect" && !gatewayConnected
-                  ? "Connect first"
-                  : "Next"}
+                  ? t("onboarding.connect_first", "請先連線")
+                  : t("onboarding.next", "下一步")}
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             )}

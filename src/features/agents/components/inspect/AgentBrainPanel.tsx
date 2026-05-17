@@ -16,6 +16,7 @@ import {
   serializePersonalityFiles,
 } from "@/lib/agents/personalityBuilder";
 import { useAgentFilesEditor } from "@/features/agents/hooks/useAgentFilesEditor";
+import { T, useTranslation } from "@/lib/i18n/TranslationProvider";
 
 export type AgentBrainPanelProps = {
   client: GatewayClient;
@@ -43,21 +44,25 @@ const AgentBrainPanelSection = ({
 const AgentFileProvenance = ({
   path,
   workspace,
+  t,
 }: {
   path: string | null;
   workspace: string | null;
+  t: (key: string, fallback?: string) => string;
 }) => {
   if (!path && !workspace) return null;
   return (
     <div className="rounded-md border border-border/50 bg-black/20 px-3 py-2 text-[11px] text-muted-foreground">
       {workspace ? (
         <div>
-          Workspace: <span className="font-mono text-foreground">{workspace}</span>
+          {t("brain.workspace_label", "Workspace:")}{" "}
+          <span className="font-mono text-foreground">{workspace}</span>
         </div>
       ) : null}
       {path ? (
         <div>
-          File: <span className="font-mono text-foreground">{path}</span>
+          {t("brain.file_label", "File:")}{" "}
+          <span className="font-mono text-foreground">{path}</span>
         </div>
       ) : null}
     </div>
@@ -73,6 +78,7 @@ export const AgentBrainPanel = ({
   onUnsavedChangesChange,
   onRename,
 }: AgentBrainPanelProps) => {
+  const { t } = useTranslation();
   const selectedAgent = useMemo(
     () =>
       selectedAgentId
@@ -122,7 +128,7 @@ export const AgentBrainPanel = ({
     }
     const renamed = await onRename(selectedAgent.agentId, nextName);
     if (!renamed) {
-      setSaveError("Saved IDENTITY.md, but could not rename the live agent.");
+      setSaveError(t("brain.save_identity_error", "已儲存 IDENTITY.md，但無法重新命名執行中的 Agent。"));
     }
   }, [
     agentFilesDirty,
@@ -132,6 +138,7 @@ export const AgentBrainPanel = ({
     onRename,
     saveAgentFiles,
     selectedAgent,
+    t,
   ]);
 
   const handleInitializeMissingFiles = useCallback(async () => {
@@ -162,9 +169,9 @@ export const AgentBrainPanel = ({
       const file = agentFiles[name];
       const trimmedContent = file.content.trim();
       const statusCopy = !file.exists
-        ? `This agent does not have a custom ${name} yet. Saving here will create the real workspace file.`
+        ? t("brain.no_custom_yet", "此 Agent 尚無自訂 %{name}。在此儲存將建立真實的工作區檔案。").replace("%{name}", name)
         : !trimmedContent
-          ? `This agent's ${name} exists, but it is currently empty.`
+          ? t("brain.empty_custom", "此 Agent 的 %{name} 已存在，但內容為空。").replace("%{name}", name)
           : null;
       return (
         <AgentBrainPanelSection title={AGENT_FILE_META[name].title}>
@@ -174,12 +181,12 @@ export const AgentBrainPanel = ({
               {statusCopy}
             </div>
           ) : null}
-          <AgentFileProvenance path={file.path} workspace={file.workspace} />
+          <AgentFileProvenance path={file.path} workspace={file.workspace} t={t} />
           <textarea
             aria-label={AGENT_FILE_META[name].title}
             className="h-[min(56vh,480px)] w-full resize-y rounded-md border border-border/80 bg-background px-4 py-3 font-mono text-sm leading-6 text-foreground outline-none"
             value={file.content}
-            placeholder={!file.exists ? `No ${name} yet.` : ""}
+            placeholder={!file.exists ? t("brain.no_file_yet", "尚無 %{name}。").replace("%{name}", name) : ""}
             disabled={agentFilesLoading || agentFilesSaving}
             onChange={(event) => {
               setAgentFileContent(name, event.target.value);
@@ -188,7 +195,7 @@ export const AgentBrainPanel = ({
         </AgentBrainPanelSection>
       );
     },
-    [agentFiles, agentFilesLoading, agentFilesSaving, setAgentFileContent],
+    [agentFiles, agentFilesLoading, agentFilesSaving, setAgentFileContent, t],
   );
 
   const renderIdentityEditor = useCallback(
@@ -199,12 +206,12 @@ export const AgentBrainPanel = ({
           {AGENT_FILE_META["IDENTITY.md"].hint}
         </div>
         <div className="text-xs text-muted-foreground">
-          Changing <span className="font-medium text-foreground">Name</span> here also renames the live agent
-          when you save.
+          <T id="brain.rename_hint" fallback="在此變更名稱時，儲存也會重新命名執行中的 Agent。" />
         </div>
         <AgentFileProvenance
           path={agentFiles["IDENTITY.md"].path}
           workspace={agentFiles["IDENTITY.md"].workspace}
+          t={t}
         />
         <AgentIdentityFields
           values={draft.identity}
@@ -215,7 +222,7 @@ export const AgentBrainPanel = ({
         />
       </section>
     ),
-    [agentFilesLoading, agentFilesSaving, draft.identity, setIdentityField],
+    [agentFilesLoading, agentFilesSaving, draft.identity, setIdentityField, t, agentFiles],
   );
 
   const renderedSections = useMemo(() => {
@@ -265,7 +272,7 @@ export const AgentBrainPanel = ({
                   void handleInitializeMissingFiles();
                 }}
               >
-                Initialize missing files
+                <T id="brain.init_missing" fallback="初始化遺漏的檔案" />
               </button>
             ) : null}
             <button
@@ -274,7 +281,7 @@ export const AgentBrainPanel = ({
               disabled={agentFilesLoading || agentFilesSaving}
               onClick={onCancel}
             >
-              Cancel
+              <T id="brain.cancel" fallback="取消" />
             </button>
             <button
               type="button"
@@ -284,7 +291,7 @@ export const AgentBrainPanel = ({
                 void handleSave();
               }}
             >
-              Save
+              <T id="brain.save" fallback="儲存" />
             </button>
           </div>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
+import { T, useTranslation } from "@/lib/i18n/TranslationProvider";
 import { useJukeboxStore } from "../store";
 import {
   startSpotifyAuth,
@@ -25,6 +26,7 @@ type JukeboxPanelProps = {
 // ---------------------------------------------------------------------------
 
 export function JukeboxPanel({ onClose }: JukeboxPanelProps) {
+  const { t } = useTranslation();
   const { view, init } = useJukeboxStore();
 
   useEffect(() => {
@@ -75,7 +77,7 @@ export function JukeboxPanel({ onClose }: JukeboxPanelProps) {
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-400/70">
                 Soundclaw
               </div>
-              <h2 className="text-base font-semibold text-white">Office Jukebox</h2>
+              <h2 className="text-base font-semibold text-white"><T id="jukebox.panel_title" fallback="Office Jukebox" /></h2>
             </div>
           </div>
           <button
@@ -83,7 +85,7 @@ export function JukeboxPanel({ onClose }: JukeboxPanelProps) {
             onClick={onClose}
             className="rounded-full border border-white/10 px-4 py-1.5 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white"
           >
-            Close
+            <T id="jukebox.close_btn" fallback="Close" />
           </button>
         </div>
 
@@ -101,6 +103,7 @@ export function JukeboxPanel({ onClose }: JukeboxPanelProps) {
 // ---------------------------------------------------------------------------
 
 function SetupView() {
+  const { t } = useTranslation();
   const { clientId, setClientId } = useJukeboxStore();
   const [inputId, setInputId] = useState(clientId);
   const [callbackBaseUrl, setCallbackBaseUrl] = useState(() => loadCallbackBaseUrl());
@@ -145,7 +148,7 @@ function SetupView() {
       {/* What you need card. */}
       <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-300">
-          <span>⚠️</span> What you need before connecting
+          <span>⚠️</span> <T id="jukebox.what_you_need" fallback="What you need before connecting" />
         </h3>
         <ol className="space-y-3 text-sm text-slate-300">
           <li className="flex gap-2">
@@ -179,7 +182,7 @@ function SetupView() {
                 onClick={() => navigator.clipboard.writeText(redirectUri)}
                 className="mt-1.5 text-xs text-slate-500 hover:text-slate-300"
               >
-                Copy to clipboard
+                <T id="jukebox.copy_clipboard" fallback="Copy to clipboard" />
               </button>
             </li>
           )}
@@ -200,7 +203,7 @@ function SetupView() {
 
       <div className="space-y-2">
         <label className="block text-sm font-medium text-slate-300">
-          ngrok Public URL
+          <T id="jukebox.ngrok_url_label" fallback="ngrok Public URL" />
         </label>
         <input
           type="url"
@@ -217,7 +220,7 @@ function SetupView() {
       {/* Client ID input. */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-slate-300">
-          Spotify Client ID
+          <T id="jukebox.client_id_label" fallback="Spotify Client ID" />
         </label>
         <input
           type="text"
@@ -237,7 +240,7 @@ function SetupView() {
         onClick={handleConnect}
         className="w-full rounded-xl bg-[#1DB954] py-3 text-sm font-semibold text-black transition hover:bg-[#1ed760] active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-40"
       >
-        {isRedirecting ? "Opening Spotify…" : "Connect with Spotify"}
+        {isRedirecting ? t("jukebox.opening_spotify", "Opening Spotify…") : <T id="jukebox.connect_spotify" fallback="Connect with Spotify" />}
       </button>
     </div>
   );
@@ -248,6 +251,7 @@ function SetupView() {
 // ---------------------------------------------------------------------------
 
 function PlayerView() {
+  const { t } = useTranslation();
   const {
     playerState,
     searchResults,
@@ -299,12 +303,12 @@ function PlayerView() {
       {/* Now playing. */}
       <div className="rounded-2xl border border-white/5 bg-slate-900/60 p-4">
         <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">
-          Now playing
+          <T id="jukebox.now_playing" fallback="Now playing" />
         </div>
         {isLoadingPlayer && !track ? (
           <div className="flex items-center gap-3 text-slate-500">
             <RunningAvatarLoader size={16} trackWidth={32} inline />
-            <span className="text-sm">Loading player…</span>
+            <span className="text-sm"><T id="jukebox.loading_player" fallback="Loading player…" /></span>
           </div>
         ) : track ? (
           <div className="flex items-center gap-4">
@@ -326,19 +330,19 @@ function PlayerView() {
           </div>
         ) : (
           <p className="text-sm text-slate-500">
-            No active playback. Open Spotify on a device first, then hit play.
+            <T id="jukebox.no_active_playback" fallback="No active playback. Open Spotify on a device first, then hit play." />
           </p>
         )}
 
         {/* Transport controls. */}
         <div className="mt-4 flex items-center justify-center gap-4">
-          <ControlButton icon="⏮" onClick={() => void previous()} title="Previous" />
+          <ControlButton icon="⏮" onClick={() => void previous()} title={t("jukebox.previous", "Previous")} />
           {playerState?.isPlaying ? (
-            <ControlButton icon="⏸" onClick={() => void pause()} title="Pause" large />
+            <ControlButton icon="⏸" onClick={() => void pause()} title={t("jukebox.pause", "Pause")} large />
           ) : (
-            <ControlButton icon="▶" onClick={() => void resume()} title="Play" large />
+            <ControlButton icon="▶" onClick={() => void resume()} title={t("jukebox.play", "Play")} large />
           )}
-          <ControlButton icon="⏭" onClick={() => void next()} title="Next" />
+          <ControlButton icon="⏭" onClick={() => void next()} title={t("jukebox.next", "Next")} />
         </div>
 
         {/* Volume. */}
@@ -363,7 +367,7 @@ function PlayerView() {
       {/* Search. */}
       <div>
         <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">
-          Search tracks
+          <T id="jukebox.search_tracks" fallback="Search tracks" />
         </div>
         <div className="relative">
           <input
@@ -396,7 +400,7 @@ function PlayerView() {
           onClick={disconnect}
           className="text-xs text-slate-600 underline underline-offset-2 hover:text-slate-400"
         >
-          Disconnect Spotify
+          <T id="jukebox.disconnect" fallback="Disconnect Spotify" />
         </button>
       </div>
     </div>
@@ -457,7 +461,7 @@ function SearchResult({
         onClick={onPlay}
         className="shrink-0 rounded-full border border-cyan-500/30 px-3 py-1 text-xs font-medium text-cyan-400 transition hover:bg-cyan-500/10"
       >
-        Play
+        <T id="jukebox.play_btn" fallback="Play" />
       </button>
     </li>
   );

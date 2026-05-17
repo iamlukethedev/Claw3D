@@ -1,5 +1,7 @@
 "use client";
 
+import { T, useTranslation } from "@/lib/i18n/TranslationProvider";
+
 type KanbanDisabledPanelProps = {
   onClose: () => void;
   onInstall: () => void;
@@ -17,6 +19,8 @@ export function KanbanDisabledPanel({
   progressMessage = null,
   errorMessage = null,
 }: KanbanDisabledPanelProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-6">
       <div className="w-full max-w-sm rounded-3xl border border-slate-700/40 bg-slate-950/95 p-8 text-center shadow-2xl">
@@ -25,19 +29,18 @@ export function KanbanDisabledPanel({
         </div>
 
         <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-slate-500">
-          Task Manager
+          <T id="kanban.disabled_title" fallback="任務管理員" />
         </div>
-        <h2 className="mt-1 text-xl font-semibold text-white">Kanban Skill Not Installed</h2>
+        <h2 className="mt-1 text-xl font-semibold text-white"><T id="kanban.disabled_heading" fallback="看板技能未安裝" /></h2>
         <p className="mt-3 text-sm leading-relaxed text-slate-400">
-          Install the <span className="text-cyan-400">TASK-MANAGER</span> skill to let your
-          agents capture work as tasks and open the Kanban desk.
+          <T id="kanban.disabled_desc" fallback="安裝 TASK-MANAGER 技能，讓 Agent 將工作捕捉為任務，並開啟看板工作區。" />
         </p>
 
         {installing ? (
           <div className="mt-5 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-left">
             <div className="flex items-center justify-between gap-3">
               <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-300/80">
-                Installing
+                <T id="kanban.installing" fallback="安裝中" />
               </span>
               <span className="font-mono text-[10px] text-cyan-100/70">
                 {Math.max(0, Math.min(100, Math.round(progressPercent)))}%
@@ -50,10 +53,10 @@ export function KanbanDisabledPanel({
               />
             </div>
             <p className="mt-3 text-sm leading-relaxed text-slate-300">
-              {progressMessage?.trim() || "Installing the task-manager skill."}
+              {progressMessage?.trim() || t("kanban.installing_msg", "正在安裝 task-manager 技能。")}
             </p>
             <p className="mt-2 text-xs leading-relaxed text-slate-500">
-              Once it&apos;s installed, Claw3D will refresh the task-manager state.
+              <T id="kanban.installed_hint" fallback="安裝完成後，Claw3D 將重新整理 task-manager 狀態。" />
             </p>
           </div>
         ) : null}
@@ -71,7 +74,9 @@ export function KanbanDisabledPanel({
             onClick={onInstall}
             disabled={installing}
           >
-            {installing ? "Installing TASK-MANAGER skill..." : "Install TASK-MANAGER skill"}
+            {installing
+              ? t("kanban.installing_btn", "正在安裝 TASK-MANAGER 技能…")
+              : t("kanban.install_btn", "安裝 TASK-MANAGER 技能")}
           </button>
           <button
             type="button"
@@ -79,7 +84,7 @@ export function KanbanDisabledPanel({
             onClick={onClose}
             disabled={installing}
           >
-            Dismiss
+            <T id="common.dismiss" fallback="關閉" />
           </button>
         </div>
       </div>

@@ -15,7 +15,7 @@ import type { OfficeAgent } from "@/features/retro-office/core/types";
 import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
 import { GatewayConnectScreen } from "@/features/agents/components/GatewayConnectScreen";
 import { useAgentStore, type AgentState } from "@/features/agents/state/store";
-import { T } from "@/lib/i18n/TranslationProvider";
+import { T, useTranslation } from "@/lib/i18n/TranslationProvider";
 import {
   GatewayClient,
   buildAgentMainSessionKey,
@@ -955,6 +955,7 @@ export function OfficeScreen({
   showOpenClawConsole = true,
 }: OfficeScreenProps) {
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
   const debugEnabled = searchParams.get("officeDebug") === "1";
   const [settingsCoordinator] = useState(() =>
     createStudioSettingsCoordinator(),
@@ -4704,14 +4705,14 @@ export function OfficeScreen({
       {showGatewayLoadingOverlay ? (
         <div
           className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-[#120a05]/76"
-          aria-label={<T id="office.connecting_to_runtime" fallback="Connecting to runtime" />}
+          aria-label={t('office.connecting_to_runtime', 'Connecting to runtime')}
           role="status"
         >
           <div className="rounded-xl border border-amber-700/45 bg-[#1a1008] px-8 py-6 shadow-2xl">
             <RunningAvatarLoader
               size={28}
               trackWidth={76}
-              label={<T id="office.connecting_to_runtime" fallback="Connecting to your runtime..." />}
+              label={t('office.connecting_to_runtime', 'Connecting to your runtime...')}
               labelClassName="text-amber-100/80"
             />
           </div>

@@ -2,6 +2,8 @@
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { RefreshCcw, Shuffle } from "lucide-react";
+
+import { T, useTranslation } from '@/lib/i18n/TranslationProvider';
 import {
   AGENT_AVATAR_BOTTOM_STYLE_OPTIONS,
   AGENT_AVATAR_CLOTHING_COLOR_OPTIONS,
@@ -58,6 +60,7 @@ export const AgentAvatarEditorPanel = forwardRef<
   }: AgentAvatarEditorPanelProps,
   ref
 ) {
+  const { t } = useTranslation();
   const fallbackProfile = useMemo(
     () => createDefaultAgentAvatarProfile(agentId),
     [agentId]
