@@ -1,10 +1,10 @@
 import type { AgentState, FocusFilter } from "@/features/agents/state/store";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { AgentAvatar } from "./AgentAvatar";
+import { T } from "@/lib/i18n/TranslationProvider";
 import {
   NEEDS_APPROVAL_BADGE_CLASS,
   resolveAgentStatusBadgeClass,
-  resolveAgentStatusLabel,
 } from "./colorSemantics";
 import { EmptyStatePanel } from "./EmptyStatePanel";
 
@@ -75,7 +75,7 @@ export const FleetSidebar = ({
       data-testid="fleet-sidebar"
     >
       <div className="flex items-center justify-between gap-2 px-1">
-        <p className="console-title type-page-title text-foreground">Agents ({agents.length})</p>
+        <p className="console-title type-page-title text-foreground"><T id="nav.agents" /> ({agents.length})</p>
         <button
           type="button"
           data-testid="fleet-new-agent-button"
@@ -155,11 +155,11 @@ export const FleetSidebar = ({
                         className={`ui-badge ${resolveAgentStatusBadgeClass(agent.status)}`}
                         data-status={agent.status}
                       >
-                        {resolveAgentStatusLabel(agent.status)}
+                        <T id={`agent.status.${agent.status}`} />
                       </span>
                       {agent.awaitingUserInput ? (
                         <span className={`ui-badge ${NEEDS_APPROVAL_BADGE_CLASS}`} data-status="approval">
-                          Needs approval
+                          <T id="agent.needs_approval" fallback="Needs approval" />
                         </span>
                       ) : null}
                     </div>

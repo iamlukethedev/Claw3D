@@ -13,6 +13,7 @@ import { FleetSidebar } from "@/features/agents/components/FleetSidebar";
 import { HeaderBar } from "@/features/agents/components/HeaderBar";
 import { ConnectionPanel } from "@/features/agents/components/ConnectionPanel";
 import { GatewayConnectScreen } from "@/features/agents/components/GatewayConnectScreen";
+import { T } from "@/lib/i18n/TranslationProvider";
 import { EmptyStatePanel } from "@/features/agents/components/EmptyStatePanel";
 import {
   isHeartbeatPrompt,
@@ -1374,7 +1375,7 @@ const AgentsPageScreen = () => {
               Claw3D
             </div>
             <div className="mt-3 text-sm text-muted-foreground">
-              {status === "connecting" ? "Connecting to gateway…" : "Booting Studio…"}
+              {status === "connecting" ? <T id="gateway.connecting" fallback="Connecting to gateway…" /> : <T id="office.boot" fallback="Booting Studio…" />}
             </div>
           </div>
         </div>

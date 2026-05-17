@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CURATED_ELEVENLABS_VOICES } from "@/lib/voiceReply/catalog";
 import type { StudioGatewayAdapterType } from "@/lib/studio/settings";
+import { T } from "@/lib/i18n/TranslationProvider";
 
 type SettingsPanelProps = {
   gatewayStatus?: string;
@@ -98,13 +99,13 @@ export function SettingsPanel({
       <div className="rounded-lg border border-cyan-500/10 bg-black/20 px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-[11px] font-medium text-white">Studio title</div>
+            <div className="text-[11px] font-medium text-white"><T id="settings.studio_title" fallback="Studio title" /></div>
             <div className="mt-1 text-[10px] text-white/75">
-              Customize the banner shown at the top of the office.
+              <T id="settings.studio_title_desc" fallback="Customize the banner shown at the top of the office." />
             </div>
           </div>
           <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-200/70">
-            {officeTitleLoaded ? "Ready" : "Loading"}
+            {officeTitleLoaded ? <T id="settings.studio_ready" fallback="Ready" /> : <T id="common.loading" fallback="Loading" />}
           </span>
         </div>
         <input
@@ -117,15 +118,15 @@ export function SettingsPanel({
           className="mt-3 w-full rounded-md border border-cyan-500/10 bg-black/25 px-3 py-2 text-[11px] uppercase tracking-[0.18em] text-cyan-100 outline-none transition-colors placeholder:text-cyan-100/30 focus:border-cyan-400/30 disabled:cursor-not-allowed disabled:opacity-50"
         />
         <div className="mt-2 text-[10px] text-white/50">
-          Used in the office scene header.
+          <T id="settings.studio_title_usage" fallback="Used in the office scene header." />
         </div>
       </div>
       <div className="mt-3 rounded-lg border border-cyan-500/10 bg-black/20 px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-[11px] font-medium text-white">Gateway</div>
+            <div className="text-[11px] font-medium text-white"><T id="settings.gateway" fallback="Gateway" /></div>
             <div className="mt-1 text-[10px] text-white/75">
-              Switch the active backend and update its saved endpoint details.
+              <T id="settings.gateway_desc" fallback="Switch the active backend and update its saved endpoint details." />
             </div>
           </div>
           <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-200/70">
@@ -155,7 +156,7 @@ export function SettingsPanel({
                     : "border-cyan-500/10 bg-black/20 text-white/75 hover:border-cyan-400/25 hover:text-cyan-50"
                 }`}
               >
-                {label}
+                <T id={`gateway.backend_${adapterType}`} fallback={label} />
               </button>
             );
           })}
@@ -200,7 +201,7 @@ export function SettingsPanel({
           <span className="font-mono">
             Active backend: {activeAdapterType}
           </span>
-          <span>Each backend keeps its own saved URL and token.</span>
+          <span><T id="gateway.each_backend_hint" fallback="Each backend keeps its own saved URL and token." /></span>
         </div>
         <div className="mt-3 flex items-center justify-between gap-3">
           <div className="text-[10px] text-white/60">
@@ -229,7 +230,7 @@ export function SettingsPanel({
       <div className="mt-3 rounded-lg border border-cyan-500/10 bg-black/20 px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-[11px] font-medium text-white">Remote office</div>
+            <div className="text-[11px] font-medium text-white"><T id="settings.remote_office" fallback="Remote office" /></div>
             <div className="mt-1 text-[10px] text-white/75">
               Attach a second read-only office from either another Claw3D or a remote OpenClaw gateway.
             </div>
@@ -251,7 +252,7 @@ export function SettingsPanel({
               <span className="ui-switch-thumb" />
             </button>
             <div className="flex flex-col">
-              <span className="text-[11px] font-medium text-white">Show second office</span>
+              <span className="text-[11px] font-medium text-white"><T id="settings.remote_office_show" fallback="Show second office" /></span>
               <span className="text-[10px] text-white/80">
                 Remote agents stay visible but non-interactive.
               </span>
@@ -275,8 +276,8 @@ export function SettingsPanel({
               }
               className="w-full rounded-md border border-cyan-500/10 bg-black/25 px-3 py-2 text-[11px] text-cyan-100 outline-none transition-colors focus:border-cyan-400/30"
             >
-              <option value="presence_endpoint">Remote Claw3D presence endpoint</option>
-              <option value="openclaw_gateway">Remote OpenClaw gateway</option>
+              <option value="presence_endpoint"><T id="settings.remote_claw3d" fallback="Remote Claw3D presence endpoint" /></option>
+              <option value="openclaw_gateway"><T id="settings.remote_openclaw" fallback="Remote OpenClaw gateway" /></option>
             </select>
             <div className="mt-1 text-[10px] text-white/50">
               Use a presence endpoint when the other machine runs Claw3D. Use gateway mode when the other machine only runs OpenClaw.
@@ -412,9 +413,9 @@ export function SettingsPanel({
       <div className="mt-3 rounded-lg border border-cyan-500/10 bg-black/20 px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-[11px] font-medium text-white">Onboarding</div>
+            <div className="text-[11px] font-medium text-white"><T id="settings.onboarding" fallback="Onboarding" /></div>
             <div className="mt-1 text-[10px] text-white/75">
-              Re-open the onboarding wizard to test the new-user flow.
+              <T id="settings.onboarding_reopen" fallback="Re-open the onboarding wizard to test the new-user flow." />
             </div>
           </div>
           <button
@@ -422,7 +423,7 @@ export function SettingsPanel({
             onClick={() => onOpenOnboarding?.()}
             className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-emerald-100 transition-colors hover:border-emerald-400/40 hover:bg-emerald-500/15"
           >
-            Launch wizard
+            <T id="common.reopen" fallback="Launch wizard" />
           </button>
         </div>
       </div>

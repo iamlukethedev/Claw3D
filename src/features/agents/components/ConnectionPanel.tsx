@@ -2,6 +2,7 @@ import type { GatewayStatus } from "@/lib/gateway/GatewayClient";
 import type { StudioGatewayAdapterType } from "@/lib/studio/settings";
 import { X } from "lucide-react";
 import { resolveGatewayStatusBadgeClass, resolveGatewayStatusLabel } from "./colorSemantics";
+import { T } from "@/lib/i18n/TranslationProvider";
 
 type ConnectionPanelProps = {
   gatewayUrl: string;
@@ -68,7 +69,7 @@ export const ConnectionPanel = ({
       : selectedAdapterType === "hermes"
         ? "Hermes owns provider/account routing behind the gateway."
         : selectedAdapterType === "demo"
-          ? "Demo can seed a local main agent or connect to the mock gateway."
+          ? <T id="gateway.backend_demo_desc" fallback="Demo can seed a local main agent or connect to the mock gateway." />
           : selectedAdapterType === "claw3d"
             ? "Claw3D runtime keeps Claw3D transcript semantics over direct HTTP."
             : selectedAdapterType === "local"

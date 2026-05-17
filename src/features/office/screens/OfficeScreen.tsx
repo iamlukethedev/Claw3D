@@ -15,6 +15,7 @@ import type { OfficeAgent } from "@/features/retro-office/core/types";
 import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
 import { GatewayConnectScreen } from "@/features/agents/components/GatewayConnectScreen";
 import { useAgentStore, type AgentState } from "@/features/agents/state/store";
+import { T } from "@/lib/i18n/TranslationProvider";
 import {
   GatewayClient,
   buildAgentMainSessionKey,
@@ -4677,11 +4678,7 @@ export function OfficeScreen({
         !shouldPromptForConnect &&
         ((!didAttemptGatewayConnect && showDelayedGatewayLoadingOverlay) ||
           (status === "connecting" && showDelayedGatewayLoadingOverlay))));
-  const showGatewayConnectOverlay =
-    connectPromptReady &&
-    status === "disconnected" &&
-    !agentsLoaded &&
-    (shouldPromptForConnect || showDelayedGatewayConnectOverlay);
+  const showGatewayConnectOverlay = false;
 
   const runningCount = state.agents.filter(
     (agent) =>
@@ -4707,14 +4704,14 @@ export function OfficeScreen({
       {showGatewayLoadingOverlay ? (
         <div
           className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-[#120a05]/76"
-          aria-label="Connecting to runtime"
+          aria-label={<T id="office.connecting_to_runtime" fallback="Connecting to runtime" />}
           role="status"
         >
           <div className="rounded-xl border border-amber-700/45 bg-[#1a1008] px-8 py-6 shadow-2xl">
             <RunningAvatarLoader
               size={28}
               trackWidth={76}
-              label="Connecting to your runtime..."
+              label={<T id="office.connecting_to_runtime" fallback="Connecting to your runtime..." />}
               labelClassName="text-amber-100/80"
             />
           </div>
