@@ -695,6 +695,7 @@ export const useTaskBoardController = ({
     "unknown" | "supported" | "unsupported"
   >("unknown");
   const sharedRefreshInFlightRef = useRef(false);
+  const lastPersistedTaskBoardSnapshotRef = useRef<string | null>(null);
 
   useEffect(() => {
     stateRef.current = state;
@@ -831,6 +832,15 @@ export const useTaskBoardController = ({
 
   useEffect(() => {
     if (!hydratedRef.current || !gatewayUrl.trim()) return;
+    const nextSnapshot = JSON.stringify({
+      gatewayUrl,
+      cards: state.cards,
+      selectedCardId: state.selectedCardId,
+    });
+    if (lastPersistedTaskBoardSnapshotRef.current === nextSnapshot) {
+      return;
+    }
+    lastPersistedTaskBoardSnapshotRef.current = nextSnapshot;
     settingsCoordinator.schedulePatch(
       {
         taskBoard: {
@@ -1141,8 +1151,26 @@ export const useTaskBoardController = ({
     [applySharedTaskRecord],
   );
 
+  const lastDedupeSnapshotRef = useRef<string | null>(null);
   useEffect(() => {
     if (!hydratedRef.current) return;
+    // Patch Hermes Phase 2: snapshot guard prevents re-entering the dedupe
+    // loop when state.cards is replaced by a structurally-identical array
+    // (upstream dispatch churn). Without this, the effect dispatches
+    // `upsert` to mark duplicates archived → state.cards new ref →
+    // effect re-runs → "Maximum update depth exceeded" in dev mode.
+    const snapshot = JSON.stringify(
+      stateRef.current.cards
+        .filter((card) => !card.isArchived && card.source === "openclaw_event")
+        .map((card) => ({
+          id: card.id,
+          title: card.title,
+          assignedAgentId: card.assignedAgentId ?? null,
+          externalThreadId: card.externalThreadId ?? null,
+        })),
+    );
+    if (lastDedupeSnapshotRef.current === snapshot) return;
+    lastDedupeSnapshotRef.current = snapshot;
     const grouped = new Map<string, TaskBoardCard[]>();
     for (const card of stateRef.current.cards) {
       if (card.isArchived || card.source !== "openclaw_event") continue;

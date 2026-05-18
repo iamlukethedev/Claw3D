@@ -739,6 +739,7 @@ export const useGatewayConnection = (
   const [connectErrorCode, setConnectErrorCode] = useState<string | null>(null);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [hasLastKnownGoodState, setHasLastKnownGoodState] = useState(false);
+  const lastScheduledGatewaySnapshotRef = useRef<string | null>(null);
   const setSelectedAdapterType = useCallback(
     (value: StudioGatewayAdapterType) => {
       setSelectedAdapterTypeState(value);
@@ -795,18 +796,26 @@ export const useGatewayConnection = (
           resolveDefaultStudioGatewayProfile(nextAdapterType, normalizedDefaults);
         const nextGatewayUrl = selectedProfile.url ?? "";
         const nextToken = selectedProfile.token ?? "";
+        // Patch Hermes Phase 2: allow auto-connect for auto-managed adapters
+        // (hermes/openclaw/demo) when a persisted URL exists, even if
+        // gateway.lastKnownGood.adapterType doesn't match the currently
+        // selected adapter. Without this, switching to Hermes never
+        // auto-connects because lastKnownGood is still "openclaw".
+        const hasPersistedProfileForSelected =
+          Boolean(resolvedGatewayProfiles.lastKnownGoodForSelected?.url) ||
+          (isAutoManagedAdapter(nextAdapterType) && nextGatewayUrl.trim().length > 0);
         loadedGatewaySettings.current = {
           gatewayUrl: nextGatewayUrl.trim(),
           token: nextToken,
           adapterType: nextAdapterType,
           profiles: resolvedGatewayProfiles.profiles,
-          hasLastKnownGood: Boolean(resolvedGatewayProfiles.lastKnownGoodForSelected?.url),
+          hasLastKnownGood: hasPersistedProfileForSelected,
         };
         setGatewayUrl(nextGatewayUrl);
         setToken(nextToken);
         setSelectedAdapterTypeState(nextAdapterType);
         setAdapterProfiles(resolvedGatewayProfiles.profiles);
-        setHasLastKnownGoodState(Boolean(resolvedGatewayProfiles.lastKnownGoodForSelected?.url));
+        setHasLastKnownGoodState(hasPersistedProfileForSelected);
       } catch (err) {
         if (!cancelled) {
           const message = err instanceof Error ? err.message : "Failed to load gateway settings.";
@@ -1106,14 +1115,25 @@ export const useGatewayConnection = (
         token: persistToken,
       },
     };
+    const nextSnapshot = JSON.stringify({
+      gatewayUrl: nextGatewayUrl,
+      token,
+      selectedAdapterType,
+      profiles: nextProfiles,
+    });
+    if (lastScheduledGatewaySnapshotRef.current === nextSnapshot) {
+      return;
+    }
     if (
       nextGatewayUrl === baseline.gatewayUrl &&
       token === baseline.token &&
       selectedAdapterType === baseline.adapterType &&
       JSON.stringify(nextProfiles) === JSON.stringify(baseline.profiles ?? {})
     ) {
+      lastScheduledGatewaySnapshotRef.current = nextSnapshot;
       return;
     }
+    lastScheduledGatewaySnapshotRef.current = nextSnapshot;
     settingsCoordinator.schedulePatch(
       {
         gateway: {
@@ -1125,6 +1145,13 @@ export const useGatewayConnection = (
       },
       400
     );
+    loadedGatewaySettings.current = {
+      gatewayUrl: nextGatewayUrl,
+      token,
+      adapterType: selectedAdapterType,
+      profiles: nextProfiles,
+      hasLastKnownGood: baseline.hasLastKnownGood,
+    };
   }, [adapterProfiles, gatewayUrl, selectedAdapterType, settingsCoordinator, settingsLoaded, token]);
 
   const useLocalGatewayDefaults = useCallback(() => {

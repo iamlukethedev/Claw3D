@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { MessageSquare, ChevronDown, ChevronLeft, ChevronRight, Mic } from "lucide-react";
 import { RetroOffice3D } from "@/features/retro-office/RetroOffice3D";
 import type { OfficeAgent } from "@/features/retro-office/core/types";
@@ -953,8 +953,15 @@ type OfficeScreenProps = {
 export function OfficeScreen({
   showOpenClawConsole = true,
 }: OfficeScreenProps) {
-  const searchParams = useSearchParams();
-  const debugEnabled = searchParams.get("officeDebug") === "1";
+  // Patch Hermes Phase 2: avoid useSearchParams() at component root — it
+  // suspends during hydration in Next.js dev mode and keeps the parent
+  // Suspense fallback stuck on "Loading...". Use a sync useMemo so
+  // debugEnabled is stable across renders (state+useEffect caused a
+  // re-render cascade through downstream useCallbacks).
+  const debugEnabled = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("officeDebug") === "1";
+  }, []);
   const [settingsCoordinator] = useState(() =>
     createStudioSettingsCoordinator(),
   );
