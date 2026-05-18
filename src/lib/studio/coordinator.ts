@@ -353,6 +353,7 @@ const mergeStudioPatch = (
       ...(next.voiceReplies ? { voiceReplies: { ...next.voiceReplies } } : {}),
       ...(next.office ? { office: { ...next.office } } : {}),
       ...(next.standup ? { standup: { ...next.standup } } : {}),
+      ...(next.taskBoard ? { taskBoard: { ...next.taskBoard } } : {}),
       ...(next.officeFloors ? { officeFloors: { ...next.officeFloors } } : {}),
     };
   }

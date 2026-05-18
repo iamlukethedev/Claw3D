@@ -739,6 +739,7 @@ export const useGatewayConnection = (
   const [connectErrorCode, setConnectErrorCode] = useState<string | null>(null);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [hasLastKnownGoodState, setHasLastKnownGoodState] = useState(false);
+  const lastScheduledGatewaySnapshotRef = useRef<string | null>(null);
   const setSelectedAdapterType = useCallback(
     (value: StudioGatewayAdapterType) => {
       setSelectedAdapterTypeState(value);
@@ -1114,14 +1115,25 @@ export const useGatewayConnection = (
         token: persistToken,
       },
     };
+    const nextSnapshot = JSON.stringify({
+      gatewayUrl: nextGatewayUrl,
+      token,
+      selectedAdapterType,
+      profiles: nextProfiles,
+    });
+    if (lastScheduledGatewaySnapshotRef.current === nextSnapshot) {
+      return;
+    }
     if (
       nextGatewayUrl === baseline.gatewayUrl &&
       token === baseline.token &&
       selectedAdapterType === baseline.adapterType &&
       JSON.stringify(nextProfiles) === JSON.stringify(baseline.profiles ?? {})
     ) {
+      lastScheduledGatewaySnapshotRef.current = nextSnapshot;
       return;
     }
+    lastScheduledGatewaySnapshotRef.current = nextSnapshot;
     settingsCoordinator.schedulePatch(
       {
         gateway: {
@@ -1133,6 +1145,13 @@ export const useGatewayConnection = (
       },
       400
     );
+    loadedGatewaySettings.current = {
+      gatewayUrl: nextGatewayUrl,
+      token,
+      adapterType: selectedAdapterType,
+      profiles: nextProfiles,
+      hasLastKnownGood: baseline.hasLastKnownGood,
+    };
   }, [adapterProfiles, gatewayUrl, selectedAdapterType, settingsCoordinator, settingsLoaded, token]);
 
   const useLocalGatewayDefaults = useCallback(() => {
