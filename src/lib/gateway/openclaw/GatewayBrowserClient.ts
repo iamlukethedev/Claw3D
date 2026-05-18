@@ -1,6 +1,8 @@
 // Adapted from `openclaw/openclaw` `ui/src/ui/gateway.ts`.
 // Source license: MIT. Last verified against OpenClaw 2026.2.12
 // (`f9e444dd56ccfc2271e8ae1729b7a14a55e1c11e`).
+// Protocol v4 support (maxProtocol: 4) added 2026-05-17 to match OpenClaw
+// ≥ 2026.3.x which bumped the required gateway protocol version from 3 to 4.
 // Update this file via `npm run sync:gateway-client -- /path/to/gateway.ts` and record
 // provenance changes in `THIRD_PARTY_CODE.md` whenever the upstream source changes.
 import { getPublicKeyAsync, signAsync, utils } from "@noble/ed25519";
@@ -540,13 +542,15 @@ export class GatewayBrowserClient {
         }
       | undefined;
 
+    const effectiveMode = this.opts.mode ?? GATEWAY_CLIENT_MODES.WEBCHAT;
+
     if (isSecureContext && deviceIdentity) {
       const signedAtMs = Date.now();
       const nonce = this.connectNonce ?? undefined;
       const payload = buildDeviceAuthPayload({
         deviceId: deviceIdentity.deviceId,
         clientId: this.opts.clientName ?? GATEWAY_CLIENT_NAMES.CONTROL_UI,
-        clientMode: this.opts.mode ?? GATEWAY_CLIENT_MODES.WEBCHAT,
+        clientMode: effectiveMode,
         role,
         scopes,
         signedAtMs,
@@ -564,12 +568,12 @@ export class GatewayBrowserClient {
     }
     const params = {
       minProtocol: 3,
-      maxProtocol: 3,
+      maxProtocol: 4,
       client: {
         id: this.opts.clientName ?? GATEWAY_CLIENT_NAMES.CONTROL_UI,
         version: this.opts.clientVersion ?? "dev",
         platform: this.opts.platform ?? navigator.platform ?? "web",
-        mode: this.opts.mode ?? GATEWAY_CLIENT_MODES.WEBCHAT,
+        mode: effectiveMode,
         instanceId: this.opts.instanceId,
       },
       role,
@@ -703,10 +707,24 @@ export class GatewayBrowserClient {
     this.connectNonce = null;
     this.connectSent = false;
     if (this.connectTimer !== null) window.clearTimeout(this.connectTimer);
-    const SOCKET_OPEN_CONNECT_DELAY_MS = 75;
-    gatewayBrowserDebugLog("queue-connect", { delayMs: SOCKET_OPEN_CONNECT_DELAY_MS });
+    // When device auth is active the gateway sends a connect.challenge nonce
+    // that must arrive before we transmit the connect frame. 75 ms is fine for
+    // low-latency links (LAN, Tailscale) but SSH tunnels to remote hosts can
+    // easily exceed that, causing the timer to fire before the nonce arrives.
+    // The result is a nonce-less device payload that the proxy treats as
+    // incomplete (hasDevice=false), downgrades to webchat-ui, and OpenClaw then
+    // rejects with a protocol-version mismatch. Use a generous fallback when we
+    // would actually generate device auth so the nonce has time to arrive; the
+    // challenge handler cancels the timer immediately when it does, so fast
+    // connections are unaffected.
+    const expectChallenge =
+      !this.opts.disableDeviceAuth &&
+      typeof crypto !== "undefined" &&
+      !!crypto.subtle;
+    const delayMs = expectChallenge ? 5_000 : 75;
+    gatewayBrowserDebugLog("queue-connect", { delayMs });
     this.connectTimer = window.setTimeout(() => {
       void this.sendConnect();
-    }, SOCKET_OPEN_CONNECT_DELAY_MS);
+    }, delayMs);
   }
 }
