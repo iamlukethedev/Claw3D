@@ -795,18 +795,26 @@ export const useGatewayConnection = (
           resolveDefaultStudioGatewayProfile(nextAdapterType, normalizedDefaults);
         const nextGatewayUrl = selectedProfile.url ?? "";
         const nextToken = selectedProfile.token ?? "";
+        // Patch Hermes Phase 2: allow auto-connect for auto-managed adapters
+        // (hermes/openclaw/demo) when a persisted URL exists, even if
+        // gateway.lastKnownGood.adapterType doesn't match the currently
+        // selected adapter. Without this, switching to Hermes never
+        // auto-connects because lastKnownGood is still "openclaw".
+        const hasPersistedProfileForSelected =
+          Boolean(resolvedGatewayProfiles.lastKnownGoodForSelected?.url) ||
+          (isAutoManagedAdapter(nextAdapterType) && nextGatewayUrl.trim().length > 0);
         loadedGatewaySettings.current = {
           gatewayUrl: nextGatewayUrl.trim(),
           token: nextToken,
           adapterType: nextAdapterType,
           profiles: resolvedGatewayProfiles.profiles,
-          hasLastKnownGood: Boolean(resolvedGatewayProfiles.lastKnownGoodForSelected?.url),
+          hasLastKnownGood: hasPersistedProfileForSelected,
         };
         setGatewayUrl(nextGatewayUrl);
         setToken(nextToken);
         setSelectedAdapterTypeState(nextAdapterType);
         setAdapterProfiles(resolvedGatewayProfiles.profiles);
-        setHasLastKnownGoodState(Boolean(resolvedGatewayProfiles.lastKnownGoodForSelected?.url));
+        setHasLastKnownGoodState(hasPersistedProfileForSelected);
       } catch (err) {
         if (!cancelled) {
           const message = err instanceof Error ? err.message : "Failed to load gateway settings.";
