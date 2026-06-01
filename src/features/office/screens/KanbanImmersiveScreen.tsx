@@ -17,12 +17,12 @@ export function KanbanImmersiveScreen({
   cronLoading,
   cronError,
   taskCaptureDebug,
-  onCreateCard,
-  onMoveCard,
-  onSelectCard,
-  onUpdateCard,
-  onDeleteCard,
-  onRefreshCronJobs,
+  onCreateCardAction,
+  onMoveCardAction,
+  onSelectCardAction,
+  onUpdateCardAction,
+  onDeleteCardAction,
+  onRefreshCronJobsAction,
   onClose,
 }: {
   agents: AgentState[];
@@ -33,12 +33,12 @@ export function KanbanImmersiveScreen({
   cronLoading: boolean;
   cronError: string | null;
   taskCaptureDebug?: ComponentProps<typeof TaskBoardView>["taskCaptureDebug"];
-  onCreateCard: () => void;
-  onMoveCard: (cardId: string, status: TaskBoardStatus) => void;
-  onSelectCard: (cardId: string | null) => void;
-  onUpdateCard: (cardId: string, patch: Partial<TaskBoardCard>) => void;
-  onDeleteCard: (cardId: string) => void;
-  onRefreshCronJobs: () => void;
+  onCreateCardAction: () => void;
+  onMoveCardAction: (cardId: string, status: TaskBoardStatus) => void;
+  onSelectCardAction: (cardId: string | null) => void;
+  onUpdateCardAction: (cardId: string, patch: Partial<TaskBoardCard>) => void;
+  onDeleteCardAction: (cardId: string) => void;
+  onRefreshCronJobsAction: () => void;
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -84,7 +84,7 @@ export function KanbanImmersiveScreen({
       role="dialog"
       aria-modal="true"
       aria-label="Kanban Board"
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-[2px]"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -102,7 +102,7 @@ export function KanbanImmersiveScreen({
         <div
           ref={dialogRef}
           tabIndex={-1}
-          className="flex h-[min(75vh,800px)] w-[min(80vw,1280px)] flex-col overflow-hidden rounded-2xl border border-amber-500/20 bg-[#0e0b07]/85 shadow-2xl outline-none backdrop-blur-md"
+          className="flex h-[min(90vh,960px)] w-[min(94vw,1500px)] flex-col overflow-hidden rounded-2xl border border-amber-500/20 bg-[#0e0b07]/85 shadow-2xl outline-none backdrop-blur-md"
         >
           <div className="min-h-0 flex-1">
           <TaskBoardView
@@ -116,12 +116,12 @@ export function KanbanImmersiveScreen({
             cronLoading={cronLoading}
             cronError={cronError}
             taskCaptureDebug={taskCaptureDebug}
-            onCreateCard={onCreateCard}
-            onMoveCard={onMoveCard}
-            onSelectCard={onSelectCard}
-            onUpdateCard={onUpdateCard}
-            onDeleteCard={onDeleteCard}
-            onRefreshCronJobs={onRefreshCronJobs}
+            onCreateCardAction={onCreateCardAction}
+            onMoveCardAction={onMoveCardAction}
+            onSelectCardAction={onSelectCardAction}
+            onUpdateCardAction={onUpdateCardAction}
+            onDeleteCardAction={onDeleteCardAction}
+            onRefreshCronJobsAction={onRefreshCronJobsAction}
           />
           </div>
         </div>

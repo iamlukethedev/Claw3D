@@ -51,8 +51,8 @@ describe("skills presentation helpers", () => {
       "workspace",
       "built-in",
       "installed",
-      "extra",
-      "other",
+      "community",
+      "unknown",
     ]);
     expect(groups[0]?.skills.map((skill) => skill.name)).toEqual(["workspace"]);
     expect(groups[1]?.skills.map((skill) => skill.name)).toEqual(["bundled"]);
@@ -75,8 +75,8 @@ describe("skills presentation helpers", () => {
     expect(details).toEqual([
       "Missing tools: playwright",
       "Missing one-of tools (install any): chromium | chrome",
-      "Missing env vars (set in gateway env): GITHUB_TOKEN",
-      "Missing config values (set in openclaw.json): browser.enabled",
+      "Missing env vars: GITHUB_TOKEN",
+      "Missing config values (set in gateway config): browser.enabled",
       "Requires OS: Linux",
     ]);
   });
@@ -211,8 +211,8 @@ describe("skills presentation helpers", () => {
   it("marks only gateway-managed and workspace skill sources as removable", () => {
     expect(canRemoveSkill(createSkill({ source: "openclaw-managed" }))).toBe(true);
     expect(canRemoveSkill(createSkill({ source: "openclaw-workspace" }))).toBe(true);
-    expect(canRemoveSkill(createSkill({ source: "agents-skills-personal" }))).toBe(false);
-    expect(canRemoveSkill(createSkill({ source: "agents-skills-project" }))).toBe(false);
+    expect(canRemoveSkill(createSkill({ source: "agents-skills-personal" }))).toBe(true);
+    expect(canRemoveSkill(createSkill({ source: "agents-skills-project" }))).toBe(true);
     expect(canRemoveSkill(createSkill({ source: "openclaw-bundled", bundled: true }))).toBe(
       false
     );

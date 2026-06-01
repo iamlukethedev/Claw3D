@@ -80,7 +80,6 @@ async function main() {
     dev,
     hostname,
     port,
-    ...(dev ? { webpack: true } : null),
   });
   const handle = app.getRequestHandler();
 
@@ -129,13 +128,6 @@ async function main() {
 
   const attachUpgradeHandlers = (server) => {
     server.on("upgrade", handleServerUpgrade);
-    server.on("newListener", (eventName, listener) => {
-      if (eventName !== "upgrade") return;
-      if (listener === handleServerUpgrade) return;
-      process.nextTick(() => {
-        server.removeListener("upgrade", listener);
-      });
-    });
   };
 
   for (const server of servers) {

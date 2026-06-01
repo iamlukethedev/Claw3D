@@ -1,11 +1,15 @@
 import { createElement } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TaskBoardView } from "@/features/office/tasks/TaskBoardView";
 import type { TaskBoardCard } from "@/features/office/tasks/types";
 import type { AgentState } from "@/features/agents/state/store";
 import type { CronJobSummary } from "@/lib/cron/types";
+
+afterEach(() => {
+  cleanup();
+});
 
 const createCard = (overrides: Partial<TaskBoardCard> = {}): TaskBoardCard => ({
   id: "task-1",
@@ -103,18 +107,20 @@ describe("TaskBoardView", () => {
         cronJobs: [createCronJob()],
         cronLoading: false,
         cronError: null,
-        onCreateCard,
-        onMoveCard,
-        onSelectCard,
-        onUpdateCard,
-        onDeleteCard,
-        onRefreshCronJobs,
+        onCreateCardAction: onCreateCard,
+        onMoveCardAction: onMoveCard,
+        onSelectCardAction: onSelectCard,
+        onUpdateCardAction: onUpdateCard,
+        onDeleteCardAction: onDeleteCard,
+        onRefreshCronJobsAction: onRefreshCronJobs,
       })
     );
 
-    fireEvent.click(screen.getAllByRole("button", { name: /new task/i })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: /new task/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^\+ task$/i }));
     fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
-    fireEvent.click(screen.getAllByRole("button", { name: /new task/i })[1]!);
+    fireEvent.click(screen.getByRole("button", { name: /^kanban/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^close$/i }));
     fireEvent.change(screen.getByLabelText("Title"), {
       target: { value: "Create marketing website" },
     });
@@ -126,12 +132,103 @@ describe("TaskBoardView", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /delete task/i }));
 
-    expect(onCreateCard).toHaveBeenCalledTimes(1);
+    expect(onCreateCard).toHaveBeenCalledTimes(2);
     expect(onRefreshCronJobs).toHaveBeenCalledTimes(1);
     expect(onSelectCard).toHaveBeenCalledWith(null);
     expect(onUpdateCard).toHaveBeenCalledWith("task-1", { title: "Create marketing website" });
     expect(onMoveCard).toHaveBeenCalledWith("task-1", "in_progress");
     expect(onUpdateCard).toHaveBeenCalledWith("task-1", { assignedAgentId: "agent-1" });
     expect(onDeleteCard).toHaveBeenCalledWith("task-1");
+  });
+
+  it("allows workspace canvas task cards to be edited directly", async () => {
+    const onUpdateCard = vi.fn();
+    const selectedCard = createCard();
+
+    render(
+      createElement(TaskBoardView, {
+        title: "Kanban",
+        subtitle: "Track tasks.",
+        agents: [createAgent()],
+        cardsByStatus: {
+          todo: [selectedCard],
+          in_progress: [],
+          blocked: [],
+          review: [],
+          done: [],
+        },
+        selectedCard: null,
+        activeRuns: [],
+        cronJobs: [],
+        cronLoading: false,
+        cronError: null,
+        onCreateCardAction: vi.fn(),
+        onMoveCardAction: vi.fn(),
+        onSelectCardAction: vi.fn(),
+        onUpdateCardAction: onUpdateCard,
+        onDeleteCardAction: vi.fn(),
+        onRefreshCronJobsAction: vi.fn(),
+      })
+    );
+
+    fireEvent.change(await screen.findByPlaceholderText("Task title"), {
+      target: { value: "Write the task here" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Describe the task..."), {
+      target: { value: "Add details without leaving the canvas." },
+    });
+    fireEvent.change(screen.getByLabelText("Assign task agent"), {
+      target: { value: "agent-1" },
+    });
+
+    expect(onUpdateCard).toHaveBeenCalledWith("task-1", {
+      title: "Write the task here",
+    });
+    expect(onUpdateCard).toHaveBeenCalledWith("task-1", {
+      description: "Add details without leaving the canvas.",
+    });
+    expect(onUpdateCard).toHaveBeenCalledWith("task-1", {
+      assignedAgentId: "agent-1",
+    });
+  });
+
+  it("can delete all workspace canvas task cards after confirmation", async () => {
+    const onDeleteCard = vi.fn();
+    const firstCard = createCard({ id: "task-1", title: "First task" });
+    const secondCard = createCard({ id: "task-2", title: "Second task" });
+
+    render(
+      createElement(TaskBoardView, {
+        title: "Kanban",
+        subtitle: "Track tasks.",
+        agents: [createAgent()],
+        cardsByStatus: {
+          todo: [firstCard, secondCard],
+          in_progress: [],
+          blocked: [],
+          review: [],
+          done: [],
+        },
+        selectedCard: null,
+        activeRuns: [],
+        cronJobs: [],
+        cronLoading: false,
+        cronError: null,
+        onCreateCardAction: vi.fn(),
+        onMoveCardAction: vi.fn(),
+        onSelectCardAction: vi.fn(),
+        onUpdateCardAction: vi.fn(),
+        onDeleteCardAction: onDeleteCard,
+        onRefreshCronJobsAction: vi.fn(),
+      })
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^delete all$/i }));
+    expect(onDeleteCard).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /^confirm delete all$/i }));
+
+    expect(onDeleteCard).toHaveBeenCalledWith("task-1");
+    expect(onDeleteCard).toHaveBeenCalledWith("task-2");
   });
 });
