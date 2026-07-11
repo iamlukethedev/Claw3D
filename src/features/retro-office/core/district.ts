@@ -9,8 +9,39 @@ export type DistrictZone = {
   maxY: number;
 };
 
-export const LOCAL_OFFICE_CANVAS_WIDTH = 1800;
-export const LOCAL_OFFICE_CANVAS_HEIGHT = 720;
+// Local office floor footprint (canvas units). Historically a fixed 1800×720
+// corridor. Now configurable so a floor can be re-shaped (e.g. a compact,
+// square-ish HOME plate instead of a call-center corridor) without editing core.
+//
+// Set NEXT_PUBLIC_LOCAL_OFFICE_WIDTH / NEXT_PUBLIC_LOCAL_OFFICE_HEIGHT (positive
+// integers, canvas units) to override. Defaults preserve the original 1800×720
+// so nothing changes for existing users. Floor, walls, camera framing and the
+// walkability zones below all derive from these two values, so overriding them
+// reshapes the whole plate coherently.
+const FOOTPRINT_DEFAULT_WIDTH = 1800;
+const FOOTPRINT_DEFAULT_HEIGHT = 720;
+
+const readFootprintEnv = (raw: string | undefined, fallback: number): number => {
+  const parsed = raw !== undefined ? Number.parseInt(raw, 10) : Number.NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+export const LOCAL_OFFICE_CANVAS_WIDTH = readFootprintEnv(
+  process.env.NEXT_PUBLIC_LOCAL_OFFICE_WIDTH,
+  FOOTPRINT_DEFAULT_WIDTH,
+);
+export const LOCAL_OFFICE_CANVAS_HEIGHT = readFootprintEnv(
+  process.env.NEXT_PUBLIC_LOCAL_OFFICE_HEIGHT,
+  FOOTPRINT_DEFAULT_HEIGHT,
+);
+
+// True when the footprint is at least the original size, i.e. the built-in
+// east-wing office rooms (gym / QA lab, authored at fixed x∈[1092,1534]) still
+// fit on the plate. On a smaller custom plate they would spill past the wall, so
+// callers gate that office-specific decoration on this flag.
+export const FOOTPRINT_FITS_DEFAULT_OFFICE =
+  LOCAL_OFFICE_CANVAS_WIDTH >= FOOTPRINT_DEFAULT_WIDTH &&
+  LOCAL_OFFICE_CANVAS_HEIGHT >= FOOTPRINT_DEFAULT_HEIGHT;
 
 export const LOCAL_OFFICE_ZONE: DistrictZone = {
   minX: 0,
