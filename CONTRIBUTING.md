@@ -14,7 +14,7 @@ Please use GitHub Issues for bugs, feature requests, and questions about planned
 ## Local setup
 ```bash
 git clone https://github.com/iamlukethedev/Claw3D.git
-cd claw3d
+cd Claw3D
 npm install
 cp .env.example .env
 npm run dev
