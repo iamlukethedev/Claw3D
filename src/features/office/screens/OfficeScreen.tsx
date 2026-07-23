@@ -16,7 +16,6 @@ import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarL
 import { GatewayConnectScreen } from "@/features/agents/components/GatewayConnectScreen";
 import { useAgentStore, type AgentState } from "@/features/agents/state/store";
 import {
-  GatewayClient,
   buildAgentMainSessionKey,
   type EventFrame,
   isSameSessionKey,
@@ -128,10 +127,10 @@ import {
   type AgentAvatarProfile,
 } from "@/lib/avatars/profile";
 import {
-  createEmptyPersonalityDraft,
   serializePersonalityFiles,
   type PersonalityBuilderDraft,
 } from "@/lib/agents/personalityBuilder";
+import { createEscobarGovernedPersonalityDraft } from "@/lib/agents/escobarGovernance";
 import { writeGatewayAgentFiles } from "@/lib/gateway/agentFiles";
 import { randomUUID } from "@/lib/uuid";
 import {
@@ -380,11 +379,7 @@ const buildPhoneCallOutputLine = (text: string) => `[phone booth] ${text}`;
 const buildTextMessageOutputLine = (text: string) => `[messaging booth] ${text}`;
 
 const buildIdentityFileDraft = (identity: AgentIdentityValues) => {
-  const draft = createEmptyPersonalityDraft();
-  draft.identity = {
-    ...draft.identity,
-    ...identity,
-  };
+  const draft = createEscobarGovernedPersonalityDraft(identity);
   return serializePersonalityFiles(draft);
 };
 
@@ -2262,9 +2257,7 @@ export function OfficeScreen({
             await writeGatewayAgentFiles({
               client,
               agentId: created.id,
-              files: {
-                "IDENTITY.md": files["IDENTITY.md"],
-              },
+              files,
             });
             return { id: created.id };
           },

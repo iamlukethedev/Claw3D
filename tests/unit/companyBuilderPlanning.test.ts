@@ -149,6 +149,7 @@ describe("buildCompanyAgentBlueprints", () => {
     expect(blueprints).toHaveLength(2);
     expect(blueprints[0]?.files["AGENTS.md"]).toContain("Bug Bistro");
     expect(blueprints[0]?.files["AGENTS.md"]).toContain("Ships code.");
+    expect(blueprints[0]?.files["AGENTS.md"]).toContain("Tiana is the senior control agent");
     expect(blueprints[0]?.files["SOUL.md"]).toContain("Calm and methodical.");
     expect(blueprints[1]?.files["HEARTBEAT.md"]).toContain("Review risk daily.");
   });

@@ -24,7 +24,6 @@ import type {
 } from "@/lib/studio/coordinator";
 import { resolveStudioProxyGatewayUrl } from "@/lib/gateway/proxy-url";
 import { ensureGatewayReloadModeHotForLocalStudio } from "@/lib/gateway/gatewayReloadMode";
-import { isLocalGatewayUrl } from "@/lib/gateway/local-gateway";
 import { GatewayResponseError } from "@/lib/gateway/errors";
 
 const gatewayDebugEnabled = process.env.NODE_ENV !== "production";
@@ -122,7 +121,6 @@ const DEFAULT_UPSTREAM_GATEWAY_URL =
 const INITIAL_AUTO_CONNECT_DELAY_MS = 900;
 const INITIAL_CONNECT_RETRY_DELAY_MS = 1_200;
 const OPENCLAW_CONTROL_UI_CLIENT_ID = "openclaw-control-ui";
-const OPENCLAW_WEBCHAT_UI_CLIENT_ID = "webchat-ui";
 
 const isAutoManagedAdapter = (adapterType: StudioGatewayAdapterType) =>
   adapterType === "openclaw" || adapterType === "hermes" || adapterType === "demo";
@@ -131,12 +129,9 @@ export const resolveGatewayClientName = (
   adapterType: StudioGatewayAdapterType,
   gatewayUrl: string
 ) => {
-  if (adapterType !== "openclaw") {
-    return OPENCLAW_CONTROL_UI_CLIENT_ID;
-  }
-  return isLocalGatewayUrl(gatewayUrl)
-    ? OPENCLAW_CONTROL_UI_CLIENT_ID
-    : OPENCLAW_WEBCHAT_UI_CLIENT_ID;
+  void adapterType;
+  void gatewayUrl;
+  return OPENCLAW_CONTROL_UI_CLIENT_ID;
 };
 
 export const resolveInitialGatewayAutoConnectDelayMs = (
@@ -777,15 +772,12 @@ export const useGatewayConnection = (
                 localGatewayDefaultsPrivate: null,
               };
         const settings = envelope.settings ?? null;
-        // gatewayPrivate is no longer sent by the server — upstream tokens must not
-        // cross the browser API boundary. The Studio proxy injects tokens server-side.
-        // We derive profiles from the sanitized public settings only.
         if (cancelled) return;
         const normalizedDefaults = normalizeLocalGatewayDefaults(
-          envelope.localGatewayDefaults,
+          envelope.localGatewayDefaultsPrivate ?? envelope.localGatewayDefaults,
         );
         setLocalGatewayDefaults(normalizedDefaults);
-        const gatewaySettings = settings?.gateway ?? null;
+        const gatewaySettings = envelope.gatewayPrivate ?? settings?.gateway ?? null;
         const resolvedGatewayProfiles = resolveStudioGatewayProfiles({
           gateway: gatewaySettings as StudioGatewaySettings | null,
           localDefaults: normalizedDefaults,

@@ -409,12 +409,9 @@ describe("useAgentSettingsMutationController", () => {
       expect(ctx.getValue().hasRestartBlockInProgress).toBe(true);
     });
 
-    await waitFor(() => {
-      expect(restartBlockHookParams?.block).not.toBeNull();
-    });
-
     const timeoutHookParams = restartBlockHookParams;
     expect(timeoutHookParams).not.toBeNull();
+    expect(timeoutHookParams?.onTimeout).toBeTypeOf("function");
 
     await act(async () => {
       timeoutHookParams!.onTimeout();

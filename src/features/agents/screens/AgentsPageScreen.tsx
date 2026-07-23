@@ -42,6 +42,9 @@ import {
   resolveDefaultConfigAgentId,
   slugifyAgentName,
 } from "@/lib/gateway/agentConfig";
+import { writeGatewayAgentFiles } from "@/lib/gateway/agentFiles";
+import { createEscobarGovernedPersonalityDraft } from "@/lib/agents/escobarGovernance";
+import { serializePersonalityFiles } from "@/lib/agents/personalityBuilder";
 import { buildAvatarDataUrl } from "@/lib/avatars/multiavatar";
 import { createStudioSettingsCoordinator } from "@/lib/studio/coordinator";
 import {
@@ -961,6 +964,14 @@ const AgentsPageScreen = () => {
           enqueueConfigMutation,
           createAgent: async (name, avatarSeed) => {
             const created = await createGatewayAgent({ client, name });
+            const files = serializePersonalityFiles(
+              createEscobarGovernedPersonalityDraft({ name }),
+            );
+            await writeGatewayAgentFiles({
+              client,
+              agentId: created.id,
+              files,
+            });
             if (avatarSeed) {
               persistAvatarProfile(
                 created.id,

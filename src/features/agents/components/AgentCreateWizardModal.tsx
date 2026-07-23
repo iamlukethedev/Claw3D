@@ -12,9 +12,9 @@ import {
   AGENT_FILE_PLACEHOLDERS,
 } from "@/lib/agents/agentFiles";
 import {
-  createEmptyPersonalityDraft,
   type PersonalityBuilderDraft,
 } from "@/lib/agents/personalityBuilder";
+import { createEscobarGovernedPersonalityDraft } from "@/lib/agents/escobarGovernance";
 import {
   createDefaultAgentAvatarProfile,
   type AgentAvatarProfile,
@@ -99,9 +99,9 @@ const wizardSteps: Array<{ id: WizardStepId; label: string; hint: string }> = [
 ];
 
 const buildInitialDraft = (suggestedName: string): PersonalityBuilderDraft => {
-  const draft = createEmptyPersonalityDraft();
-  draft.identity.name = suggestedName.trim() || "New Agent";
-  return draft;
+  return createEscobarGovernedPersonalityDraft({
+    name: suggestedName.trim() || "New Agent",
+  });
 };
 
 const WizardField = ({
