@@ -4228,7 +4228,12 @@ export function OfficeScreen({
         smsBoothHeld: boolean;
       }
     >();
-    const nextOfficeAgents = state.agents.map((agent) => {
+    // OpenClaw's built-in "main" agent is a permanent fallback/default that cannot
+    // be deleted; hide it from the 3D room without touching the OpenClaw config.
+    const visibleAgents = state.agents.filter(
+      (agent) => agent.agentId !== "main",
+    );
+    const nextOfficeAgents = visibleAgents.map((agent) => {
       const latchedWorking = (workingUntilByAgentId[agent.agentId] ?? 0) > now;
       const deskHeld = Boolean(deskHoldByAgentId[agent.agentId]);
       const gymHeld = Boolean(gymHoldByAgentId[agent.agentId]);
