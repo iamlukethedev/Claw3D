@@ -16,27 +16,29 @@ import type { FurnitureItem } from "@/features/retro-office/core/types";
 import type { InteractiveFurnitureModelProps } from "@/features/retro-office/objects/types";
 
 export const FURNITURE_GLB: Record<string, string> = {
-  desk_cubicle: "/office-assets/models/furniture/desk.glb",
-  executive_desk: "/office-assets/models/furniture/deskCorner.glb",
-  chair: "/office-assets/models/furniture/chairDesk.glb",
-  round_table: "/office-assets/models/furniture/tableRound.glb",
-  couch: "/office-assets/models/furniture/loungeSofa.glb",
-  couch_v: "/office-assets/models/furniture/loungeDesignChair.glb",
-  bookshelf: "/office-assets/models/furniture/bookcaseClosed.glb",
-  plant: "/office-assets/models/furniture/pottedPlant.glb",
-  beanbag: "/office-assets/models/furniture/loungeDesignChair.glb",
-  pingpong: "/office-assets/models/furniture/tableCoffee.glb",
-  table_rect: "/office-assets/models/furniture/table.glb",
-  coffee_machine: "/office-assets/models/furniture/kitchenCoffeeMachine.glb",
-  fridge: "/office-assets/models/furniture/kitchenFridgeSmall.glb",
-  water_cooler: "/office-assets/models/furniture/plantSmall1.glb",
-  whiteboard: "/office-assets/models/furniture/bookcaseClosed.glb",
-  kanban_board: "/office-assets/models/furniture/deskCorner.glb",
-  cabinet: "/office-assets/models/furniture/kitchenCabinet.glb",
-  computer: "/office-assets/models/furniture/computerScreen.glb",
-  lamp: "/office-assets/models/furniture/lampRoundFloor.glb",
-  printer: "/office-assets/models/furniture/kitchenCoffeeMachine.glb",
+  desk_cubicle: "models/furniture/desk.glb",
+  executive_desk: "models/furniture/deskCorner.glb",
+  chair: "models/furniture/chairDesk.glb",
+  round_table: "models/furniture/tableRound.glb",
+  couch: "models/furniture/loungeSofa.glb",
+  couch_v: "models/furniture/loungeDesignChair.glb",
+  bookshelf: "models/furniture/bookcaseClosed.glb",
+  plant: "models/furniture/pottedPlant.glb",
+  beanbag: "models/furniture/loungeDesignChair.glb",
+  pingpong: "models/furniture/tableCoffee.glb",
+  table_rect: "models/furniture/table.glb",
+  coffee_machine: "models/furniture/kitchenCoffeeMachine.glb",
+  fridge: "models/furniture/kitchenFridgeSmall.glb",
+  water_cooler: "models/furniture/plantSmall1.glb",
+  whiteboard: "models/furniture/bookcaseClosed.glb",
+  kanban_board: "models/furniture/deskCorner.glb",
+  cabinet: "models/furniture/kitchenCabinet.glb",
+  computer: "models/furniture/computerScreen.glb",
+  lamp: "models/furniture/lampRoundFloor.glb",
+  printer: "models/furniture/kitchenCoffeeMachine.glb",
 };
+
+const legacyAssetResolver = (assetId: string) => `/office-assets/${assetId}`;
 
 export const FURNITURE_SCALE: Record<string, [number, number, number]> = {
   desk_cubicle: [1.5, 1.5, 1.5],
@@ -193,12 +195,15 @@ export function InstancedFurnitureItems({
   itemType,
   items,
   onItemClick,
+  resolveAsset = legacyAssetResolver,
 }: {
   itemType: string;
   items: FurnitureItem[];
   onItemClick?: (itemUid: string) => void;
+  resolveAsset?: (assetId: string) => string;
 }) {
-  const glbPath = FURNITURE_GLB[itemType] ?? FURNITURE_GLB.table_rect;
+  const assetId = FURNITURE_GLB[itemType] ?? FURNITURE_GLB.table_rect;
+  const glbPath = resolveAsset(assetId);
   const { scene } = useGLTF(glbPath);
   const template = useMemo(
     () =>
@@ -295,9 +300,11 @@ export function FurnitureModel({
   onPointerOver,
   onPointerOut,
   onClick,
-}: InteractiveFurnitureModelProps) {
+  resolveAsset = legacyAssetResolver,
+}: InteractiveFurnitureModelProps & { resolveAsset?: (assetId: string) => string }) {
   const itemType = resolveItemTypeKey(item);
-  const glbPath = FURNITURE_GLB[itemType] ?? FURNITURE_GLB.table_rect;
+  const assetId = FURNITURE_GLB[itemType] ?? FURNITURE_GLB.table_rect;
+  const glbPath = resolveAsset(assetId);
   const { scene } = useGLTF(glbPath);
   const template = useMemo(
     () =>
@@ -723,7 +730,8 @@ export function PlacementGhost({
   itemType: string;
   position: [number, number, number];
 }) {
-  const glbPath = FURNITURE_GLB[itemType] ?? FURNITURE_GLB.table_rect;
+  const assetId = FURNITURE_GLB[itemType] ?? FURNITURE_GLB.table_rect;
+  const glbPath = legacyAssetResolver(assetId);
   const { scene } = useGLTF(glbPath);
   const template = useMemo(
     () =>
@@ -749,7 +757,3 @@ export function PlacementGhost({
     </group>
   );
 }
-
-[...new Set(Object.values(FURNITURE_GLB))].forEach((path) =>
-  useGLTF.preload(path),
-);

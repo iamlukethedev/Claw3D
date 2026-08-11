@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, Suspense, useMemo } from "react";
+import type { AssetResolver } from "@claw3d/visual-contract";
 import type { FurnitureItem } from "@/features/retro-office/core/types";
 import {
   FurnitureModel as GenericFurnitureModel,
@@ -48,8 +49,10 @@ const NOOP_FURNITURE_UID_HANDLER = () => {};
 const NOOP_FURNITURE_HANDLER = () => {};
 export const ReadOnlyFurnitureClone = memo(function ReadOnlyFurnitureClone({
   furniture,
+  assetResolver,
 }: {
   furniture: FurnitureItem[];
+  assetResolver: AssetResolver;
 }) {
   const deskItems = useMemo(
     () => furniture.filter((item) => item.type === "desk_cubicle"),
@@ -67,8 +70,8 @@ export const ReadOnlyFurnitureClone = memo(function ReadOnlyFurnitureClone({
   return (
     <Suspense fallback={null}>
       <PrimitiveInstancedWallSegmentsModel items={wallItems} />
-      <InstancedFurnitureItemsModel itemType="desk_cubicle" items={deskItems} />
-      <InstancedFurnitureItemsModel itemType="chair" items={chairItems} />
+      <InstancedFurnitureItemsModel itemType="desk_cubicle" items={deskItems} resolveAsset={assetResolver.resolve} />
+      <InstancedFurnitureItemsModel itemType="chair" items={chairItems} resolveAsset={assetResolver.resolve} />
       {furniture.map((item) =>
         item.type === "wall" ||
         item.type === "desk_cubicle" ||
@@ -392,6 +395,7 @@ export const ReadOnlyFurnitureClone = memo(function ReadOnlyFurnitureClone({
             onPointerDown={NOOP_FURNITURE_UID_HANDLER}
             onPointerOver={NOOP_FURNITURE_UID_HANDLER}
             onPointerOut={NOOP_FURNITURE_HANDLER}
+            resolveAsset={assetResolver.resolve}
           />
         ),
       )}

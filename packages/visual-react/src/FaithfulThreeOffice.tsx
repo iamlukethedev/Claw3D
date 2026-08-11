@@ -1,9 +1,8 @@
 "use client";
 
-import { Environment, OrbitControls } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
 import {
-  Suspense,
   useEffect,
   useMemo,
   useRef,
@@ -12,17 +11,8 @@ import {
   type CSSProperties,
 } from "react";
 import * as THREE from "three";
-import type { VisualActor, VisualConnectionState, VisualSnapshot } from "@claw3d/visual-contract";
+import type { AssetResolver, VisualActor, VisualConnectionState, VisualSnapshot } from "@claw3d/visual-contract";
 import {
-  ensureOfficeAtm,
-  ensureOfficeGymRoom,
-  ensureOfficeJukebox,
-  ensureOfficeKanbanBoard,
-  ensureOfficePhoneBooth,
-  ensureOfficePingPongTable,
-  ensureOfficeQaLab,
-  ensureOfficeServerRoom,
-  ensureOfficeSmsBooth,
   isRetiredPingPongLamp,
   materializeDefaults,
 } from "@/features/retro-office/core/furnitureDefaults";
@@ -81,23 +71,7 @@ const CAMERA_POSITION: [number, number, number] = [
 ];
 
 function materializeLobby(): FurnitureItem[] {
-  return ensureOfficeKanbanBoard(
-    ensureOfficeJukebox(
-      ensureOfficeQaLab(
-        ensureOfficeGymRoom(
-          ensureOfficeServerRoom(
-            ensureOfficePhoneBooth(
-              ensureOfficeSmsBooth(
-                ensureOfficeAtm(
-                  ensureOfficePingPongTable(materializeDefaults("lobby")),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-  ).filter((item) => !isRetiredPingPongLamp(item));
+  return materializeDefaults("lobby").filter((item) => !isRetiredPingPongLamp(item));
 }
 
 function deterministicItem(actorId: string): string {
@@ -159,6 +133,7 @@ function TinyIcon({ kind }: { kind: "overview" | "desk" | "lounge" | "heat" | "t
 }
 
 export interface FaithfulThreeOfficeProps {
+  assetResolver: AssetResolver;
   snapshot: VisualSnapshot | null;
   connection: VisualConnectionState;
   title?: string;
@@ -167,6 +142,7 @@ export interface FaithfulThreeOfficeProps {
 }
 
 export function FaithfulThreeOffice({
+  assetResolver,
   snapshot,
   connection,
   title = "Visual Headquarters",
@@ -253,8 +229,8 @@ export function FaithfulThreeOffice({
           <directionalLight position={[-5, 8, -4]} intensity={0.4} color="#7090ff" />
           <FloorAndWalls showRemoteOffice={false} />
           <WallPictures showRemoteOffice={false} />
-          <Suspense fallback={null}><Environment preset="city" /></Suspense>
-          <ReadOnlyFurnitureClone furniture={furniture} />
+          <hemisphereLight args={["#f4efe6", "#12131a", 1.15]} />
+          <ReadOnlyFurnitureClone furniture={furniture} assetResolver={assetResolver} />
           {renderAgents.map((actor) => (
             <AgentModel
               key={actor.id}

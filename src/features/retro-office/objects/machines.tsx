@@ -1,4 +1,3 @@
-import { Text } from "@react-three/drei";
 import { useMemo } from "react";
 import * as THREE from "three";
 import { SCALE } from "@/features/retro-office/core/constants";
@@ -8,6 +7,7 @@ import {
   toWorld,
 } from "@/features/retro-office/core/geometry";
 import { InteractiveFurnitureModelProps } from "@/features/retro-office/objects/types";
+import { LocalSceneText as Text } from "@/features/retro-office/objects/LocalSceneText";
 
 export function AtmMachineModel({
   item,

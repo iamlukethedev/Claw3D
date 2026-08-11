@@ -1,4 +1,4 @@
-import { Billboard, Text } from "@react-three/drei";
+import { Billboard } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { memo, useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -13,6 +13,7 @@ import type {
   RenderAgent,
 } from "@/features/retro-office/core/types";
 import { AgentModelProps } from "@/features/retro-office/objects/types";
+import { LocalSceneText as Text } from "@/features/retro-office/objects/LocalSceneText";
 
 const MAX_NAMEPLATE_TEXT_LENGTH = 10;
 const MAX_SPEECH_BUBBLE_TEXT_LENGTH = 180;

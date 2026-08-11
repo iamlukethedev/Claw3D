@@ -1,6 +1,6 @@
 "use client";
 
-import { Billboard, Text } from "@react-three/drei";
+import { Billboard } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useRef, useState } from "react";
 import * as THREE from "three";
@@ -11,6 +11,7 @@ import {
   toWorld,
 } from "@/features/retro-office/core/geometry";
 import type { InteractiveFurnitureModelProps } from "@/features/retro-office/objects/types";
+import { LocalSceneText as Text } from "@/features/retro-office/objects/LocalSceneText";
 
 export type JukeboxModelProps = InteractiveFurnitureModelProps & {
   active?: boolean;

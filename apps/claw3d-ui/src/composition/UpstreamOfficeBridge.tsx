@@ -4,6 +4,12 @@ import { useState } from "react";
 import type { VisualConnectionState, VisualSnapshot } from "@claw3d/visual-contract";
 import { FaithfulThreeOffice } from "@claw3d/visual-react";
 
+const OFFICE_ASSETS = {
+  resolve(assetId: string) {
+    return `/office-assets/${assetId}`;
+  },
+};
+
 export interface UpstreamOfficeBridgeProps {
   snapshot: VisualSnapshot | null;
   connection: VisualConnectionState;
@@ -38,6 +44,7 @@ export function UpstreamOfficeBridge({
     <main className="upstream-office-shell">
       <section className="upstream-office-scene" aria-label="Claw3D visual office">
         <FaithfulThreeOffice
+          assetResolver={OFFICE_ASSETS}
           snapshot={snapshot}
           connection={connection}
           title="JARVIS Headquarters"

@@ -10,14 +10,24 @@ The root MIT license and `Copyright (c) 2026 Luke The Dev` are preserved.
 
 ## GLB furniture models
 
-The 17 GLB files under `public/office-assets/models/furniture/` contain only a
-`UniGLTF-1.24` generator marker. They embed no author, source URL, license, or
-attribution metadata, and the repository contains no separate attribution for
-them.
+The 17 GLB files under `public/office-assets/models/furniture/` are from Kenney's
+Furniture Kit 1.0. Every retained binary was SHA-256 compared with the matching
+file in the explicitly named `kenney_furniture-kit/Models/GLTF format` mirror at
+RetroDECK/RetroQUEST commit
+`dfa19a5602a31f64bd890d15279a61f43b127328`: 17 of 17 are exact matches.
 
-Decision: provenance is not established. The target visual scene will use
-code-native Three.js geometry. These GLB files are classified for removal after
-checkpoint approval.
+Kenney's official Furniture Kit page identifies the pack as Creative Commons
+CC0 and the official support page confirms that assets on those pages are public
+domain licensed and may be used in commercial projects:
+
+- https://kenney.nl/assets/furniture-kit
+- https://kenney.nl/support
+- https://creativecommons.org/publicdomain/zero/1.0/
+
+Decision: retain the 17 GLB files, record them in `THIRD_PARTY_NOTICES.md`, and
+serve them only through the Claw3D same-origin asset allowlist. The scene receives
+their URLs through `AssetResolver`; the visual package does not own a hard-coded
+route.
 
 ## Office background and image assets
 
@@ -25,9 +35,10 @@ checkpoint approval.
 branding images have no asset-specific provenance record. They are not required
 by the autonomous UI.
 
-Decision: the office background and non-validation images are classified for
-removal. Validation screenshots created by this refactor remain as project
-evidence and are clearly identified as such.
+Decision: the office background and non-validation images remain classified for
+removal. The restored scene does not request the background image. Validation
+screenshots created by this refactor remain as project evidence and are clearly
+identified as such.
 
 ## Vendored Multiavatar code
 

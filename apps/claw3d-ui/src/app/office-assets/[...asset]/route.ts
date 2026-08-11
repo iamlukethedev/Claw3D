@@ -3,7 +3,6 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 
 const ALLOWED_OFFICE_ASSETS = new Set<string>([
-  "backgrounds/office-bg.png",
   "models/furniture/bookcaseClosed.glb",
   "models/furniture/chairDesk.glb",
   "models/furniture/chairModernCushion.glb",
