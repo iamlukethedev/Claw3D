@@ -1,4 +1,5 @@
 import { readVisualRuntimeConfig } from "../../../../../composition/config";
+import { SESSION_AUTH_POLICY } from "../../../../../server/sessionAuthPolicy";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ export function GET() {
     connectorEnabled: config.adapter === "jarvis-readonly" && config.connectorEnabled,
     capabilities: {
       readOnly: true,
-      sessionAuth: false,
+      sessionAuth: SESSION_AUTH_POLICY.enabled,
       businessCommands: false,
     },
   }, { headers: { "cache-control": "no-store" } });

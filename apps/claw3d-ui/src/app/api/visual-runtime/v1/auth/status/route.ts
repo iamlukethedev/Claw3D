@@ -1,3 +1,5 @@
+import { SESSION_AUTH_POLICY } from "../../../../../../server/sessionAuthPolicy";
+
 export const dynamic = "force-dynamic";
 
 export function GET() {
@@ -5,7 +7,8 @@ export function GET() {
     schemaVersion: 1,
     configured: false,
     authenticated: false,
-    sessionAuth: false,
-    reason: "Cross-origin session relay is intentionally disabled",
+    sessionAuth: SESSION_AUTH_POLICY.enabled,
+    cookieRelay: SESSION_AUTH_POLICY.cookieRelay,
+    reason: SESSION_AUTH_POLICY.reason,
   }, { headers: { "cache-control": "no-store" } });
 }

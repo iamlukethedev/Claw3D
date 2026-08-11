@@ -25,7 +25,20 @@ describe("visual runtime configuration", () => {
       readVisualRuntimeConfig({
         VISUAL_ADAPTER: "jarvis-readonly",
         JARVIS_CONNECTOR_ENABLED: "true",
+        JARVIS_ORIGIN: "http://127.0.0.1:8000",
       }),
     ).toMatchObject({ adapter: "jarvis-readonly", connectorEnabled: true });
+  });
+
+  it("rejects a missing, credentialed, or path-bearing private origin", () => {
+    expect(readVisualRuntimeConfig({
+      VISUAL_ADAPTER: "jarvis-readonly",
+      JARVIS_CONNECTOR_ENABLED: "true",
+    }).adapter).toBe("null");
+    expect(readVisualRuntimeConfig({
+      VISUAL_ADAPTER: "jarvis-readonly",
+      JARVIS_CONNECTOR_ENABLED: "true",
+      JARVIS_ORIGIN: "https://user:secret@example.test/api",
+    }).adapter).toBe("null");
   });
 });
