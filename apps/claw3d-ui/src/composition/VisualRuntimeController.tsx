@@ -3,22 +3,17 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { createMockAdapter, MOCK_SCENARIOS, type MockScenario } from "@claw3d/adapter-mock";
 import { createNullAdapter } from "@claw3d/adapter-null";
-import type { AssetResolver, VisualRuntimeAdapter } from "@claw3d/visual-contract";
+import { createJarvisReadonlyBrowserAdapter } from "@claw3d/adapter-jarvis-readonly";
+import type { VisualRuntimeAdapter } from "@claw3d/visual-contract";
 import { INITIAL_VISUAL_STATE, visualReducer } from "@claw3d/visual-core";
-import { VisualOffice } from "@claw3d/visual-react";
 import { createBrowserStoragePort } from "./browserStorage";
+import { UpstreamOfficeBridge } from "./UpstreamOfficeBridge";
 
 export interface VisualRuntimeControllerProps {
   configuredAdapter: "mock" | "null" | "jarvis-readonly";
   persistenceEnabled: boolean;
   configurationReason?: string;
 }
-
-const ASSET_RESOLVER: AssetResolver = {
-  resolve(assetId) {
-    return assetId;
-  },
-};
 
 export function VisualRuntimeController({
   configuredAdapter,
@@ -36,6 +31,7 @@ export function VisualRuntimeController({
   const adapter = useMemo<VisualRuntimeAdapter>(() => {
     void reload;
     if (configuredAdapter === "mock") return createMockAdapter(scenario);
+    if (configuredAdapter === "jarvis-readonly") return createJarvisReadonlyBrowserAdapter();
     return createNullAdapter();
   }, [configuredAdapter, scenario, reload]);
 
@@ -79,17 +75,13 @@ export function VisualRuntimeController({
     setScenario("multiple");
   }, [storage]);
 
-  const adapterLabel = configuredAdapter === "jarvis-readonly"
-    ? "null · connector pending checkpoint"
-    : `${adapter.id}${configurationReason ? ` · ${configurationReason}` : ""}`;
+  const adapterLabel = `${adapter.id}${configurationReason ? ` · ${configurationReason}` : ""}`;
 
   return (
-    <VisualOffice
+    <UpstreamOfficeBridge
       snapshot={state.snapshot}
       connection={state.connection}
-      title="JARVIS visual office"
       adapterLabel={adapterLabel}
-      assetResolver={ASSET_RESOLVER}
       scenarios={configuredAdapter === "mock" ? MOCK_SCENARIOS : []}
       selectedScenario={scenario}
       persistenceEnabled={persistenceEnabled}

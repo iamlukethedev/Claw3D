@@ -12,6 +12,10 @@ export default defineConfig({
       "@claw3d/visual-core": path.resolve(__dirname, "packages/visual-core/src/index.ts"),
       "@claw3d/adapter-mock": path.resolve(__dirname, "packages/adapter-mock/src/index.ts"),
       "@claw3d/adapter-null": path.resolve(__dirname, "packages/adapter-null/src/index.ts"),
+      "@claw3d/adapter-jarvis-readonly": path.resolve(
+        __dirname,
+        "packages/adapter-jarvis-readonly/src/index.ts",
+      ),
     },
   },
   test: {

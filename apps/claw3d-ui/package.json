@@ -11,6 +11,7 @@
   "dependencies": {
     "@claw3d/adapter-mock": "1.0.0",
     "@claw3d/adapter-null": "1.0.0",
+    "@claw3d/adapter-jarvis-readonly": "1.0.0",
     "@claw3d/visual-contract": "1.0.0",
     "@claw3d/visual-core": "1.0.0",
     "@claw3d/visual-react": "1.0.0",

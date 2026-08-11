@@ -9,7 +9,8 @@
       "@claw3d/visual-core": ["packages/visual-core/src/index.ts"],
       "@claw3d/visual-react": ["packages/visual-react/src/index.ts"],
       "@claw3d/adapter-mock": ["packages/adapter-mock/src/index.ts"],
-      "@claw3d/adapter-null": ["packages/adapter-null/src/index.ts"]
+      "@claw3d/adapter-null": ["packages/adapter-null/src/index.ts"],
+      "@claw3d/adapter-jarvis-readonly": ["packages/adapter-jarvis-readonly/src/index.ts"]
     }
   },
   "include": [
