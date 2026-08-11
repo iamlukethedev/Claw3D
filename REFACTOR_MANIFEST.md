@@ -2,8 +2,8 @@
 
 Source SHA: `70ba84c1b13322eb660a6f7f5c53e36e7067c412`.
 Classification: kept only after decoupling or rewrite.
-Exact paths: 126.
-Coverage set: 627 repository files; every path is assigned exactly once.
+Exact paths: 161.
+Coverage set: 669 repository files; every path is assigned exactly once.
 
 - `.env.example`
 - `.github/CODEOWNERS`
@@ -27,11 +27,41 @@ Coverage set: 627 repository files; every path is assigned exactly once.
 - `ARCHITECTURE.md`
 - `CODE_DOCUMENTATION.md`
 - `README.md`
+- `apps/claw3d-ui/next.config.ts`
+- `apps/claw3d-ui/package.json`
+- `apps/claw3d-ui/src/app/layout.tsx`
+- `apps/claw3d-ui/src/app/office/builder/page.tsx`
+- `apps/claw3d-ui/src/app/office/page.tsx`
+- `apps/claw3d-ui/src/app/page.tsx`
+- `apps/claw3d-ui/src/composition/BuilderController.tsx`
+- `apps/claw3d-ui/src/composition/VisualRuntimeController.tsx`
+- `apps/claw3d-ui/src/composition/browserStorage.ts`
+- `apps/claw3d-ui/src/composition/config.ts`
+- `apps/claw3d-ui/tsconfig.json`
 - `components.json`
 - `eslint.config.mjs`
 - `next.config.ts`
 - `package-lock.json`
 - `package.json`
+- `packages/adapter-mock/package.json`
+- `packages/adapter-mock/src/index.ts`
+- `packages/adapter-null/package.json`
+- `packages/adapter-null/src/index.ts`
+- `packages/visual-contract/package.json`
+- `packages/visual-contract/src/fixtures.ts`
+- `packages/visual-contract/src/index.ts`
+- `packages/visual-core/package.json`
+- `packages/visual-core/src/geometry.ts`
+- `packages/visual-core/src/index.ts`
+- `packages/visual-core/src/navigation.ts`
+- `packages/visual-core/src/reducer.ts`
+- `packages/visual-core/src/viewModel.ts`
+- `packages/visual-react/package.json`
+- `packages/visual-react/src/PhaserOfficeBuilder.tsx`
+- `packages/visual-react/src/ThreeOfficeScene.tsx`
+- `packages/visual-react/src/VisualOffice.tsx`
+- `packages/visual-react/src/index.ts`
+- `packages/visual-react/src/styles.css`
 - `playwright.config.ts`
 - `postcss.config.mjs`
 - `src/app/globals.css`
@@ -129,5 +159,10 @@ Coverage set: 627 repository files; every path is assigned exactly once.
 - `tests/unit/personalityBuilder.test.ts`
 - `tests/unit/studioDeskAssignments.test.ts`
 - `tests/unit/useOfficeFloorRuntimePersistence.test.ts`
+- `tests/visual/adapters.test.ts`
+- `tests/visual/config.test.ts`
+- `tests/visual/visualCore.test.ts`
 - `tsconfig.json`
+- `tsconfig.visual.json`
 - `vitest.config.ts`
+- `vitest.visual.config.ts`

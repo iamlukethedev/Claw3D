@@ -1,0 +1,31 @@
+{
+  "name": "@claw3d/app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@claw3d/adapter-mock": "1.0.0",
+    "@claw3d/adapter-null": "1.0.0",
+    "@claw3d/visual-contract": "1.0.0",
+    "@claw3d/visual-core": "1.0.0",
+    "@claw3d/visual-react": "1.0.0",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "next": "16.1.7",
+    "phaser": "^3.90.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "three": "^0.183.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  }
+}

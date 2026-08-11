@@ -3,7 +3,7 @@
 Source SHA: `70ba84c1b13322eb660a6f7f5c53e36e7067c412`.
 Classification: removed after explicit checkpoint approval.
 Exact paths: 490.
-Coverage set: 627 repository files; every path is assigned exactly once.
+Coverage set: 669 repository files; every path is assigned exactly once.
 
 - `.dockerignore`
 - `CHANGELOG.md`

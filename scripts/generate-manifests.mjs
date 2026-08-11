@@ -18,12 +18,16 @@ const keepExact = new Set([
   ".claw3d-root",
   "ASSET_AUDIT.md",
   "BASELINE_REPORT.md",
+  "CHECKPOINT_REPORT.md",
+  "DELETION_PLAN.md",
   "KEEP_MANIFEST.md",
   "LICENSE",
   "REMOVE_MANIFEST.md",
   "REFACTOR_MANIFEST.md",
   "UPSTREAM_SOURCE.md",
+  "docs/architecture/visual-ui.md",
   "scripts/generate-manifests.mjs",
+  "scripts/verify-visual-boundaries.mjs",
 ]);
 
 const refactorExact = new Set([
@@ -41,7 +45,9 @@ const refactorExact = new Set([
   "playwright.config.ts",
   "postcss.config.mjs",
   "tsconfig.json",
+  "tsconfig.visual.json",
   "vitest.config.ts",
+  "vitest.visual.config.ts",
   "src/app/globals.css",
   "src/app/layout.tsx",
   "src/features/office/components/OfficeBuilderPanel.tsx",
@@ -60,12 +66,17 @@ const refactorPrefixes = [
   "src/lib/avatars/",
   "src/lib/office/",
   "tests/e2e/",
+  "tests/visual/",
 ];
 
 const visualTestPattern = /(office|retro|navigation|pathfinding|floor|furniture|avatar|builder|geometry|desk|map)/i;
 
 function classify(file) {
-  if (keepExact.has(file) || file.startsWith("artifacts/baseline/")) return "keep";
+  if (
+    keepExact.has(file) ||
+    file.startsWith("artifacts/baseline/") ||
+    file.startsWith("artifacts/checkpoint/")
+  ) return "keep";
   if (refactorExact.has(file) || refactorPrefixes.some((prefix) => file.startsWith(prefix))) {
     return "refactor";
   }

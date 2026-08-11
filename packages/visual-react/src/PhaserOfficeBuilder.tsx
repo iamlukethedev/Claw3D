@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-type PhaserModule = typeof import("phaser")["default"];
+type PhaserModule = typeof import("phaser");
 
 export interface VisualLayoutItem {
   id: string;
