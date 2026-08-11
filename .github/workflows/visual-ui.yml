@@ -1,0 +1,75 @@
+name: Visual UI CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.claw3d/playwright-browsers
+      npm_config_cache: ${{ github.workspace }}/.claw3d/npm-cache
+      TMPDIR: ${{ github.workspace }}/.claw3d/tmp
+      VISUAL_ADAPTER: mock
+      JARVIS_CONNECTOR_ENABLED: "false"
+      VISUAL_BROWSER_PERSISTENCE: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare repository-local state
+        run: mkdir -p .claw3d/npm-cache .claw3d/tmp .claw3d/playwright-browsers
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install frozen dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify containment before validation
+        run: ./scripts/verify-containment.sh
+
+      - name: Check visual boundaries
+        run: npm run visual:boundaries
+
+      - name: Lint
+        run: npm run visual:lint
+
+      - name: Typecheck
+        run: npm run visual:typecheck
+
+      - name: Unit tests
+        run: npm run visual:test
+
+      - name: Production build
+        run: npm run visual:build
+
+      - name: Install repository-local Chromium headless shell
+        run: npx --no-install playwright install chromium-headless-shell
+
+      - name: Playwright visual scenarios
+        run: npm run visual:e2e
+
+      - name: Verify containment after validation
+        run: ./scripts/verify-containment.sh
+
+      - name: Upload visual failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-ui-failures
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7

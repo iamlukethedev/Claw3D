@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import path from "node:path";
 
 const root = path.resolve(__dirname);
+const executablePath = process.env.CLAW3D_PLAYWRIGHT_EXECUTABLE_PATH || undefined;
 
 export default defineConfig({
   testDir: "./tests/e2e-visual",
@@ -11,7 +12,7 @@ export default defineConfig({
   expect: { timeout: 8_000 },
   use: {
     baseURL: "http://127.0.0.1:3210",
-    channel: "chromium",
+    launchOptions: executablePath ? { executablePath } : undefined,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },

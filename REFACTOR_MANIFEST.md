@@ -2,8 +2,8 @@
 
 Source SHA: `70ba84c1b13322eb660a6f7f5c53e36e7067c412`.
 Classification: kept only after decoupling or rewrite.
-Exact paths: 184.
-Coverage set: 697 repository files; every path is assigned exactly once.
+Exact paths: 185.
+Coverage set: 713 repository files; every path is assigned exactly once.
 
 - `.env.example`
 - `.github/CODEOWNERS`
@@ -13,6 +13,7 @@ Coverage set: 697 repository files; every path is assigned exactly once.
 - `.github/ISSUE_TEMPLATE/feature_request.md`
 - `.github/SECURITY.md`
 - `.github/workflows/docker-publish.yml`
+- `.github/workflows/visual-ui.yml`
 - `.gitignore`
 - `.serena/.gitignore`
 - `.serena/memories/architecture/boundaries.md`

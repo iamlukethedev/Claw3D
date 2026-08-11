@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
     "@claw3d/visual-react",
     "@claw3d/adapter-mock",
     "@claw3d/adapter-null",
+    "@claw3d/adapter-jarvis-readonly",
   ],
   poweredByHeader: false,
 };

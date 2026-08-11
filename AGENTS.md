@@ -1,41 +1,39 @@
 # Agent Instructions
 
-Keep repository instructions generic and safe for open source.
+Keep repository instructions generic, safe for open source, and aligned with the standalone visual product.
 
-This repo is a frontend for OpenClaw. Keep any OpenClaw runtime checkout separate from this repository.
+## Product boundary
 
-Do not modify the OpenClaw source code. When the user asks for changes, they are asking for changes to this app. Your solutions should be applied to this app but to understand the full context of implementing your solution, you will need to search through OpenClaw's source code.
+Claw3D is an autonomous Next.js visual UI. Preserve the historical isometric office, pixel actors, amber/cyan HUD, and Phaser builder. `visual-core` means visual state only: it must never become an agent engine, orchestration layer, or business backend.
 
-If you use local private overlay instructions, keep them outside the repository and do not commit them here.
+JarvisAPI is strictly external and read-only from this repository's perspective. Never modify it, import its source, mount its data, add a local path dependency, copy secrets, or couple either repository's lifecycle to the other.
 
-Do not commit personal, environment-specific, or secret instructions to this repository.
+The only allowed backend integration is the server-side, fail-closed connector documented in `docs/JARVIS_INTEGRATION.md`. Browser code receives neutral visual contracts only.
 
-## Cursor Cloud specific instructions
+## Repository lifecycle
 
-### Service overview
+- Install with `./scripts/install.sh`.
+- Start with `./scripts/start.sh` and stop with `./scripts/stop.sh`.
+- Validate with `./scripts/verify-containment.sh` and the `visual:*` npm scripts.
+- Clean generated artifacts with `./scripts/uninstall.sh`; never exercise `--remove-source` without explicit user authorization.
+- Never use sudo, global package installs, system services, or persistent paths outside this repository.
+- Never overwrite an existing `.env`.
 
-Claw3D is a Next.js 16 frontend (TypeScript, React 19, Three.js, Phaser) for OpenClaw. It runs a custom Node.js server (`server/index.js`) that bundles a same-origin WebSocket proxy to the upstream OpenClaw Gateway. No database or Docker is required. The only hard system dependency is Node.js 20+ with npm 10+.
+## Quality gates
 
-### Running the app
+Run the targeted checks first, then the complete visual validation appropriate to the change:
 
-- `npm run dev` starts the dev server on port 3000 via the custom server (`node server/index.js --dev`).
-- The app requires a running OpenClaw Gateway to show agent data. Without one, the UI loads but shows the gateway connection form. This is expected and not an error.
-- `.env` is copied from `.env.example`; see `README.md` "Configuration" for variable descriptions.
+```bash
+npm run visual:boundaries
+npm run visual:lint
+npm run visual:typecheck
+npm run visual:test
+npm run visual:build
+npm run visual:e2e
+```
 
-### Lint, typecheck, and tests
+All Playwright downloads and output must use repository-local paths under `.claw3d/`.
 
-- `npm run lint` — ESLint. The codebase has a small number of pre-existing warnings and one pre-existing error (in `RetroOffice3D.tsx`).
-- `npm run typecheck` — `tsc --noEmit`. Pre-existing type errors exist in some test files (`agentChatPanel-*.test.ts`) due to a stale `onOpenSettings` prop.
-- `npm run test -- --run` — Vitest unit tests (use `--run` for single-run mode). A few pre-existing failures exist.
-- `npm run e2e` — Playwright E2E tests; requires `npx playwright install` first.
-- `npm run smoke:dev-server` — starts the dev server on a random port and verifies HTTP response.
+## Destructive cleanup checkpoint
 
-### Build
-
-- `npm run build` — Next.js production build. Expect a non-blocking warning about `Can't resolve 'openclaw'`; the `openclaw` npm package is resolved optionally at runtime and is not bundled.
-
-### Gotchas
-
-- The `openclaw` npm package is not a dependency of this repo. The build warning about it is harmless.
-- `npm run studio:setup` is interactive (TTY prompts) — avoid running it in non-interactive cloud environments.
-- Vitest runs in watch mode by default; always pass `--run` for CI/cloud agent use.
+Do not delete paths covered by `REMOVE_MANIFEST.md` until the user explicitly approves the checkpoint in `CHECKPOINT_REPORT.md`. This approval does not authorize push, PR creation, JarvisAPI changes, or full source deletion.

@@ -119,8 +119,8 @@ closed cookie/session boundary.
 
 ## Manifests and deletion gate
 
-The generated manifests currently cover 697 repository paths exactly once:
-37 KEEP, 184 REFACTOR and 476 REMOVE. `DELETION_PLAN.md` defines the ordered
+The generated manifests currently cover 713 repository paths exactly once:
+53 KEEP, 185 REFACTOR and 475 REMOVE. `DELETION_PLAN.md` defines the ordered
 post-approval process. No path from `REMOVE_MANIFEST.md` has been deleted.
 
 Explicit approval of this checkpoint authorizes only those validated Claw3D

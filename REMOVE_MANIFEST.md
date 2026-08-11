@@ -2,8 +2,8 @@
 
 Source SHA: `70ba84c1b13322eb660a6f7f5c53e36e7067c412`.
 Classification: removed after explicit checkpoint approval.
-Exact paths: 476.
-Coverage set: 697 repository files; every path is assigned exactly once.
+Exact paths: 475.
+Coverage set: 713 repository files; every path is assigned exactly once.
 
 - `.dockerignore`
 - `CHANGELOG.md`
@@ -17,7 +17,6 @@ Coverage set: 697 repository files; every path is assigned exactly once.
 - `SECURITY.md`
 - `SECURITY_HARDENING.md`
 - `SUPPORT.md`
-- `THIRD_PARTY_NOTICES.md`
 - `TUTORIAL.md`
 - `VISION.md`
 - `artifacts/reference/screenshots/builder-original.jpg`
