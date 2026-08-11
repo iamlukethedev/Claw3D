@@ -97,3 +97,399 @@ button, a { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
 }
+
+.legacy-builder-shell {
+  display: grid;
+  grid-template-columns: 322px minmax(0, 1fr);
+  gap: 14px;
+  width: 100vw;
+  height: 100dvh;
+  padding: 13px;
+  overflow: hidden;
+  background: #091018;
+  color: #d2d7dc;
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.faithful-office-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #1a1008;
+  color: #fff;
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.faithful-office-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.faithful-office-canvas canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.faithful-camera-controls,
+.faithful-runtime-tools {
+  position: absolute;
+  z-index: 20;
+  top: 13px;
+  display: flex;
+  gap: 7px;
+}
+
+.faithful-camera-controls {
+  left: 13px;
+}
+
+.faithful-runtime-tools {
+  right: 13px;
+}
+
+.faithful-camera-controls button,
+.faithful-runtime-tools button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 33px;
+  height: 33px;
+  padding: 0;
+  border: 1px solid rgba(146, 91, 36, 0.25);
+  border-radius: 7px;
+  background: rgba(28, 22, 16, 0.84);
+  color: rgba(229, 166, 80, 0.58);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(6px);
+  font-size: 14px;
+}
+
+.faithful-camera-controls button:hover,
+.faithful-camera-controls button:focus-visible,
+.faithful-runtime-tools button:hover,
+.faithful-runtime-tools button:focus-visible,
+.faithful-runtime-tools button[aria-pressed="true"] {
+  border-color: rgba(222, 153, 70, 0.44);
+  background: rgba(54, 40, 25, 0.92);
+  color: #e4aa5f;
+  outline: none;
+}
+
+.faithful-office-title {
+  position: absolute;
+  z-index: 10;
+  top: 15px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  user-select: none;
+}
+
+.faithful-office-title i {
+  width: 50px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(222, 153, 70, 0.48));
+}
+
+.faithful-office-title i:last-child {
+  transform: rotate(180deg);
+}
+
+.faithful-office-title strong {
+  color: rgba(248, 194, 119, 0.83);
+  font-family: var(--font-sans), ui-sans-serif, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.faithful-roster-summary {
+  position: absolute;
+  z-index: 20;
+  top: 47px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 6px 16px 6px 8px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(146, 91, 36, 0.25);
+  border-radius: 999px;
+  background: rgba(28, 22, 16, 0.93);
+  box-shadow: 0 11px 25px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(8px);
+}
+
+.faithful-roster-avatars {
+  display: flex;
+  padding-left: 3px;
+}
+
+.faithful-roster-avatars button {
+  position: relative;
+  width: 37px;
+  height: 37px;
+  margin-left: -7px;
+  border: 2px solid #21170e;
+  border-radius: 999px;
+  background: var(--faithful-actor);
+  color: #101010;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.34);
+  font-size: 19px;
+  text-transform: uppercase;
+}
+
+.faithful-roster-avatars button:first-child {
+  margin-left: 0;
+}
+
+.faithful-roster-avatars button::after {
+  position: absolute;
+  right: -1px;
+  bottom: 0;
+  width: 8px;
+  height: 8px;
+  border: 1px solid #21170e;
+  border-radius: 50%;
+  background: #45d66f;
+  content: "";
+}
+
+.faithful-roster-summary > span {
+  color: rgba(255, 226, 185, 0.76);
+  font-size: 16px;
+}
+
+.faithful-roster-summary > strong {
+  color: rgba(255, 239, 217, 0.86);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.faithful-runtime {
+  display: flex;
+  align-items: center;
+  height: 33px;
+  padding: 0 11px;
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  border-radius: 7px;
+  background: rgba(65, 18, 25, 0.42);
+  color: rgba(255, 218, 220, 0.85);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.faithful-runtime-connected {
+  border-color: rgba(52, 211, 153, 0.28);
+  background: rgba(16, 78, 55, 0.35);
+  color: #d1fae5;
+}
+
+.faithful-runtime-connecting {
+  border-color: rgba(251, 191, 36, 0.28);
+  background: rgba(91, 60, 9, 0.35);
+  color: #fef3c7;
+}
+
+.faithful-scene-status {
+  position: absolute;
+  z-index: 20;
+  top: 98px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transform: translateX(-50%);
+  color: rgba(239, 207, 166, 0.46);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.faithful-scene-status i {
+  color: rgba(229, 166, 80, 0.32);
+  font-style: normal;
+}
+
+@media (max-width: 760px) {
+  .faithful-office-title strong {
+    max-width: 190px;
+    overflow: hidden;
+    font-size: 11px;
+    text-overflow: ellipsis;
+  }
+
+  .faithful-office-title i,
+  .faithful-scene-status {
+    display: none;
+  }
+
+  .faithful-roster-summary {
+    top: 55px;
+    min-height: 40px;
+    padding: 4px 10px 4px 6px;
+  }
+
+  .faithful-roster-avatars button {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
+
+  .faithful-roster-summary > strong {
+    font-size: 9px;
+  }
+
+  .faithful-runtime {
+    display: none;
+  }
+}
+
+.legacy-builder-controls,
+.legacy-builder-canvas {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid #263746;
+  border-radius: 13px;
+  background: #101a23;
+}
+
+.legacy-builder-controls {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  overflow-y: auto;
+  scrollbar-color: #718496 #15212b;
+}
+
+.legacy-builder-controls h1,
+.legacy-builder-controls h2 {
+  margin: 1px 0 6px;
+  color: #c2c9d0;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+}
+
+.legacy-builder-controls h2 {
+  margin-top: 4px;
+}
+
+.legacy-builder-controls > button,
+.legacy-builder-footer button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid #273746;
+  border-radius: 6px;
+  background: transparent;
+  color: #d4d9dd;
+  font-size: 13px;
+  text-transform: lowercase;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.legacy-builder-controls > button:hover:not(:disabled),
+.legacy-builder-controls > button:focus-visible,
+.legacy-builder-footer button:hover,
+.legacy-builder-footer button:focus-visible {
+  border-color: #4aa9c8;
+  background: rgba(74, 169, 200, 0.09);
+  outline: none;
+}
+
+.legacy-builder-controls > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.legacy-builder-divider {
+  height: 1px;
+  margin: 8px 0 5px;
+  background: #263442;
+}
+
+.legacy-builder-controls label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 20px;
+  font-size: 13px;
+}
+
+.legacy-builder-controls input {
+  width: 14px;
+  height: 14px;
+  accent-color: #167ee8;
+}
+
+.legacy-builder-controls > p {
+  margin: 12px 0 0;
+  color: #8f9ba6;
+  font-size: 12px;
+}
+
+.legacy-builder-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #263442;
+}
+
+.legacy-builder-footer span {
+  color: #71808d;
+  font-size: 10px;
+}
+
+.legacy-builder-footer button {
+  min-height: 32px;
+  color: #aeb8c0;
+  font-size: 11px;
+}
+
+.legacy-builder-canvas {
+  position: relative;
+  overflow: hidden;
+}
+
+.legacy-builder-canvas canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+@media (max-width: 760px) {
+  .legacy-builder-shell {
+    grid-template-columns: 190px minmax(0, 1fr);
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .legacy-builder-controls {
+    padding: 9px;
+  }
+
+  .legacy-builder-controls > button {
+    min-height: 32px;
+    padding: 6px;
+    font-size: 11px;
+  }
+}

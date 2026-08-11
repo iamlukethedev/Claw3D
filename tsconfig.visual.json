@@ -3,6 +3,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
+      "@/*": ["src/*"],
       "@claw3d/visual-contract": ["packages/visual-contract/src/index.ts"],
       "@claw3d/visual-contract/fixtures": ["packages/visual-contract/src/fixtures.ts"],
       "@claw3d/visual-core": ["packages/visual-core/src/index.ts"],
