@@ -20,6 +20,9 @@
 # production
 /build
 
+# project-owned generated state (must remain inside the repository root)
+/.claw3d/
+
 # misc
 .DS_Store
 *.pem
