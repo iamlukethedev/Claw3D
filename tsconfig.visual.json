@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@claw3d/visual-contract": ["packages/visual-contract/src/index.ts"],
+      "@claw3d/visual-contract/fixtures": ["packages/visual-contract/src/fixtures.ts"],
+      "@claw3d/visual-core": ["packages/visual-core/src/index.ts"],
+      "@claw3d/visual-react": ["packages/visual-react/src/index.ts"],
+      "@claw3d/adapter-mock": ["packages/adapter-mock/src/index.ts"],
+      "@claw3d/adapter-null": ["packages/adapter-null/src/index.ts"]
+    }
+  },
+  "include": [
+    "apps/claw3d-ui/**/*.ts",
+    "apps/claw3d-ui/**/*.tsx",
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "tests/visual/**/*.ts",
+    "tests/visual/**/*.tsx"
+  ],
+  "exclude": ["node_modules"]
+}

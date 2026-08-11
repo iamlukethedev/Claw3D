@@ -3,6 +3,10 @@
   "version": "0.1.4",
   "private": true,
   "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "node server/index.js --dev",
     "dev:https": "node server/index.js --dev --https",
@@ -18,7 +22,12 @@
     "smoke:dev-server": "node scripts/smoke-dev-server.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "visual:dev": "npm run dev --workspace @claw3d/app",
+    "visual:build": "npm run build --workspace @claw3d/app",
+    "visual:boundaries": "node scripts/verify-visual-boundaries.mjs",
+    "visual:typecheck": "tsc --project tsconfig.visual.json --noEmit",
+    "visual:test": "vitest --config vitest.visual.config.ts --run"
   },
   "dependencies": {
     "@noble/ed25519": "^3.0.0",

@@ -1,0 +1,10 @@
+{
+  "name": "@claw3d/visual-contract",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fixtures": "./src/fixtures.ts"
+  }
+}

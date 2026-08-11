@@ -1,0 +1,10 @@
+{
+  "name": "@claw3d/visual-core",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@claw3d/visual-contract": "1.0.0"
+  }
+}

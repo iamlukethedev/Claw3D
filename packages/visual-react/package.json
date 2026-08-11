@@ -1,0 +1,21 @@
+{
+  "name": "@claw3d/visual-react",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "dependencies": {
+    "@claw3d/visual-contract": "1.0.0",
+    "@claw3d/visual-core": "1.0.0"
+  },
+  "peerDependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "phaser": "^3.90.0",
+    "react": "^19.2.3",
+    "three": "^0.183.2"
+  }
+}
