@@ -32,7 +32,8 @@ path is absent from all three manifests.
 - agent CRUD/configuration, chat, approvals, cron, models, permissions and stores;
 - GitHub/Jira, Spotify, calling, SMS, TTS/STT and other business integrations;
 - obsolete same-origin APIs, server stores, scripts, docs and tests for those areas;
-- unverified GLB/background/vendor avatar assets and framework starter assets;
+- unverified background/vendor avatar assets and framework starter assets;
+- all 17 verified CC0 Kenney Furniture Kit GLBs remain in the exact KEEP set;
 - root screenshots, marketing material and development utilities unrelated to the
   autonomous visual product.
 

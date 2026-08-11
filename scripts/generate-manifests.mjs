@@ -12,6 +12,7 @@ const manifestNames = new Set([
   "KEEP_MANIFEST.md",
   "REFACTOR_MANIFEST.md",
   "REMOVE_MANIFEST.md",
+  "THIRD_PARTY_NOTICES.md",
 ]);
 
 const keepExact = new Set([
@@ -43,6 +44,7 @@ const refactorExact = new Set([
   "package-lock.json",
   "package.json",
   "playwright.config.ts",
+  "playwright.visual.config.ts",
   "postcss.config.mjs",
   "tsconfig.json",
   "tsconfig.visual.json",
@@ -66,6 +68,7 @@ const refactorPrefixes = [
   "src/lib/avatars/",
   "src/lib/office/",
   "tests/e2e/",
+  "tests/e2e-visual/",
   "tests/visual/",
 ];
 
@@ -74,6 +77,7 @@ const visualTestPattern = /(office|retro|navigation|pathfinding|floor|furniture|
 function classify(file) {
   if (
     keepExact.has(file) ||
+    file.startsWith("public/office-assets/models/furniture/") ||
     file.startsWith("artifacts/baseline/") ||
     file.startsWith("artifacts/checkpoint/")
   ) return "keep";

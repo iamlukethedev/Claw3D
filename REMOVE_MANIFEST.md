@@ -2,8 +2,8 @@
 
 Source SHA: `70ba84c1b13322eb660a6f7f5c53e36e7067c412`.
 Classification: removed after explicit checkpoint approval.
-Exact paths: 490.
-Coverage set: 669 repository files; every path is assigned exactly once.
+Exact paths: 476.
+Coverage set: 697 repository files; every path is assigned exactly once.
 
 - `.dockerignore`
 - `CHANGELOG.md`
@@ -17,8 +17,11 @@ Coverage set: 669 repository files; every path is assigned exactly once.
 - `SECURITY.md`
 - `SECURITY_HARDENING.md`
 - `SUPPORT.md`
+- `THIRD_PARTY_NOTICES.md`
 - `TUTORIAL.md`
 - `VISION.md`
+- `artifacts/reference/screenshots/builder-original.jpg`
+- `artifacts/reference/screenshots/office-original-unobscured.jpg`
 - `assets/branding/claw3d-hero.png`
 - `assets/skills/soundclaw/SKILL.md`
 - `assets/skills/task-manager/SKILL.md`
@@ -61,23 +64,6 @@ Coverage set: 669 repository files; every path is assigned exactly once.
 - `public/globe.svg`
 - `public/next.svg`
 - `public/office-assets/backgrounds/office-bg.png`
-- `public/office-assets/models/furniture/bookcaseClosed.glb`
-- `public/office-assets/models/furniture/chairDesk.glb`
-- `public/office-assets/models/furniture/chairModernCushion.glb`
-- `public/office-assets/models/furniture/computerScreen.glb`
-- `public/office-assets/models/furniture/desk.glb`
-- `public/office-assets/models/furniture/deskCorner.glb`
-- `public/office-assets/models/furniture/kitchenCabinet.glb`
-- `public/office-assets/models/furniture/kitchenCoffeeMachine.glb`
-- `public/office-assets/models/furniture/kitchenFridgeSmall.glb`
-- `public/office-assets/models/furniture/lampRoundFloor.glb`
-- `public/office-assets/models/furniture/loungeDesignChair.glb`
-- `public/office-assets/models/furniture/loungeSofa.glb`
-- `public/office-assets/models/furniture/plantSmall1.glb`
-- `public/office-assets/models/furniture/pottedPlant.glb`
-- `public/office-assets/models/furniture/table.glb`
-- `public/office-assets/models/furniture/tableCoffee.glb`
-- `public/office-assets/models/furniture/tableRound.glb`
 - `readme-image.png`
 - `scripts/claw3doctor.mjs`
 - `scripts/clawd3d-start.sh`
