@@ -1,10 +1,10 @@
-# Claw3Doctor Spec
+# Hermes3Doctor Spec
 
-> First-pass diagnostics plan for Claw3D deployments so users stop chasing the same setup failures manually.
+> First-pass diagnostics plan for Hermes3D deployments so users stop chasing the same setup failures manually.
 
 ## Goal
 
-Provide a single diagnostics surface for the common "Claw3D cannot connect"
+Provide a single diagnostics surface for the common "Hermes3D cannot connect"
 or "runtime support looks broken" cases.
 
 The intent is similar to:
@@ -12,11 +12,11 @@ The intent is similar to:
 - `openclaw doctor`
 - `hermes doctor`
 
-but focused on Claw3D's integration points across providers.
+but focused on Hermes3D's integration points across providers.
 
 ## Primary Outcomes
 
-`claw3doctor` should:
+`hermes3doctor` should:
 
 - identify the selected runtime profile/provider
 - verify the gateway is reachable
@@ -26,7 +26,7 @@ but focused on Claw3D's integration points across providers.
 
 ## First-Pass Scope
 
-### Claw3D Settings / Environment
+### Hermes3D Settings / Environment
 
 Checks:
 
@@ -48,7 +48,7 @@ Checks:
 
 - can the configured gateway URL be reached?
 - can Studio proxy the selected gateway?
-- does the endpoint respond like a Claw3D-compatible gateway?
+- does the endpoint respond like a Hermes3D-compatible gateway?
 
 Outputs:
 
@@ -118,7 +118,7 @@ Outputs:
 
 ## Recommended Output Shape
 
-`claw3doctor` should produce:
+`hermes3doctor` should produce:
 
 - short headline result
 - categorized checks
@@ -128,7 +128,7 @@ Outputs:
 Example:
 
 ```text
-Claw3Doctor: WARN
+Hermes3Doctor: WARN
 
 [pass] Runtime profile: OpenClaw Default
 [pass] Gateway URL reachable: ws://localhost:18789
@@ -144,7 +144,7 @@ Suggested next actions:
 
 ## Runtime-Profile Awareness
 
-`claw3doctor` should be designed against the runtime-profile model:
+`hermes3doctor` should be designed against the runtime-profile model:
 
 - provider
 - runtime profile
@@ -224,7 +224,7 @@ Add:
 
 ## Relationship To Office Systems
 
-`claw3doctor` should land before more runtime complexity because it will
+`hermes3doctor` should land before more runtime complexity because it will
 make debugging:
 
 - multi-runtime support
@@ -237,7 +237,7 @@ This is why it is sequenced ahead of deeper Office Systems feature work.
 
 ## V1 Delivery Boundary
 
-`claw3doctor` v1 should be considered complete when it provides:
+`hermes3doctor` v1 should be considered complete when it provides:
 
 - selected-profile diagnostics with optional per-profile probing
 - grouped terminal output with clear pass / warn / fail results
@@ -277,7 +277,7 @@ diagnosis depth and better operator ergonomics rather than broader scope.
 
 ### Runtime-Profile Follow-Through
 
-`claw3doctor` v2 should also benefit from the separate runtime-profile work:
+`hermes3doctor` v2 should also benefit from the separate runtime-profile work:
 
 - simultaneous runtime profile visibility
 - per-profile health history

@@ -310,7 +310,7 @@ const normalizeRole = (value: ParsedCompanyRole, index: number): CompanyBuilderR
 
 export const buildImproveCompanyBriefPrompt = (businessDescription: string) =>
   [
-    "You are helping a user describe the company they want to build inside Claw3D.",
+    "You are helping a user describe the company they want to build inside Hermes3D.",
     "Rewrite their brief so another connected runtime agent can generate a clean org structure from it.",
     "Keep the answer short, concrete, and useful.",
     "Return markdown with these sections only:",
@@ -325,7 +325,7 @@ export const buildImproveCompanyBriefPrompt = (businessDescription: string) =>
 
 export const buildGenerateCompanyPlanPrompt = (brief: string) =>
   [
-    "You are designing an AI company org structure for Claw3D.",
+    "You are designing an AI company org structure for Hermes3D.",
     "Return only valid JSON with no markdown fence.",
     "Each role name must be one concise word only with no spaces.",
     "Schema:",

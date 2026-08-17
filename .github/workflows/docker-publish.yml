@@ -10,7 +10,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/claw3d
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/hermes3d
 
 jobs:
   publish:

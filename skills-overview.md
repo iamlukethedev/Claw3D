@@ -1,6 +1,6 @@
-# Skills in OpenClaw + Claw3D
+# Skills in OpenClaw + Hermes3D
 
-This document explains skills from first principles, how they work in the OpenClaw runtime, and how Claw3D currently exposes them in UX.
+This document explains skills from first principles, how they work in the OpenClaw runtime, and how Hermes3D currently exposes them in UX.
 
 It is intended as design context for rethinking the Skills UX.
 
@@ -156,7 +156,7 @@ Important scope behavior:
 Security detail:
 - `skills.status` exposes config check satisfaction, not raw secret config values.
 
-## 10) Claw3D UX (current behavior)
+## 10) Hermes3D UX (current behavior)
 
 ### 10.1 Route and navigation model
 
@@ -225,7 +225,7 @@ This keeps scope and install-target warnings accurate while minimizing noise in 
 
 ## 11) What recent `.agent/done` plans show
 
-Sorted by most recent creation time in `claw3d/.agent/done`, the latest items are mostly bugfix exec plans (streaming, proxy auth, stale config, cron rollback, etc.).
+Sorted by most recent creation time in `hermes3d/.agent/done`, the latest items are mostly bugfix exec plans (streaming, proxy auth, stale config, cron rollback, etc.).
 
 The most recent plan with explicit skills direction is:
 - `ui-execplan-stuff.md` (2026-02-20 create time), which intentionally scoped skills as coming-soon during that IA pass.

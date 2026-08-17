@@ -112,7 +112,7 @@ export const fetchRemoteOfficePresenceSnapshot = async (params: {
     const token = params.token?.trim() ?? "";
     if (token) {
       headers.Authorization = `Bearer ${token}`;
-      headers["X-Claw3D-Office-Token"] = token;
+      headers["X-Hermes3D-Office-Token"] = token;
     }
     const response = await fetch(presenceUrl, {
       method: "GET",

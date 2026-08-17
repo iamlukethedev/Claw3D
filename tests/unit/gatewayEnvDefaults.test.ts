@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
+describe("loadLocalGatewayDefaults with HERMES3D_GATEWAY_URL", () => {
   const originalEnv = { ...process.env };
 
   afterEach(() => {
@@ -11,10 +11,10 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
     vi.resetModules();
   });
 
-  it("returns env-based defaults when CLAW3D_GATEWAY_URL is set and no openclaw.json exists", async () => {
-    process.env.CLAW3D_GATEWAY_URL = "ws://my-gateway:18789";
-    process.env.CLAW3D_GATEWAY_TOKEN = "my-token";
-    process.env.OPENCLAW_STATE_DIR = "/tmp/claw3d-test-nonexistent-" + Date.now();
+  it("returns env-based defaults when HERMES3D_GATEWAY_URL is set and no openclaw.json exists", async () => {
+    process.env.HERMES3D_GATEWAY_URL = "ws://my-gateway:18789";
+    process.env.HERMES3D_GATEWAY_TOKEN = "my-token";
+    process.env.OPENCLAW_STATE_DIR = "/tmp/hermes3d-test-nonexistent-" + Date.now();
     const { loadLocalGatewayDefaults } = await import(
       "../../src/lib/studio/settings-store"
     );
@@ -30,9 +30,9 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
   });
 
   it("returns env-based defaults with empty token when only URL is set", async () => {
-    process.env.CLAW3D_GATEWAY_URL = "ws://my-gateway:18789";
-    delete process.env.CLAW3D_GATEWAY_TOKEN;
-    process.env.OPENCLAW_STATE_DIR = "/tmp/claw3d-test-nonexistent-" + Date.now();
+    process.env.HERMES3D_GATEWAY_URL = "ws://my-gateway:18789";
+    delete process.env.HERMES3D_GATEWAY_TOKEN;
+    process.env.OPENCLAW_STATE_DIR = "/tmp/hermes3d-test-nonexistent-" + Date.now();
     const { loadLocalGatewayDefaults } = await import(
       "../../src/lib/studio/settings-store"
     );
@@ -48,9 +48,9 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
   });
 
   it("returns null when no env var and no openclaw.json", async () => {
-    delete process.env.CLAW3D_GATEWAY_URL;
-    delete process.env.CLAW3D_GATEWAY_TOKEN;
-    process.env.OPENCLAW_STATE_DIR = "/tmp/claw3d-test-nonexistent-" + Date.now();
+    delete process.env.HERMES3D_GATEWAY_URL;
+    delete process.env.HERMES3D_GATEWAY_TOKEN;
+    process.env.OPENCLAW_STATE_DIR = "/tmp/hermes3d-test-nonexistent-" + Date.now();
     const { loadLocalGatewayDefaults } = await import(
       "../../src/lib/studio/settings-store"
     );
@@ -59,11 +59,11 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
   });
 
   it("prefers env vars over openclaw.json when both exist while preserving the file-backed profile", async () => {
-    process.env.CLAW3D_GATEWAY_URL = "ws://env-gateway:18789";
-    process.env.CLAW3D_GATEWAY_TOKEN = "env-token";
-    process.env.CLAW3D_GATEWAY_ADAPTER_TYPE = "hermes";
+    process.env.HERMES3D_GATEWAY_URL = "ws://env-gateway:18789";
+    process.env.HERMES3D_GATEWAY_TOKEN = "env-token";
+    process.env.HERMES3D_GATEWAY_ADAPTER_TYPE = "hermes";
 
-    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw3d-gateway-defaults-"));
+    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "hermes3d-gateway-defaults-"));
     process.env.OPENCLAW_STATE_DIR = stateDir;
     fs.writeFileSync(
       path.join(stateDir, "openclaw.json"),
@@ -92,11 +92,11 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
     });
   });
 
-  it("uses CLAW3D_GATEWAY_ADAPTER_TYPE for Hermes env defaults", async () => {
-    process.env.CLAW3D_GATEWAY_URL = "ws://my-hermes:18789";
-    process.env.CLAW3D_GATEWAY_ADAPTER_TYPE = "hermes";
-    delete process.env.CLAW3D_GATEWAY_TOKEN;
-    process.env.OPENCLAW_STATE_DIR = "/tmp/claw3d-test-nonexistent-" + Date.now();
+  it("uses HERMES3D_GATEWAY_ADAPTER_TYPE for Hermes env defaults", async () => {
+    process.env.HERMES3D_GATEWAY_URL = "ws://my-hermes:18789";
+    process.env.HERMES3D_GATEWAY_ADAPTER_TYPE = "hermes";
+    delete process.env.HERMES3D_GATEWAY_TOKEN;
+    process.env.OPENCLAW_STATE_DIR = "/tmp/hermes3d-test-nonexistent-" + Date.now();
     const { loadLocalGatewayDefaults } = await import(
       "../../src/lib/studio/settings-store"
     );
@@ -112,10 +112,10 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
   });
 
   it("exposes local Hermes adapter defaults when only HERMES_ADAPTER_PORT is set", async () => {
-    delete process.env.CLAW3D_GATEWAY_URL;
-    delete process.env.CLAW3D_GATEWAY_TOKEN;
+    delete process.env.HERMES3D_GATEWAY_URL;
+    delete process.env.HERMES3D_GATEWAY_TOKEN;
     process.env.HERMES_ADAPTER_PORT = "19444";
-    process.env.OPENCLAW_STATE_DIR = "/tmp/claw3d-test-nonexistent-" + Date.now();
+    process.env.OPENCLAW_STATE_DIR = "/tmp/hermes3d-test-nonexistent-" + Date.now();
     const { loadLocalGatewayDefaults } = await import(
       "../../src/lib/studio/settings-store"
     );
@@ -131,12 +131,12 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
   });
 
   it("prefers Hermes adapter defaults over file-backed OpenClaw defaults while preserving the OpenClaw profile", async () => {
-    delete process.env.CLAW3D_GATEWAY_URL;
-    delete process.env.CLAW3D_GATEWAY_TOKEN;
-    delete process.env.CLAW3D_GATEWAY_ADAPTER_TYPE;
+    delete process.env.HERMES3D_GATEWAY_URL;
+    delete process.env.HERMES3D_GATEWAY_TOKEN;
+    delete process.env.HERMES3D_GATEWAY_ADAPTER_TYPE;
     process.env.HERMES_ADAPTER_PORT = "19444";
 
-    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw3d-gateway-defaults-"));
+    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "hermes3d-gateway-defaults-"));
     process.env.OPENCLAW_STATE_DIR = stateDir;
     fs.writeFileSync(
       path.join(stateDir, "openclaw.json"),
@@ -166,11 +166,11 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
   });
 
   it("prefers explicit env adapter defaults over file-backed OpenClaw defaults", async () => {
-    process.env.CLAW3D_GATEWAY_URL = "ws://env-gateway:19999";
-    process.env.CLAW3D_GATEWAY_TOKEN = "env-token";
-    process.env.CLAW3D_GATEWAY_ADAPTER_TYPE = "hermes";
+    process.env.HERMES3D_GATEWAY_URL = "ws://env-gateway:19999";
+    process.env.HERMES3D_GATEWAY_TOKEN = "env-token";
+    process.env.HERMES3D_GATEWAY_ADAPTER_TYPE = "hermes";
 
-    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw3d-gateway-defaults-"));
+    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "hermes3d-gateway-defaults-"));
     process.env.OPENCLAW_STATE_DIR = stateDir;
     fs.writeFileSync(
       path.join(stateDir, "openclaw.json"),

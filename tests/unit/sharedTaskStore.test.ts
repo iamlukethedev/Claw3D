@@ -34,7 +34,7 @@ describe("shared task store", () => {
       title: "Research mtulsa.com",
       description: "Check site positioning.",
       status: "todo",
-      source: "claw3d_manual",
+      source: "hermes3d_manual",
     });
 
     expect(created.history).toHaveLength(1);
@@ -59,13 +59,13 @@ describe("shared task store", () => {
       id: "task-1",
       title: "Research mtulsa.com",
       status: "todo",
-      source: "claw3d_manual",
+      source: "hermes3d_manual",
     });
     const updated = upsertSharedTask({
       id: "task-1",
       title: "Research mtulsa.com",
       status: "in_progress",
-      source: "claw3d_manual",
+      source: "hermes3d_manual",
     });
     const archived = archiveSharedTask("task-1");
 
@@ -78,14 +78,14 @@ describe("shared task store", () => {
     tempDir = makeTempDir("shared-task-store-corrupt");
     process.env.OPENCLAW_STATE_DIR = tempDir;
 
-    upsertSharedTask({ id: "t-1", title: "Valid task", status: "todo", source: "claw3d_manual" });
+    upsertSharedTask({ id: "t-1", title: "Valid task", status: "todo", source: "hermes3d_manual" });
     const storePath = resolveSharedTaskStorePath();
     fs.writeFileSync(storePath, "{invalid json!!!", "utf8");
 
     const tasks = listSharedTasks();
     expect(tasks).toEqual([]);
 
-    const afterCorrupt = upsertSharedTask({ id: "t-2", title: "After recovery", status: "todo", source: "claw3d_manual" });
+    const afterCorrupt = upsertSharedTask({ id: "t-2", title: "After recovery", status: "todo", source: "hermes3d_manual" });
     expect(afterCorrupt.id).toBe("t-2");
     expect(listSharedTasks()).toHaveLength(1);
   });
@@ -94,7 +94,7 @@ describe("shared task store", () => {
     tempDir = makeTempDir("shared-task-store-atomic");
     process.env.OPENCLAW_STATE_DIR = tempDir;
 
-    upsertSharedTask({ id: "t-1", title: "Safe task", status: "todo", source: "claw3d_manual" });
+    upsertSharedTask({ id: "t-1", title: "Safe task", status: "todo", source: "hermes3d_manual" });
     const storePath = resolveSharedTaskStorePath();
     const original = fs.readFileSync(storePath, "utf8");
 
@@ -115,7 +115,7 @@ describe("shared task store", () => {
       source: "alien" as never,
     });
     expect(task.status).toBe("todo");
-    expect(task.source).toBe("claw3d_manual");
+    expect(task.source).toBe("hermes3d_manual");
   });
 
   it("truncates oversized title and description", () => {
@@ -129,7 +129,7 @@ describe("shared task store", () => {
       title: longTitle,
       description: longDesc,
       status: "todo",
-      source: "claw3d_manual",
+      source: "hermes3d_manual",
     });
 
     expect(task.title.length).toBeLessThanOrEqual(500);

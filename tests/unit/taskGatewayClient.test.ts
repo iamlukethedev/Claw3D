@@ -30,7 +30,7 @@ describe("task gateway client", () => {
       title: "Ship board",
       description: "Release the board.",
       status: "todo",
-      source: "claw3d_manual",
+      source: "hermes3d_manual",
     });
 
     expect(client.call).toHaveBeenCalledWith(
@@ -39,7 +39,7 @@ describe("task gateway client", () => {
         title: "Ship board",
         description: "Release the board.",
         status: "todo",
-        source: "claw3d_manual",
+        source: "hermes3d_manual",
       })
     );
   });

@@ -135,16 +135,16 @@ describe("useRuntimeConnection", () => {
     expect(screen.getByTestId("providerLabel")).toHaveTextContent("Local Runtime");
   });
 
-  it("selects the claw3d runtime provider from the active adapter type", async () => {
+  it("selects the hermes3d runtime provider from the active adapter type", async () => {
     vi.doMock("@/lib/gateway/GatewayClient", () => ({
       useGatewayConnection: () => ({
         client: {},
         status: "connected",
         gatewayUrl: "http://127.0.0.1:3000/api/runtime/custom",
         token: "",
-        selectedAdapterType: "claw3d",
-        detectedAdapterType: "claw3d",
-        activeAdapterType: "claw3d",
+        selectedAdapterType: "hermes3d",
+        detectedAdapterType: "hermes3d",
+        activeAdapterType: "hermes3d",
         localGatewayDefaults: null,
         error: null,
         connectPromptReady: true,
@@ -173,7 +173,7 @@ describe("useRuntimeConnection", () => {
 
     render(createElement(Probe));
 
-    expect(screen.getByTestId("providerId")).toHaveTextContent("claw3d");
-    expect(screen.getByTestId("providerLabel")).toHaveTextContent("Claw3D Runtime");
+    expect(screen.getByTestId("providerId")).toHaveTextContent("hermes3d");
+    expect(screen.getByTestId("providerLabel")).toHaveTextContent("Hermes3D Runtime");
   });
 });

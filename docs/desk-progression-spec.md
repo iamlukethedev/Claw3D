@@ -1,6 +1,6 @@
 # Desk Progression Spec
 
-> Fifth concrete office-system feature for Claw3D, connecting visible office presence to role maturity, permissions, and capability growth.
+> Fifth concrete office-system feature for Hermes3D, connecting visible office presence to role maturity, permissions, and capability growth.
 
 ## Goal
 
@@ -207,11 +207,11 @@ Examples:
 
 ## Relationship To Existing Systems
 
-Desk progression should integrate with real Claw3D systems rather than sit beside them.
+Desk progression should integrate with real Hermes3D systems rather than sit beside them.
 
 ### Permissions
 
-Claw3D already has permission and approval surfaces.
+Hermes3D already has permission and approval surfaces.
 
 Desk progression should act as a higher-level office policy layer that influences:
 

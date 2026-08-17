@@ -4,7 +4,7 @@ import path from "node:path";
 import { resolveStateDir } from "@/lib/clawdbot/paths";
 import type { StandupMeeting, StandupMeetingStore } from "@/lib/office/standup/types";
 
-const STORE_DIR = "claw3d";
+const STORE_DIR = "hermes3d";
 const STORE_FILE = "standup-store.json";
 const GATHERING_MEETING_MAX_AGE_MS = 5 * 60 * 1000;
 const ACTIVE_MEETING_MAX_AGE_MS = 20 * 60 * 1000;

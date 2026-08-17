@@ -1,16 +1,16 @@
 # Agent Bus Integration
 
-> Visualize AI coding sessions in Claw3D's retro office — without OpenClaw.
+> Visualize AI coding sessions in Hermes3D's retro office — without OpenClaw.
 
-[Agent Bus](https://github.com/emiliovos/agent-bus) is an open-source event routing system that bridges AI coding agents (Claude Code, Gemini, Codex, etc.) to Claw3D. Agents appear in the 3D office, animate when working, and go idle between tasks. Zero inference cost — pure data routing.
+[Agent Bus](https://github.com/emiliovos/agent-bus) is an open-source event routing system that bridges AI coding agents (Claude Code, Gemini, Codex, etc.) to Hermes3D. Agents appear in the 3D office, animate when working, and go idle between tasks. Zero inference cost — pure data routing.
 
 ## How It Works
 
 ```
-AI coding session → hook fires → Agent Bus hub → gateway :18789 → Claw3D renders in 3D
+AI coding session → hook fires → Agent Bus hub → gateway :18789 → Hermes3D renders in 3D
 ```
 
-Agent Bus includes an **OpenClaw-compatible gateway** that speaks the same WebSocket protocol Claw3D already uses. No Claw3D code changes needed — just point `GATEWAY_URL` to the Agent Bus gateway.
+Agent Bus includes an **OpenClaw-compatible gateway** that speaks the same WebSocket protocol Hermes3D already uses. No Hermes3D code changes needed — just point `GATEWAY_URL` to the Agent Bus gateway.
 
 ### Architecture
 
@@ -39,7 +39,7 @@ Agent Bus includes an **OpenClaw-compatible gateway** that speaks the same WebSo
                      │ WebSocket (OpenClaw frames)
                      ▼
 ┌──────────────────────────────────────────┐
-│ Claw3D (:3000)                           │
+│ Hermes3D (:3000)                           │
 │ Connects via GATEWAY_URL                 │
 │ Renders agents in 3D retro office        │
 └──────────────────────────────────────────┘
@@ -50,7 +50,7 @@ Agent Bus includes an **OpenClaw-compatible gateway** that speaks the same WebSo
 ### Prerequisites
 
 - Node.js 18+
-- Claw3D running on `:3000`
+- Hermes3D running on `:3000`
 
 ### Setup (5 minutes)
 
@@ -68,16 +68,16 @@ This starts:
 - Hub on `:4000` (event routing)
 - Gateway on `:18789` (OpenClaw protocol)
 
-### Connect Claw3D
+### Connect Hermes3D
 
-Point Claw3D's gateway URL to Agent Bus:
+Point Hermes3D's gateway URL to Agent Bus:
 
 ```bash
-# In your Claw3D .env or environment:
+# In your Hermes3D .env or environment:
 GATEWAY_URL=ws://localhost:18789
 ```
 
-Restart Claw3D. It will connect to the Agent Bus gateway instead of OpenClaw.
+Restart Hermes3D. It will connect to the Agent Bus gateway instead of OpenClaw.
 
 ### Send Your First Event
 
@@ -119,7 +119,7 @@ Add to `.claude/settings.json`:
 }
 ```
 
-Every tool use in Claude Code now appears as agent activity in Claw3D.
+Every tool use in Claude Code now appears as agent activity in Hermes3D.
 
 ## Gateway Protocol Compatibility
 
@@ -156,7 +156,7 @@ Agent Bus supports Cloudflare Tunnel for secure remote access:
 bash scripts/setup-cloudflare-tunnel.sh
 ```
 
-This exposes the hub and Claw3D via HTTPS with service token authentication. Agents on remote machines (VPS, other PCs) can send events through the tunnel.
+This exposes the hub and Hermes3D via HTTPS with service token authentication. Agents on remote machines (VPS, other PCs) can send events through the tunnel.
 
 ## Event Schema
 

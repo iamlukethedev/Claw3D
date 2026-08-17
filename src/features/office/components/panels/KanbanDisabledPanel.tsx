@@ -53,7 +53,7 @@ export function KanbanDisabledPanel({
               {progressMessage?.trim() || "Installing the task-manager skill."}
             </p>
             <p className="mt-2 text-xs leading-relaxed text-slate-500">
-              Once it&apos;s installed, Claw3D will refresh the task-manager state.
+              Once it&apos;s installed, Hermes3D will refresh the task-manager state.
             </p>
           </div>
         ) : null}

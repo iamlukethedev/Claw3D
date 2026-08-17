@@ -2,11 +2,11 @@
  * useOnboardingState — Tracks whether onboarding has been completed.
  *
  * Uses localStorage so the wizard only shows once per browser.
- * The key is scoped to the Claw3D app to avoid collisions.
+ * The key is scoped to the Hermes3D app to avoid collisions.
  */
 import { useCallback, useEffect, useState } from "react";
 
-const STORAGE_KEY = "claw3d:onboarding:completed";
+const STORAGE_KEY = "hermes3d:onboarding:completed";
 
 const readCompleted = (): boolean => {
   if (typeof window === "undefined") return false;

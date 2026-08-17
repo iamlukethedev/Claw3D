@@ -6,7 +6,7 @@ describe("useOnboardingState", () => {
   afterEach(() => {
     // Clean up localStorage between tests
     try {
-      window.localStorage.removeItem("claw3d:onboarding:completed");
+      window.localStorage.removeItem("hermes3d:onboarding:completed");
     } catch {
       // noop
     }
@@ -35,13 +35,13 @@ describe("useOnboardingState", () => {
       result.current.completeOnboarding();
     });
 
-    expect(window.localStorage.getItem("claw3d:onboarding:completed")).toBe(
+    expect(window.localStorage.getItem("hermes3d:onboarding:completed")).toBe(
       "true",
     );
   });
 
   it("reads completion state from localStorage on mount", () => {
-    window.localStorage.setItem("claw3d:onboarding:completed", "true");
+    window.localStorage.setItem("hermes3d:onboarding:completed", "true");
     const { result } = renderHook(() => useOnboardingState());
     expect(result.current.showOnboarding).toBe(false);
   });
@@ -58,6 +58,6 @@ describe("useOnboardingState", () => {
       result.current.resetOnboarding();
     });
     expect(result.current.showOnboarding).toBe(true);
-    expect(window.localStorage.getItem("claw3d:onboarding:completed")).toBeNull();
+    expect(window.localStorage.getItem("hermes3d:onboarding:completed")).toBeNull();
   });
 });

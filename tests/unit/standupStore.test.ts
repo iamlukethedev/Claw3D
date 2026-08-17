@@ -10,7 +10,7 @@ import type { StandupMeetingStore } from "@/lib/office/standup/types";
 const makeTempDir = (name: string) => fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`));
 
 const writeStandupStore = (stateDir: string, store: StandupMeetingStore) => {
-  const storeDir = path.join(stateDir, "claw3d");
+  const storeDir = path.join(stateDir, "hermes3d");
   fs.mkdirSync(storeDir, { recursive: true });
   fs.writeFileSync(
     path.join(storeDir, "standup-store.json"),

@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // TODO: Create Claw3D voice and text skill.
+    // TODO: Create Hermes3D voice and text skill.
     const scenario = buildMockPhoneCallScenario({
       callee,
       message: message || null,

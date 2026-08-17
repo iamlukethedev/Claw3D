@@ -13,7 +13,7 @@ import {
 } from "@/lib/office/floors";
 import type { FloorRosterState } from "@/lib/office/floorRoster";
 
-const DIRECTORY_COLLAPSED_STORAGE_KEY = "claw3d.officeFloorNav.directoryCollapsed";
+const DIRECTORY_COLLAPSED_STORAGE_KEY = "hermes3d.officeFloorNav.directoryCollapsed";
 
 type OfficeFloorNavProps = {
   activeFloorId: FloorId;
@@ -30,7 +30,7 @@ const PROVIDER_LABEL: Record<FloorProvider, string> = {
   paperclip: "Paperclip",
   custom: "Custom",
   local: "Local",
-  claw3d: "Claw3D",
+  hermes3d: "Hermes3D",
 };
 
 const renderFloorButton = (params: {

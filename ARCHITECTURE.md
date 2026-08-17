@@ -1,9 +1,9 @@
 # Architecture
 
 ## Overview
-Claw3D is a gateway-first Next.js application for visualizing and operating AI agents powered by OpenClaw using Three.JS framework.
+Hermes3D is a gateway-first Next.js application for visualizing and operating AI agents powered by OpenClaw using Three.JS framework.
 
-It is the UI and proxy layer, not the OpenClaw runtime itself. OpenClaw remains the system of record for agents, sessions, and execution, while Claw3D provides:
+It is the UI and proxy layer, not the OpenClaw runtime itself. OpenClaw remains the system of record for agents, sessions, and execution, while Hermes3D provides:
 
 - an `/agents` workspace for chat, approvals, settings, and runtime monitoring,
 - an `/office` 3D environment for spatializing agent activity,
@@ -23,7 +23,7 @@ It is the UI and proxy layer, not the OpenClaw runtime itself. OpenClaw remains 
 - Moving gateway-owned agent state into local frontend storage.
 
 ## System Model
-Claw3D is split into four main parts:
+Hermes3D is split into four main parts:
 
 1. Browser UI.
    The Next.js client renders the agents workspace, the office, and the builder.
@@ -38,7 +38,7 @@ Claw3D is split into four main parts:
 ### 1. Gateway-owned state
 Agent records, sessions, approvals, runtime streams, and agent files belong to OpenClaw.
 
-Claw3D may read and mutate that state through gateway APIs, but it should not create a competing local source of truth.
+Hermes3D may read and mutate that state through gateway APIs, but it should not create a competing local source of truth.
 
 ### 2. Studio-owned local state
 Studio stores local settings such as:
@@ -105,7 +105,7 @@ For a practical contributor code map and extension guide, see `CODE_DOCUMENTATIO
 - Browser traffic goes through a same-origin Studio proxy rather than directly to the gateway.
   This adds one hop, but keeps credentials server-side and improves deployment flexibility.
 - Agent configuration and files are managed through gateway APIs.
-  This avoids drift between Claw3D and the upstream runtime.
+  This avoids drift between Hermes3D and the upstream runtime.
 - Office behavior is driven from derived event state rather than imperative scene mutations.
   This keeps the 3D layer more reproducible and testable.
 

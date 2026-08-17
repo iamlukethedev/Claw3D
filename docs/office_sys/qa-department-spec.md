@@ -1,10 +1,10 @@
 # QA Department Spec
 
-> Fourth concrete office-system feature for Claw3D, completing the first real office loop: plan, coordinate, execute, review.
+> Fourth concrete office-system feature for Hermes3D, completing the first real office loop: plan, coordinate, execute, review.
 
 ## Goal
 
-Add a QA department workflow to Claw3D so the office can visibly review, test, triage, and sign off on work before it is treated as complete.
+Add a QA department workflow to Hermes3D so the office can visibly review, test, triage, and sign off on work before it is treated as complete.
 
 The QA department should make review state legible in-world.
 
@@ -208,7 +208,7 @@ type QaDepartmentState = {
 
 ## Relationship To Existing Systems
 
-The QA department should plug into systems Claw3D already has.
+The QA department should plug into systems Hermes3D already has.
 
 ### Task Board / Kanban
 
@@ -256,7 +256,7 @@ This makes the meeting room and QA department part of one loop instead of separa
 
 ### Approvals
 
-Claw3D already has approval-related surfaces.
+Hermes3D already has approval-related surfaces.
 
 The QA department should integrate with them conceptually, even if V1 is mostly local office state.
 
@@ -269,7 +269,7 @@ Those are related but not identical.
 
 ### GitHub / Review Surfaces
 
-Claw3D already has review-adjacent UI, including GitHub-oriented immersive screens.
+Hermes3D already has review-adjacent UI, including GitHub-oriented immersive screens.
 
 The QA department should be able to:
 

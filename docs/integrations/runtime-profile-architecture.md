@@ -1,10 +1,10 @@
 # Runtime Profile Architecture
 
-> Forward-looking runtime model for Claw3D after the OpenClaw + Hermes adapter work landed on `main`.
+> Forward-looking runtime model for Hermes3D after the OpenClaw + Hermes adapter work landed on `main`.
 
 ## Goal
 
-Claw3D should treat runtime connection targets as profiles, not as ad hoc
+Hermes3D should treat runtime connection targets as profiles, not as ad hoc
 gateway URLs tied to one backend assumption.
 
 That means the app should model:
@@ -35,7 +35,7 @@ Optional paths:
 
 The important rule is:
 
-- the UI keeps speaking one Claw3D gateway contract
+- the UI keeps speaking one Hermes3D gateway contract
 - the backend behind that contract may be native OpenClaw, Hermes through
   the adapter, or a custom runtime/provider
 
@@ -89,7 +89,7 @@ export type RuntimeProfile = {
 
 Runtime profile answers:
 
-- where does Claw3D connect?
+- where does Hermes3D connect?
 - what provider is behind this connection?
 - which auth/token should be used?
 - which profile should be the default?
@@ -149,7 +149,7 @@ Examples:
 
 Initial default behavior should be:
 
-- if nothing else is configured, Claw3D prefers `OpenClaw`
+- if nothing else is configured, Hermes3D prefers `OpenClaw`
 - Hermes remains optional and adapter-backed
 - custom runtimes remain optional and profile-driven
 
@@ -186,7 +186,7 @@ Custom runtimes should fit the same profile model:
 - one or more named profiles
 - floor binding selects which profile powers which floor
 
-This avoids making the "Custom Floor" logic one-off and lets Claw3D grow
+This avoids making the "Custom Floor" logic one-off and lets Hermes3D grow
 to multiple custom environments without another architecture pass.
 
 ## One Gateway Contract, Different Backends
@@ -195,7 +195,7 @@ The UI should not branch everywhere on backend family.
 
 Instead:
 
-- the browser talks one Claw3D gateway contract
+- the browser talks one Hermes3D gateway contract
 - Studio/settings select the runtime profile
 - profile/provider metadata informs capability checks and defaults
 
@@ -251,7 +251,7 @@ This model supports the current Office Systems direction cleanly.
 Recommended next branches:
 
 - `docs/runtime-profiles`
-- `feat/claw3doctor`
+- `feat/hermes3doctor`
 - `refactor/office-shell`
 - later:
   - `docs/floor-builder-schema`
@@ -269,11 +269,11 @@ Define:
 - `Custom Runtime(s)` optional
 - one gateway contract, different backends
 
-### 2. `feat: claw3doctor`
+### 2. `feat: hermes3doctor`
 
 First pass should check:
 
-- Claw3D settings/env
+- Hermes3D settings/env
 - gateway reachability
 - OpenClaw version
 - Hermes adapter/API availability
@@ -302,14 +302,14 @@ The runtime-profile document should land before more implementation work
 because it informs both:
 
 - multi-runtime support
-- `claw3doctor`
+- `hermes3doctor`
 
 Without this, diagnostics and floor binding will keep being designed
 against moving assumptions.
 
 ## Summary
 
-Claw3D should move to a runtime profile model where:
+Hermes3D should move to a runtime profile model where:
 
 - providers describe the backend family
 - profiles describe named connection targets

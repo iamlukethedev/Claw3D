@@ -14,7 +14,7 @@ Do not commit personal, environment-specific, or secret instructions to this rep
 
 ### Service overview
 
-Claw3D is a Next.js 16 frontend (TypeScript, React 19, Three.js, Phaser) for OpenClaw. It runs a custom Node.js server (`server/index.js`) that bundles a same-origin WebSocket proxy to the upstream OpenClaw Gateway. No database or Docker is required. The only hard system dependency is Node.js 20+ with npm 10+.
+Hermes3D is a Next.js 16 frontend (TypeScript, React 19, Three.js, Phaser) for OpenClaw. It runs a custom Node.js server (`server/index.js`) that bundles a same-origin WebSocket proxy to the upstream OpenClaw Gateway. No database or Docker is required. The only hard system dependency is Node.js 20+ with npm 10+.
 
 ### Running the app
 

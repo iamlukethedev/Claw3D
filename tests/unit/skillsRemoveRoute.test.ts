@@ -21,7 +21,7 @@ const writeStudioSettings = (gatewayUrl: string) => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "studio-state-"));
   process.env.OPENCLAW_STATE_DIR = stateDir;
 
-  const settingsDir = path.join(stateDir, "claw3d");
+  const settingsDir = path.join(stateDir, "hermes3d");
   fs.mkdirSync(settingsDir, { recursive: true });
   fs.writeFileSync(
     path.join(settingsDir, "settings.json"),

@@ -47,7 +47,7 @@ const createMockClient = () => {
       "AGENTS.md": "alpha agents",
       "SOUL.md": "# SOUL.md - Who You Are\n\n## Core Truths\n\nBe useful.",
       "IDENTITY.md": "# IDENTITY.md - Who Am I?\n\n- Name: Alpha\n- Creature: droid\n- Vibe: calm\n- Emoji: 🤖\n",
-      "USER.md": "# USER.md - About Your Human\n\n- Name: George\n- What to call them: GP\n\n## Context\n\nBuilding Claw3D.",
+      "USER.md": "# USER.md - About Your Human\n\n- Name: George\n- What to call them: GP\n\n## Context\n\nBuilding Hermes3D.",
       "TOOLS.md": "tool notes",
       "HEARTBEAT.md": "heartbeat notes",
       "MEMORY.md": "durable memory",

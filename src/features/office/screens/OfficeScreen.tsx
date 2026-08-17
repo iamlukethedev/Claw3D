@@ -166,7 +166,7 @@ import { JukeboxPanel } from "@/features/spotify-jukebox/components/JukeboxPanel
 import { JukeboxDisabledPanel } from "@/features/spotify-jukebox/components/JukeboxDisabledPanel";
 import { executeBrowserJukeboxCommand } from "@/features/spotify-jukebox/agentBridge";
 import {
-  SOUNDCLAW_PLAYBACK_STARTED_EVENT_NAME,
+  SOUNDHERMES_PLAYBACK_STARTED_EVENT_NAME,
   useJukeboxStore,
 } from "@/features/spotify-jukebox/store";
 import { useOfficeSkillTriggers } from "@/features/office/hooks/useOfficeSkillTriggers";
@@ -250,7 +250,7 @@ const createDemoMainAgentSeed = (): {
 } => ({
   agentId: MAIN_AGENT_ID,
   name: "Main",
-  runtimeName: "Claw3D Demo",
+  runtimeName: "Hermes3D Demo",
   identityName: "Main",
   sessionDisplayName: "Main",
   role: "assistant",
@@ -1298,12 +1298,12 @@ export function OfficeScreen({
       });
     };
     window.addEventListener(
-      SOUNDCLAW_PLAYBACK_STARTED_EVENT_NAME,
+      SOUNDHERMES_PLAYBACK_STARTED_EVENT_NAME,
       handlePlaybackStarted,
     );
     return () => {
       window.removeEventListener(
-        SOUNDCLAW_PLAYBACK_STARTED_EVENT_NAME,
+        SOUNDHERMES_PLAYBACK_STARTED_EVENT_NAME,
         handlePlaybackStarted,
       );
     };
@@ -2409,7 +2409,7 @@ export function OfficeScreen({
       );
       if (!agent) return;
       const confirmed = window.confirm(
-        `Delete ${agent.name}? This removes the agent record from OpenClaw and clears its scheduled automations. Claw3D will not touch workspace files.`,
+        `Delete ${agent.name}? This removes the agent record from OpenClaw and clears its scheduled automations. Hermes3D will not touch workspace files.`,
       );
       if (!confirmed) return;
 
@@ -4526,12 +4526,12 @@ export function OfficeScreen({
       }) ?? null,
     [marketplace.skillsReport],
   );
-  const soundclawSkill = useMemo<SkillStatusEntry | null>(
+  const soundhermesSkill = useMemo<SkillStatusEntry | null>(
     () =>
       marketplace.skillsReport?.skills.find((skill) => {
         const normalizedKey = skill.skillKey.trim().toLowerCase();
         const normalizedName = skill.name.trim().toLowerCase();
-        return normalizedKey === "soundclaw" || normalizedName === "soundclaw";
+        return normalizedKey === "soundhermes" || normalizedName === "soundhermes";
       }) ?? null,
     [marketplace.skillsReport],
   );
@@ -4548,13 +4548,13 @@ export function OfficeScreen({
     () => (taskManagerSkill ? deriveSkillReadinessState(taskManagerSkill) === "ready" : false),
     [taskManagerSkill],
   );
-  const soundclawReady = useMemo(
-    () => (soundclawSkill ? deriveSkillReadinessState(soundclawSkill) === "ready" : false),
-    [soundclawSkill]
+  const soundhermesReady = useMemo(
+    () => (soundhermesSkill ? deriveSkillReadinessState(soundhermesSkill) === "ready" : false),
+    [soundhermesSkill]
   );
 
   useEffect(() => {
-    if (!soundclawReady || !jukeboxToken) {
+    if (!soundhermesReady || !jukeboxToken) {
       return;
     }
 
@@ -4636,7 +4636,7 @@ export function OfficeScreen({
   }, [
     jukeboxToken,
     skillTriggers.movementTargetByAgentId,
-    soundclawReady,
+    soundhermesReady,
     state.agents,
   ]);
 
@@ -4775,7 +4775,7 @@ export function OfficeScreen({
           monitorByAgentId={monitorByAgentId}
           githubSkill={githubSkill}
           taskManagerEnabled={taskManagerReady}
-          soundclawEnabled={soundclawReady}
+          soundhermesEnabled={soundhermesReady}
           officeTitle={officeTitle}
           officeTitleLoaded={officeTitleLoaded}
           remoteOfficeEnabled={remoteOfficeEnabled}
@@ -4905,7 +4905,7 @@ export function OfficeScreen({
           }}
         />
         {jukeboxOpen ? (
-          soundclawReady ? (
+          soundhermesReady ? (
             <JukeboxPanel
               client={client}
               onClose={() => setJukeboxOpen(false)}
@@ -4962,7 +4962,7 @@ export function OfficeScreen({
                   setKanbanInstallProgress({
                     active: true,
                     percent: 100,
-                    message: "Refreshing task-manager state in Claw3D.",
+                    message: "Refreshing task-manager state in Hermes3D.",
                     error: null,
                   });
                   setKanbanInstallPromptOpen(false);

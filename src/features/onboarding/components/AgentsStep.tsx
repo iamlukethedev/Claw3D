@@ -30,7 +30,7 @@ export const AgentsStep = ({ agentCount, connected }: AgentsStepProps) => {
           <p className="text-sm font-medium text-white">No agents found</p>
           <p className="max-w-xs text-center text-xs text-white/55">
             Your gateway is connected, but no agents are configured yet.
-            You can create agents from the Claw3D fleet sidebar after
+            You can create agents from the Hermes3D fleet sidebar after
             completing this wizard.
           </p>
         </div>

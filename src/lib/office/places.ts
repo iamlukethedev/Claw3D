@@ -107,7 +107,7 @@ export const DEFAULT_SKILL_TRIGGER_FALLBACKS_BY_SKILL_KEY: Record<
     movementTarget: "desk",
     skipIfAlreadyThere: true,
   },
-  soundclaw: {
+  soundhermes: {
     anyPhrases: [
       "spotify",
       "play a song",

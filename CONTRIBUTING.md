@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve Claw3D.
+Thanks for helping improve Hermes3D.
 
 Please use GitHub Issues for bugs, feature requests, and questions about planned work.
 
@@ -13,8 +13,8 @@ Please use GitHub Issues for bugs, feature requests, and questions about planned
 
 ## Local setup
 ```bash
-git clone https://github.com/iamlukethedev/Claw3D.git
-cd Claw3D
+git clone https://github.com/iamlukethedev/Hermes3D.git
+cd Hermes3D
 npm install
 cp .env.example .env
 npm run dev

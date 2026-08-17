@@ -16,7 +16,7 @@ import {
 // Studio settings are intentionally stored as a local JSON file for a single-user workflow.
 // That includes gateway connection details, so treat the state directory as plaintext secret
 // storage and document any changes to this threat model in README.md and SECURITY.md.
-const SETTINGS_DIRNAME = "claw3d";
+const SETTINGS_DIRNAME = "hermes3d";
 const SETTINGS_FILENAME = "settings.json";
 const OPENCLAW_CONFIG_FILENAME = "openclaw.json";
 const DEFAULT_LOCAL_GATEWAY_PORT = 18789;
@@ -76,7 +76,7 @@ const normalizeAdapterType = (value: string | undefined): StudioGatewayAdapterTy
     normalized === "hermes" ||
     normalized === "demo" ||
     normalized === "local" ||
-    normalized === "claw3d" ||
+    normalized === "hermes3d" ||
     normalized === "custom"
   ) {
     return normalized;
@@ -96,10 +96,10 @@ const readPortBasedGatewayProfile = (
 };
 
 const buildEnvGatewayDefaults = (): StudioGatewaySettings | null => {
-  const envUrl = process.env.CLAW3D_GATEWAY_URL?.trim();
-  const envToken = process.env.CLAW3D_GATEWAY_TOKEN?.trim() ?? "";
+  const envUrl = process.env.HERMES3D_GATEWAY_URL?.trim();
+  const envToken = process.env.HERMES3D_GATEWAY_TOKEN?.trim() ?? "";
   const envAdapterType =
-    normalizeAdapterType(process.env.CLAW3D_GATEWAY_ADAPTER_TYPE) ?? "openclaw";
+    normalizeAdapterType(process.env.HERMES3D_GATEWAY_ADAPTER_TYPE) ?? "openclaw";
 
   const hermesProfile = readPortBasedGatewayProfile("hermes", "HERMES_ADAPTER_PORT");
   const demoProfile = readPortBasedGatewayProfile("demo", "DEMO_ADAPTER_PORT");

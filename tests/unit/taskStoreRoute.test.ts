@@ -48,7 +48,7 @@ describe("task store route", () => {
           id: "task-1",
           title: "Research mtulsa.com",
           status: "todo",
-          source: "claw3d_manual",
+          source: "hermes3d_manual",
         },
       })
     );

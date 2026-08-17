@@ -7,7 +7,7 @@ import { resolveStateDir } from "@/lib/clawdbot/paths";
 
 export const runtime = "nodejs";
 
-const uploadsDir = () => path.join(resolveStateDir(), "claw3d", "uploads");
+const uploadsDir = () => path.join(resolveStateDir(), "hermes3d", "uploads");
 
 const contentTypeFromName = (fileName: string): string => {
   const ext = path.extname(fileName).toLowerCase();

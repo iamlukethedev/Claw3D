@@ -22,7 +22,7 @@ import {
   shouldRunHermesChecks,
   shouldRunOpenClawChecks,
   summarizeChecks,
-} from "./lib/claw3doctor-core.mjs";
+} from "./lib/hermes3doctor-core.mjs";
 
 const require = createRequire(import.meta.url);
 const {
@@ -324,7 +324,7 @@ async function main() {
           "Runtime profiles",
           "Runtime profile",
           "No runtime profile / gateway URL is configured.",
-          ["Set the gateway URL in Claw3D connect/settings before retrying."],
+          ["Set the gateway URL in Hermes3D connect/settings before retrying."],
         ),
   );
 
@@ -340,7 +340,7 @@ async function main() {
           "Gateway token",
           "No gateway token is configured for the selected profile.",
           [
-            "If this backend requires token auth, set the upstream token in Claw3D settings or openclaw.json.",
+            "If this backend requires token auth, set the upstream token in Hermes3D settings or openclaw.json.",
           ],
         ),
   );
@@ -367,7 +367,7 @@ async function main() {
             "Profile selection",
             `Requested profile "${args.profile}" is not configured in current Studio settings.`,
             [
-              "Run `node scripts/claw3doctor.mjs --all-profiles` to see the configured profile list.",
+              "Run `node scripts/hermes3doctor.mjs --all-profiles` to see the configured profile list.",
             ],
           ),
     );

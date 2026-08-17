@@ -1,10 +1,10 @@
-# Claw3D Vision
+# Hermes3D Vision
 
-Claw3D is an open-source 3D environment for visualizing and interacting with AI agents powered by OpenClaw.
+Hermes3D is an open-source 3D environment for visualizing and interacting with AI agents powered by OpenClaw.
 
-The long-term goal of Claw3D is to build a living 3D world where AI agents and humans collaborate: a kind of digital city where agents operate, communicate, and perform tasks in a shared visual space.
+The long-term goal of Hermes3D is to build a living 3D world where AI agents and humans collaborate: a kind of digital city where agents operate, communicate, and perform tasks in a shared visual space.
 
-OpenClaw acts as the intelligence and orchestration engine, while Claw3D provides the visual layer and interactive environment that makes agent activity understandable, inspectable, and collaborative.
+OpenClaw acts as the intelligence and orchestration engine, while Hermes3D provides the visual layer and interactive environment that makes agent activity understandable, inspectable, and collaborative.
 
 This document explains the direction of the project and the guardrails guiding its development.
 
@@ -14,11 +14,11 @@ Project overview and developer documentation can be found in:
 - [`ROADMAP.md`](ROADMAP.md)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
-## Why Claw3D Exists
+## Why Hermes3D Exists
 
 AI systems are becoming increasingly capable, but their behavior is often invisible or difficult to understand.
 
-Claw3D aims to solve this by providing a visual interface for AI systems, allowing people to:
+Hermes3D aims to solve this by providing a visual interface for AI systems, allowing people to:
 
 - observe AI agents operating in real time
 - understand system behavior visually
@@ -33,7 +33,7 @@ The ultimate vision is a 3D city of AI agents, where:
 
 ## Relationship to OpenClaw
 
-Claw3D is designed to work with OpenClaw, not replace it.
+Hermes3D is designed to work with OpenClaw, not replace it.
 
 OpenClaw provides:
 
@@ -43,7 +43,7 @@ OpenClaw provides:
 - task execution
 - model provider integrations
 
-Claw3D provides:
+Hermes3D provides:
 
 - visualization
 - interaction
@@ -54,7 +54,7 @@ In simple terms:
 
 ```text
 OpenClaw -> intelligence and task execution
-Claw3D   -> visualization and interaction layer
+Hermes3D   -> visualization and interaction layer
 ```
 
 Maintaining compatibility with OpenClaw is an important design goal.
@@ -63,7 +63,7 @@ Features that require breaking OpenClaw integration will generally not be accept
 
 ## Current Priorities
 
-Claw3D is still in an early stage of development.
+Hermes3D is still in an early stage of development.
 
 Current priorities include:
 
@@ -100,11 +100,11 @@ To keep the project maintainable:
 - Architectural changes should be discussed in issues before implementation.
 - Contributors should respect the project's direction and scope.
 
-Claw3D is still evolving quickly, so iteration is expected.
+Hermes3D is still evolving quickly, so iteration is expected.
 
 ## Architecture Direction
 
-Claw3D is designed as a visual layer on top of agent systems.
+Hermes3D is designed as a visual layer on top of agent systems.
 
 The system should remain:
 
@@ -130,7 +130,7 @@ To maintain focus, the following types of contributions are generally avoided:
 - replacing the rendering stack without strong technical justification
 - heavy framework layers that reduce hackability
 - extremely large PRs without prior coordination
-- unrelated product experiments that do not advance the Claw3D vision
+- unrelated product experiments that do not advance the Hermes3D vision
 
 This list is a directional guardrail, not a permanent restriction.
 
@@ -138,7 +138,7 @@ Strong technical arguments or user demand may change these decisions.
 
 ## Long-Term Direction
 
-The long-term vision for Claw3D is ambitious:
+The long-term vision for Hermes3D is ambitious:
 
 **A 3D city of AI agents.**
 
@@ -151,4 +151,4 @@ In this environment:
 
 Instead of interacting with invisible systems through logs and dashboards, users will be able to walk through and interact with the systems themselves.
 
-Claw3D is an early step toward that future.
+Hermes3D is an early step toward that future.

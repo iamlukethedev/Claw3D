@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { removeSkillLocally } from "@/lib/skills/remove-local";
 
-const mkTmpDir = () => fs.mkdtempSync(path.join(os.tmpdir(), "claw3d-skill-remove-"));
+const mkTmpDir = () => fs.mkdtempSync(path.join(os.tmpdir(), "hermes3d-skill-remove-"));
 
 describe("skills remove local", () => {
   const originalStateDir = process.env.OPENCLAW_STATE_DIR;

@@ -1,10 +1,10 @@
 # Multi-Floor Runtime Architecture
 
-> Architecture note for evolving Claw3D from single-runtime switching into one persistent building with multiple runtime-backed floors.
+> Architecture note for evolving Hermes3D from single-runtime switching into one persistent building with multiple runtime-backed floors.
 
 ## Goal
 
-Claw3D should move from:
+Hermes3D should move from:
 
 - one selected runtime at a time
 
@@ -175,7 +175,7 @@ Still owned by the runtime/gateway:
 
 ### Studio-owned
 
-Local Claw3D state should own:
+Local Hermes3D state should own:
 
 - floor registry
 - active floor
@@ -184,7 +184,7 @@ Local Claw3D state should own:
 - floor-local presentation preferences
 - building-level Office Systems state
 
-This follows the existing architecture boundary in [ARCHITECTURE.md](/c:/Users/G/Desktop/Builds/sigilnet/isolation/Claw3D/ARCHITECTURE.md): Claw3D should not become the system of record for runtime agent state.
+This follows the existing architecture boundary in [ARCHITECTURE.md](/c:/Users/G/Desktop/Builds/sigilnet/isolation/Hermes3D/ARCHITECTURE.md): Hermes3D should not become the system of record for runtime agent state.
 
 ## Floor Registry
 
@@ -333,7 +333,7 @@ Reason for deferral:
 
 ## Multi-Provider Roster Loading
 
-Today Claw3D mostly thinks in one active roster.
+Today Hermes3D mostly thinks in one active roster.
 
 The next model should be:
 
@@ -436,7 +436,7 @@ Good examples:
 - `Outside / Campus`
   - stadium and event spaces
 
-The pending stadium PR [#88](https://github.com/iamlukethedev/Claw3D/pull/88) should be treated as a future `Outside / Campus` scene, not as a blocker for the core floor/runtime model.
+The pending stadium work should be treated as a future `Outside / Campus` scene, not as a blocker for the core floor/runtime model.
 
 ## Progression / Unlocks
 
@@ -487,7 +487,7 @@ Deliverables:
 
 Acceptance criteria:
 
-- Claw3D can enumerate all known floors without connecting to any runtime
+- Hermes3D can enumerate all known floors without connecting to any runtime
 - floor definitions are runtime-neutral and local-state only
 - the building shell can reference floor labels and kinds without depending on roster data
 
@@ -504,7 +504,7 @@ Acceptance criteria:
 
 - switching floors does not wipe another floor’s runtime state
 - reconnecting one floor does not reset another floor
-- Claw3D can show disconnected/configured/connected/errored state per floor
+- Hermes3D can show disconnected/configured/connected/errored state per floor
 - moving from one runtime floor to another reconnects against the target runtime before the floor is treated as live
 
 ### Phase 3: Per-Floor Roster Hydration
@@ -630,7 +630,7 @@ Not for the first slice:
 
 ## Summary
 
-Claw3D should evolve into:
+Hermes3D should evolve into:
 
 - one building shell
 - multiple runtime-backed floors

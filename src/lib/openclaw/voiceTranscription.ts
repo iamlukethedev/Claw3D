@@ -283,7 +283,7 @@ export const transcribeVoiceWithOpenClaw = async (params: {
 
   const mimeType = normalizeVoiceMimeType(params.mimeType);
   const fileName = sanitizeVoiceFileName(params.fileName, mimeType);
-  const tempDirectory = await fsp.mkdtemp(path.join(os.tmpdir(), "claw3d-voice-"));
+  const tempDirectory = await fsp.mkdtemp(path.join(os.tmpdir(), "hermes3d-voice-"));
   const tempPath = path.join(tempDirectory, `${randomUUID()}-${fileName}`);
 
   await fsp.writeFile(tempPath, params.buffer);

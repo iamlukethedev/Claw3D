@@ -4,9 +4,9 @@
 
 ## Goal
 
-Define a clean `custom` runtime provider class for Claw3D.
+Define a clean `custom` runtime provider class for Hermes3D.
 
-This provider should let external orchestration stacks integrate with Claw3D through a stable seam without requiring:
+This provider should let external orchestration stacks integrate with Hermes3D through a stable seam without requiring:
 
 - OpenClaw emulation
 - Hermes-specific semantics
@@ -28,9 +28,9 @@ Current implemented behavior:
 - Studio persists the selected backend mode as `custom`
 - the provider exposes runtime metadata such as `runtimeName`, `vendor`,
   `runtimeVersion`, and `routeProfile` when available
-- Claw3D probes `GET /health`, `GET /state`, and `GET /registry`
+- Hermes3D probes `GET /health`, `GET /state`, and `GET /registry`
 - chat uses a direct HTTP path to `POST /v1/chat/completions`
-- browser traffic is proxied through Claw3D's same-origin
+- browser traffic is proxied through Hermes3D's same-origin
   `/api/runtime/custom` route instead of calling the runtime directly
 
 Still intentionally missing in this branch:
@@ -42,7 +42,7 @@ Still intentionally missing in this branch:
 
 ## Why This Matters
 
-Not every useful runtime should have to become a named built-in provider in upstream Claw3D.
+Not every useful runtime should have to become a named built-in provider in upstream Hermes3D.
 
 A clean custom provider seam gives:
 
@@ -70,7 +70,7 @@ This is the upstream-safe abstraction.
 
 ## Relationship To Existing Provider Work
 
-Claw3D’s runtime abstraction already points toward multiple providers:
+Hermes3D’s runtime abstraction already points toward multiple providers:
 
 - `openclaw`
 - `hermes`
@@ -93,7 +93,7 @@ The provider should expose:
 - normalized events
 - optional metadata
 
-It should not require upstream Claw3D to know:
+It should not require upstream Hermes3D to know:
 
 - runtime-specific routing internals
 - proprietary state logic
@@ -120,7 +120,7 @@ type CustomRuntimeDescriptor = {
 };
 ```
 
-This gives Claw3D enough identity for UI without hardcoding a brand into the provider class.
+This gives Hermes3D enough identity for UI without hardcoding a brand into the provider class.
 
 ## Reference Implementation Strategy
 
@@ -128,7 +128,7 @@ The `custom` provider should exist as a generic extension seam.
 
 That means:
 
-- upstream Claw3D gets `custom`
+- upstream Hermes3D gets `custom`
 - downstream stacks supply their own behavior
 - others can later implement their own custom providers against the same seam
 
@@ -195,7 +195,7 @@ Examples:
 - `run.lifecycle`
 - `tool.progress`
 
-This keeps Claw3D stable even if the custom stack has richer private event semantics internally.
+This keeps Hermes3D stable even if the custom stack has richer private event semantics internally.
 
 ## Custom Metadata Surface
 
@@ -230,7 +230,7 @@ Implementation-specific mapping stays in the runtime layer.
 
 ## Relationship To Agent State Model
 
-The custom provider is the right place for richer internal state to enter Claw3D.
+The custom provider is the right place for richer internal state to enter Hermes3D.
 
 For example:
 
@@ -244,7 +244,7 @@ This keeps:
 
 ## Relationship To Office Systems
 
-The custom provider should be able to support office systems without Claw3D needing to know the backend’s internals.
+The custom provider should be able to support office systems without Hermes3D needing to know the backend’s internals.
 
 Examples:
 
@@ -262,13 +262,13 @@ Recommended V1 scope:
 - define `custom` provider identity
 - allow custom provider metadata
 - ensure capability-driven UI behavior
-- make no runtime-specific assumptions in core Claw3D
+- make no runtime-specific assumptions in core Hermes3D
 
 Actual runtime adapters can be implemented separately against that seam.
 
 ## Out of Scope For V1
 
-- embedding proprietary internal orchestration logic in Claw3D core
+- embedding proprietary internal orchestration logic in Hermes3D core
 - hardcoding any one runtime as upstream architecture
 - requiring all custom providers to support advanced signals
 
@@ -288,7 +288,7 @@ Recommended order:
 
 This spec is successful if:
 
-- upstream Claw3D gains a clean extension seam
+- upstream Hermes3D gains a clean extension seam
 - Vera can integrate without bloating core architecture
 - future stacks can follow the same pattern
 - the office systems continue to work against normalized runtime behavior
@@ -297,4 +297,4 @@ This spec is successful if:
 
 The `custom` runtime provider is the right upstream abstraction for stack-specific orchestrators.
 
-It gives Claw3D extensibility, gives Vera a clean path in, and avoids hardwiring a personal stack directly into the core product model.
+It gives Hermes3D extensibility, gives Vera a clean path in, and avoids hardwiring a personal stack directly into the core product model.

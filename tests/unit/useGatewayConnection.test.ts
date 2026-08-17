@@ -372,7 +372,7 @@ describe("useGatewayConnection", () => {
 
   it("auto_applies_runtime_local_defaults_when_no_saved_gateway_and_build_time_empty", async () => {
     // Simulates #57: NEXT_PUBLIC_GATEWAY_URL was never rebuilt, but
-    // CLAW3D_GATEWAY_URL is set on the server so localGatewayDefaults
+    // HERMES3D_GATEWAY_URL is set on the server so localGatewayDefaults
     // comes through in the sanitized (public) form with tokenConfigured.
     const { useGatewayConnection } = await setupAndImportHook("");
     const coordinator = {
@@ -549,7 +549,7 @@ describe("useGatewayConnection", () => {
     expect(firstPatch.gateway?.profiles?.hermes?.token).toBeUndefined();
     expect(firstPatch.gateway?.profiles?.demo?.token).toBe("");
     expect(firstPatch.gateway?.profiles?.local?.token).toBe("");
-    expect(firstPatch.gateway?.profiles?.claw3d?.token).toBe("");
+    expect(firstPatch.gateway?.profiles?.hermes3d?.token).toBe("");
     expect(firstPatch.gateway?.profiles?.custom?.token).toBe("");
   });
 

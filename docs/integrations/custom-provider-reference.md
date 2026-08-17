@@ -1,10 +1,10 @@
 # Custom Provider Reference
 
-> Reference implementation guide for plugging a non-OpenClaw, non-Hermes runtime into Claw3D through the upstream-safe `custom` provider seam.
+> Reference implementation guide for plugging a non-OpenClaw, non-Hermes runtime into Hermes3D through the upstream-safe `custom` provider seam.
 
 ## Goal
 
-Show how a custom orchestration stack should plug into Claw3D without requiring:
+Show how a custom orchestration stack should plug into Hermes3D without requiring:
 
 - a named built-in provider
 - OpenClaw emulation
@@ -12,9 +12,9 @@ Show how a custom orchestration stack should plug into Claw3D without requiring:
 
 The shape should be:
 
-- Claw3D sees `custom`
+- Hermes3D sees `custom`
 - the external runtime stays implementation-specific
-- Claw3D core remains generic
+- Hermes3D core remains generic
 
 ## Current Implementation Notes
 
@@ -37,11 +37,11 @@ What still needs to mature:
 
 ## Position
 
-A custom runtime should sit at the Claw3D boundary as an orchestrator-backed service.
+A custom runtime should sit at the Hermes3D boundary as an orchestrator-backed service.
 
 That means:
 
-- Claw3D should talk to one stable runtime boundary
+- Hermes3D should talk to one stable runtime boundary
 - that boundary may route work to internal worker processes, models, or lanes
 - those internal details should remain mostly hidden behind the provider
 
@@ -62,11 +62,11 @@ Some stacks will be:
 - organization-specific
 - built around custom orchestration
 
-The `custom` provider exists so those stacks can integrate cleanly without forcing Claw3D core to absorb stack-specific assumptions.
+The `custom` provider exists so those stacks can integrate cleanly without forcing Hermes3D core to absorb stack-specific assumptions.
 
 ## Recommended Boundary
 
-Claw3D should integrate with the custom runtime's orchestrator or gateway layer, not with its individual workers.
+Hermes3D should integrate with the custom runtime's orchestrator or gateway layer, not with its individual workers.
 
 Recommended public boundary:
 
@@ -89,7 +89,7 @@ These do not need to be mandatory for every implementation, but they are a stron
 Recommended mapping:
 
 ```text
-Claw3D
+Hermes3D
   -> custom provider
     -> custom orchestrator / gateway
       -> internal routing
@@ -130,7 +130,7 @@ type CustomRuntimeMetadata = {
 };
 ```
 
-This gives the UI enough identity without forcing upstream Claw3D to branch on every runtime brand.
+This gives the UI enough identity without forcing upstream Hermes3D to branch on every runtime brand.
 
 ## Capability Profile
 
@@ -155,11 +155,11 @@ Possible later support depending on implementation:
 
 Important rule:
 
-Do not claim support just because the backend can theoretically do something. Claim support only where the provider exposes a stable Claw3D-facing behavior.
+Do not claim support just because the backend can theoretically do something. Claim support only where the provider exposes a stable Hermes3D-facing behavior.
 
 ## Agent Mapping
 
-Claw3D agents should not be modeled as one fixed backend process each unless the runtime truly behaves that way.
+Hermes3D agents should not be modeled as one fixed backend process each unless the runtime truly behaves that way.
 
 Instead, a custom runtime may map agents to:
 
@@ -183,7 +183,7 @@ The important point is that the provider should expose office-meaningful identit
 
 ## Session Mapping
 
-Claw3D sessions should map to runtime conversations or execution threads, not to whichever backend storage structure happens to exist internally.
+Hermes3D sessions should map to runtime conversations or execution threads, not to whichever backend storage structure happens to exist internally.
 
 Recommended session metadata:
 
@@ -199,7 +199,7 @@ The provider should normalize these into a stable session model no matter what t
 
 ## Event Mapping
 
-The provider should translate runtime activity into the same normalized Claw3D runtime events used elsewhere.
+The provider should translate runtime activity into the same normalized Hermes3D runtime events used elsewhere.
 
 Recommended mappings:
 
@@ -246,7 +246,7 @@ Worker-level status endpoints should stay behind the provider unless the UI need
 
 ## Relationship To Agent State
 
-The custom provider is the right place to map richer internal runtime signals into Claw3D's public office state model.
+The custom provider is the right place to map richer internal runtime signals into Hermes3D's public office state model.
 
 Public office state should remain simple:
 
@@ -266,11 +266,11 @@ Internally, a custom stack may derive those from richer signals such as:
 
 That should remain implementation-private.
 
-Claw3D only needs the resulting office-safe state and maybe a public reason label.
+Hermes3D only needs the resulting office-safe state and maybe a public reason label.
 
 ## Relationship To Office Systems
 
-The custom provider should support office systems without Claw3D needing to know the backend's internals.
+The custom provider should support office systems without Hermes3D needing to know the backend's internals.
 
 Examples:
 
@@ -287,12 +287,12 @@ Recommended first `custom` provider scope:
 
 1. Reach the custom orchestrator over `/v1/chat/completions`.
 2. Pull metadata from `/health`, `/state`, and `/registry`.
-3. Map runtime roles or routes into Claw3D agent identities.
+3. Map runtime roles or routes into Hermes3D agent identities.
 4. Surface streaming and final turns.
 5. Expose route metadata in a diagnostics-friendly way.
 6. Map simple public office states from observable runtime conditions.
 
-This is enough to make a custom runtime useful in Claw3D without overexposing internals.
+This is enough to make a custom runtime useful in Hermes3D without overexposing internals.
 
 ## Suggested V2 Scope
 
@@ -308,7 +308,7 @@ Once the V1 provider is stable, add:
 
 This reference should not require:
 
-- runtime-specific branches throughout Claw3D core
+- runtime-specific branches throughout Hermes3D core
 - OpenClaw compatibility shims
 - routing logic duplicated in the frontend
 - direct worker orchestration in the browser

@@ -8,7 +8,7 @@ type LayoutSnapshotStore = {
   snapshots: Record<string, OfficeLayoutSnapshot>;
 };
 
-const STORE_DIR = "claw3d";
+const STORE_DIR = "hermes3d";
 const STORE_FILE = "retro-office-layouts.json";
 
 const ensureDirectory = (dirPath: string) => {

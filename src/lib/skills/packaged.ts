@@ -179,8 +179,8 @@ Also use this skill even when those exact phrases are absent if the latest user 
 
 The authoritative task file is:
 
-- \`\${OPENCLAW_STATE_DIR}/claw3d/task-manager/tasks.json\` when \`OPENCLAW_STATE_DIR\` is set.
-- \`~/.openclaw/claw3d/task-manager/tasks.json\` otherwise.
+- \`\${OPENCLAW_STATE_DIR}/hermes3d/task-manager/tasks.json\` when \`OPENCLAW_STATE_DIR\` is set.
+- \`~/.openclaw/hermes3d/task-manager/tasks.json\` otherwise.
 
 Always treat that file as the shared source of truth for the Kanban board.
 
@@ -244,7 +244,7 @@ Each task must include:
       "title": "Research mtulsa.com",
       "description": "Review mtulsa.com and summarize the site, positioning, and improvement opportunities.",
       "status": "in_progress",
-      "source": "claw3d_manual",
+      "source": "hermes3d_manual",
       "sourceEventId": null,
       "assignedAgentId": "main",
       "createdAt": "2026-03-30T00:00:00.000Z",
@@ -295,7 +295,7 @@ const TASK_MANAGER_EXAMPLE_JSON = `{
       "title": "Research mtulsa.com",
       "description": "Review mtulsa.com and summarize the site, positioning, and improvement opportunities.",
       "status": "in_progress",
-      "source": "claw3d_manual",
+      "source": "hermes3d_manual",
       "sourceEventId": null,
       "assignedAgentId": "main",
       "createdAt": "2026-03-30T00:00:00.000Z",
@@ -329,14 +329,14 @@ const TASK_MANAGER_EXAMPLE_JSON = `{
 }
 `;
 
-// Keep this string synchronized with assets/skills/soundclaw/SKILL.md.
-const SOUNDCLAW_SKILL_MD = `---
-name: soundclaw
+// Keep this string synchronized with assets/skills/soundhermes/SKILL.md.
+const SOUNDHERMES_SKILL_MD = `---
+name: soundhermes
 description: Control Spotify playback, search music, and return shareable music links.
-metadata: {"openclaw":{"skillKey":"soundclaw"}}
+metadata: {"openclaw":{"skillKey":"soundhermes"}}
 ---
 
-# SOUNDCLAW
+# SOUNDHERMES
 
 Use this skill when the user wants an agent to search for music, play a song or playlist, control Spotify playback, or send back a shareable Spotify link on the same channel the request came from.
 
@@ -380,13 +380,13 @@ When this skill is activated, the agent should walk to the office jukebox before
 ## OpenClaw Gateway Skill Contract
 
 > This section is for developers implementing the backend skill handler in OpenClaw.
-> The Claw3D UI handles authentication via Spotify PKCE OAuth in the browser.
-> The gateway skill handles agent-driven requests via the \`soundclaw.*\` RPC namespace.
+> The Hermes3D UI handles authentication via Spotify PKCE OAuth in the browser.
+> The gateway skill handles agent-driven requests via the \`soundhermes.*\` RPC namespace.
 
 ### Authentication model
 
 The user authenticates directly in the browser (PKCE, no secret required).
-The access token is stored in browser \`localStorage\` under the key \`soundclaw_token\`.
+The access token is stored in browser \`localStorage\` under the key \`soundhermes_token\`.
 
 For **agent-driven** playback (e.g. "play Jazz for me"), the gateway skill should either:
 - Use a server-side Spotify app token (Client Credentials) for search-only actions, or
@@ -396,31 +396,31 @@ For **agent-driven** playback (e.g. "play Jazz for me"), the gateway skill shoul
 
 \`\`\`ts
 // Search for tracks. Returns a list of { name, artist, album, uri, spotifyUrl }.
-soundclaw.search({ query: string }): SpotifySearchResult[]
+soundhermes.search({ query: string }): SpotifySearchResult[]
 
 // Get a shareable Spotify link for a query (for Telegram/chat replies).
-soundclaw.getLink({ query: string }): { url: string; title: string }
+soundhermes.getLink({ query: string }): { url: string; title: string }
 
 // Report current playback state (reads from Spotify API).
-soundclaw.playerStatus(): PlayerStatus | null
+soundhermes.playerStatus(): PlayerStatus | null
 
 // Request playback of a URI (requires user to be authenticated in browser).
-soundclaw.play({ uri: string }): { ok: boolean; message?: string }
+soundhermes.play({ uri: string }): { ok: boolean; message?: string }
 
 // Pause / resume / skip.
-soundclaw.pause(): void
-soundclaw.resume(): void
-soundclaw.next(): void
-soundclaw.previous(): void
+soundhermes.pause(): void
+soundhermes.resume(): void
+soundhermes.next(): void
+soundhermes.previous(): void
 \`\`\`
 
 ### Agent workflow
 
 1. Agent receives a music request ("play some jazz", "find this song", etc.)
 2. Agent walks to the jukebox (\`movement.target: "jukebox"\`)
-3. Agent calls \`soundclaw.search\` to find the best match
-4. If the request came from a chat channel (Telegram, etc.): call \`soundclaw.getLink\` and reply with the link
-5. If the request came from the office UI: call \`soundclaw.play\` to start playback
+3. Agent calls \`soundhermes.search\` to find the best match
+4. If the request came from a chat channel (Telegram, etc.): call \`soundhermes.getLink\` and reply with the link
+5. If the request came from the office UI: call \`soundhermes.play\` to start playback
 6. Agent reports back what was played or linked
 `;
 
@@ -445,10 +445,10 @@ const PACKAGED_SKILL_FILES: Record<string, PackagedSkillFile[]> = {
       content: TASK_MANAGER_EXAMPLE_JSON,
     },
   ],
-  soundclaw: [
+  soundhermes: [
     {
       relativePath: "SKILL.md",
-      content: SOUNDCLAW_SKILL_MD,
+      content: SOUNDHERMES_SKILL_MD,
     },
   ],
 };

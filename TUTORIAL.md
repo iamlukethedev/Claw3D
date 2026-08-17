@@ -1,21 +1,21 @@
-# Claw3D + OpenClaw + Tailscale Setup Tutorial
+# Hermes3D + OpenClaw + Tailscale Setup Tutorial
 
 This guide is a step-by-step runbook for the most common production-like setup:
 
 - **Machine A** runs **OpenClaw Gateway**.
-- **Machine B** runs **Claw3D**.
+- **Machine B** runs **Hermes3D**.
 - **Tailscale** connects both machines securely.
 
-If you follow this exactly, people should avoid the most common confusion: **Claw3D does not install or run OpenClaw for you.**
+If you follow this exactly, people should avoid the most common confusion: **Hermes3D does not install or run OpenClaw for you.**
 
 ---
 
 ## 0) Architecture and Responsibilities
 
 - **OpenClaw** is the runtime and Gateway.
-- **Claw3D** is the UI and Studio proxy.
-- Claw3D connects to an already running OpenClaw Gateway.
-- In this tutorial, the Gateway lives on a different machine from Claw3D.
+- **Hermes3D** is the UI and Studio proxy.
+- Hermes3D connects to an already running OpenClaw Gateway.
+- In this tutorial, the Gateway lives on a different machine from Hermes3D.
 
 ---
 
@@ -27,7 +27,7 @@ If you follow this exactly, people should avoid the most common confusion: **Cla
 - Internet access.
 - Ability to install OpenClaw and Tailscale.
 
-### Machine B (Claw3D host)
+### Machine B (Hermes3D host)
 
 - Node.js `20+` recommended for this repo.
 - npm `10+` recommended.
@@ -70,7 +70,7 @@ You want a healthy result such as runtime running and RPC probe ok.
 
 ### 2.4 Get your Gateway token
 
-You will need this token in Claw3D:
+You will need this token in Hermes3D:
 
 ```bash
 openclaw config get gateway.auth.token
@@ -143,17 +143,17 @@ OpenClaw Tailscale docs: [Gateway Tailscale](https://docs.openclaw.ai/gateway/ta
 
 You need the `https://<gateway-host>.<tailnet>.ts.net` host.
 
-This host is what Claw3D will use as `wss://<gateway-host>.<tailnet>.ts.net`.
+This host is what Hermes3D will use as `wss://<gateway-host>.<tailnet>.ts.net`.
 
 ---
 
-## 5) Install and Run Claw3D on Machine B
+## 5) Install and Run Hermes3D on Machine B
 
 On **Machine B**:
 
 ```bash
-git clone https://github.com/iamlukethedev/Claw3D.git claw3d
-cd claw3d
+git clone https://github.com/iamlukethedev/Hermes3D.git hermes3d
+cd hermes3d
 npm install
 cp .env.example .env
 npm run dev
@@ -165,9 +165,9 @@ Then open:
 
 ---
 
-## 6) Connect Claw3D to OpenClaw
+## 6) Connect Hermes3D to OpenClaw
 
-In Claw3D connection UI:
+In Hermes3D connection UI:
 
 1. Set **Gateway URL** to:
    - `wss://<gateway-host>.<tailnet>.ts.net`
@@ -177,7 +177,7 @@ In Claw3D connection UI:
 Important:
 
 - Use `wss://` for Tailscale HTTPS endpoints.
-- Use `ws://localhost:18789` only when Gateway is local to the same machine as Claw3D or when using an SSH tunnel.
+- Use `ws://localhost:18789` only when Gateway is local to the same machine as Hermes3D or when using an SSH tunnel.
 
 ---
 
@@ -185,7 +185,7 @@ Important:
 
 This is the step people often miss.
 
-After Claw3D is running and tries to connect for the first time, approve pending device pairing on **Machine A**:
+After Hermes3D is running and tries to connect for the first time, approve pending device pairing on **Machine A**:
 
 ```bash
 openclaw devices list
@@ -209,9 +209,9 @@ Run this checklist in order:
 1. `openclaw gateway status` on Machine A shows healthy runtime.
 2. `tailscale status` on both machines shows connected devices in same tailnet.
 3. `tailscale serve status` on Machine A shows active Serve config for port `443` to `127.0.0.1:18789`.
-4. Claw3D connect UI uses `wss://...ts.net` plus valid token.
+4. Hermes3D connect UI uses `wss://...ts.net` plus valid token.
 5. `openclaw devices approve --latest` has been run after first connect attempt.
-6. Claw3D UI shows gateway connected and loads agents.
+6. Hermes3D UI shows gateway connected and loads agents.
 
 ---
 
@@ -223,13 +223,13 @@ Run this checklist in order:
 - Fix: if your endpoint is HTTPS/Tailscale Serve, use `wss://...`.
 - Do not use `wss://` against a plain `ws://` endpoint.
 
-### `401` or auth errors from Claw3D
+### `401` or auth errors from Hermes3D
 
 - Re-copy token from Machine A:
   - `openclaw config get gateway.auth.token`.
 - Confirm Gateway auth mode and token are current.
 
-### Claw3D still cannot connect after token is correct
+### Hermes3D still cannot connect after token is correct
 
 - Approve pending device:
   - `openclaw devices approve --latest`.

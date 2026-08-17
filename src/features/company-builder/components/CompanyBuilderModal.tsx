@@ -293,7 +293,7 @@ export function CompanyBuilderModal({
                   <div className="text-sm leading-6 text-white/70">
                     {input.businessDescription.trim()
                       ? input.businessDescription
-                      : "Describe what the company should do and Claw3D will immediately turn it into an improved brief."}
+                      : "Describe what the company should do and Hermes3D will immediately turn it into an improved brief."}
                   </div>
                 </div>
               </div>
@@ -686,7 +686,7 @@ export function CompanyBuilderModal({
                   <Sparkles className="mx-auto h-8 w-8 text-cyan-300/70" />
                   <p className="text-lg font-semibold text-white">No company generated yet</p>
                   <p className="text-sm text-white/55">
-                    Start by describing the company. Claw3D will create the improved brief
+                    Start by describing the company. Hermes3D will create the improved brief
                     automatically, then you can generate and edit the org structure before anything
                     is created.
                   </p>
@@ -704,7 +704,7 @@ export function CompanyBuilderModal({
               {statusLine?.trim() || "Working on your company."}
             </p>
             <p className="mt-2 text-xs leading-5 text-white/55">
-              Claw3D is using your connected runtime right now. Please wait until this finishes.
+              Hermes3D is using your connected runtime right now. Please wait until this finishes.
             </p>
             <div className="mt-5 flex gap-2">
               {Array.from({ length: 4 }, (_, index) => (
@@ -897,7 +897,7 @@ export function CompanyBuilderModal({
                   What should the company do?
                 </p>
                 <p className="mt-2 text-sm text-white/55">
-                  As soon as you submit this, Claw3D will improve the brief using your connected
+                  As soon as you submit this, Hermes3D will improve the brief using your connected
                   runtime.
                 </p>
               </div>

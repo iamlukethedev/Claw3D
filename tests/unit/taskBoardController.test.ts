@@ -210,7 +210,7 @@ describe("task board controller helpers", () => {
       title: "Review patch",
       description: "",
       status: "in_progress" as const,
-      source: "claw3d_manual" as const,
+      source: "hermes3d_manual" as const,
       sourceEventId: null,
       assignedAgentId: "agent-1",
       createdAt: "2026-03-29T10:00:00.000Z",

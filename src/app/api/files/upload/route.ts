@@ -65,7 +65,7 @@ const sanitizeFilename = (input: string): string => {
   return cleaned || "upload";
 };
 
-const uploadsDir = () => path.join(resolveStateDir(), "claw3d", "uploads");
+const uploadsDir = () => path.join(resolveStateDir(), "hermes3d", "uploads");
 
 const isTextContentType = (contentType: string): boolean =>
   TEXT_CONTENT_TYPES.some((prefix) => contentType.startsWith(prefix));

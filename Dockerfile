@@ -1,4 +1,4 @@
-# Claw3D - 3D agent visualization for OpenClaw.
+# Hermes3D - 3D agent visualization for OpenClaw.
 # Multi-stage build: install prod deps -> build Next.js -> run with custom server.
 
 FROM node:20-slim AS deps
@@ -12,7 +12,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# Build-time gateway URL (overridden at runtime by CLAW3D_GATEWAY_URL).
+# Build-time gateway URL (overridden at runtime by HERMES3D_GATEWAY_URL).
 ENV NEXT_PUBLIC_GATEWAY_URL=ws://127.0.0.1:18789
 RUN npm run build
 

@@ -24,7 +24,7 @@ Describe alternatives you've considered.
 A clear and concise description of any alternative solutions or features you've considered.
 
 **OpenClaw compatibility**
-Claw3D depends on **OpenClaw**. Any proposed feature must remain compatible with OpenClaw and should not break the integration between the two projects.
+Hermes3D depends on **OpenClaw**. Any proposed feature must remain compatible with OpenClaw and should not break the integration between the two projects.
 
 If this feature affects OpenClaw, please describe:
 

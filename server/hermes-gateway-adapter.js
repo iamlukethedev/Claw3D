@@ -18,7 +18,7 @@
  *   HERMES_API_KEY        Bearer token for Hermes     (default: empty)
  *   HERMES_ADAPTER_PORT   WebSocket port              (default: 18789)
  *   HERMES_MODEL          Model identifier            (default: hermes)
- *   HERMES_AGENT_NAME     Display name in Claw3D UI   (default: Hermes)
+ *   HERMES_AGENT_NAME     Display name in Hermes3D UI   (default: Hermes)
  */
 
 const http = require("http");
@@ -240,7 +240,7 @@ const activeSendEventFns = new Set();
 // Disk persistence for conversation history
 // ---------------------------------------------------------------------------
 
-const HISTORY_FILE = path.join(HOME, ".hermes", "clawd3d-history.json");
+const HISTORY_FILE = path.join(HOME, ".hermes", "hermes3d-history.json");
 let persistDebounceTimer = null;
 
 function loadHistoryFromDisk() {
@@ -1262,7 +1262,7 @@ function startAdapter() {
     console.log(`[hermes-adapter] ✓ Forwarding to Hermes API at ${HERMES_API_URL}`);
     console.log(`[hermes-adapter] ✓ Model: ${HERMES_MODEL}`);
     console.log(`[hermes-adapter] ✓ Multi-agent orchestration: ENABLED`);
-    console.log(`\nOpen Claw3D → ws://localhost:${ADAPTER_PORT}\n`);
+    console.log(`\nOpen Hermes3D → ws://localhost:${ADAPTER_PORT}\n`);
   });
 
   httpServer.on("error", (err) => {

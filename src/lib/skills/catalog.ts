@@ -3,7 +3,7 @@ import type {
   SkillStatusEntry,
 } from "@/lib/skills/types";
 
-export type PackagedSkillId = "soundclaw" | "task-manager" | "todo-board";
+export type PackagedSkillId = "soundhermes" | "task-manager" | "todo-board";
 
 export type PackagedSkillDefinition = {
   packageId: PackagedSkillId;
@@ -44,9 +44,9 @@ const PACKAGED_SKILLS: PackagedSkillDefinition[] = [
     creatorUrl: "https://github.com/iamlukethedev",
   },
   {
-    packageId: "soundclaw",
-    skillKey: "soundclaw",
-    name: "soundclaw",
+    packageId: "soundhermes",
+    skillKey: "soundhermes",
+    name: "soundhermes",
     description: "Control Spotify playback, search music, and return shareable music links.",
     installSource: "openclaw-workspace",
     creatorName: "iamlukethedev",

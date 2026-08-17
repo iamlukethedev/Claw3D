@@ -2,7 +2,7 @@
 
 ## Our Pledge
 
-We want Claw3D to be a welcoming, respectful project for everyone.
+We want Hermes3D to be a welcoming, respectful project for everyone.
 
 Contributors and maintainers are expected to participate in a way that makes collaboration constructive, inclusive, and professional.
 

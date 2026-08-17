@@ -18,9 +18,9 @@ import {
   shouldRunHermesChecks,
   shouldRunOpenClawChecks,
   summarizeChecks,
-} from "../../scripts/lib/claw3doctor-core.mjs";
+} from "../../scripts/lib/hermes3doctor-core.mjs";
 
-describe("claw3doctor core", () => {
+describe("hermes3doctor core", () => {
   it("resolves selected runtime from settings profiles", () => {
     const runtime = resolveRuntimeContext({
       settings: {
@@ -69,7 +69,7 @@ describe("claw3doctor core", () => {
     );
   });
 
-  it("supports local and claw3d runtime defaults", () => {
+  it("supports local and hermes3d runtime defaults", () => {
     expect(
       resolveRuntimeContext({
         settings: { gateway: { adapterType: "local" } },
@@ -80,8 +80,8 @@ describe("claw3doctor core", () => {
 
     expect(
       resolveRuntimeContext({
-        settings: { gateway: { adapterType: "claw3d" } },
-        upstreamGateway: { url: "", token: "", adapterType: "claw3d" },
+        settings: { gateway: { adapterType: "hermes3d" } },
+        upstreamGateway: { url: "", token: "", adapterType: "hermes3d" },
         env: process.env,
       }).gatewayUrl,
     ).toBe("http://localhost:3000/api/runtime/custom");
@@ -269,15 +269,15 @@ describe("claw3doctor core", () => {
     ).toBe(true);
     expect(
       shouldRunCustomChecks({
-        runtimeContext: { adapterType: "claw3d" },
+        runtimeContext: { adapterType: "hermes3d" },
       }),
     ).toBe(true);
   });
 
-  it("treats local and claw3d as custom-runtime adapters", () => {
+  it("treats local and hermes3d as custom-runtime adapters", () => {
     expect(isCustomRuntimeAdapter("custom")).toBe(true);
     expect(isCustomRuntimeAdapter("local")).toBe(true);
-    expect(isCustomRuntimeAdapter("claw3d")).toBe(true);
+    expect(isCustomRuntimeAdapter("hermes3d")).toBe(true);
     expect(isCustomRuntimeAdapter("openclaw")).toBe(false);
   });
 
@@ -293,7 +293,7 @@ describe("claw3doctor core", () => {
       },
       paths: {
         stateDir: "C:/tmp/.openclaw",
-        settingsPath: "C:/tmp/.openclaw/claw3d/settings.json",
+        settingsPath: "C:/tmp/.openclaw/hermes3d/settings.json",
       },
       checks: [
         {
@@ -305,7 +305,7 @@ describe("claw3doctor core", () => {
     });
 
     expect(report).toMatchObject({
-      doctor: "claw3doctor",
+      doctor: "hermes3doctor",
       summary: DOCTOR_STATUSES.warn,
       runtimeContext: {
         adapterType: "hermes",
@@ -329,7 +329,7 @@ describe("claw3doctor core", () => {
       },
       paths: {
         stateDir: "C:/tmp/.openclaw",
-        settingsPath: "C:/tmp/.openclaw/claw3d/settings.json",
+        settingsPath: "C:/tmp/.openclaw/hermes3d/settings.json",
       },
       checks: [
         {
@@ -341,7 +341,7 @@ describe("claw3doctor core", () => {
       ],
     });
 
-    expect(report).toContain("Claw3Doctor");
+    expect(report).toContain("Hermes3Doctor");
     expect(report).toContain("Selected profile:");
     expect(report).toContain("Configured profiles:");
     expect(report).toContain("Runtime profiles");
@@ -390,7 +390,7 @@ describe("parseDoctorArgs", () => {
 });
 
 describe("adapterInScope scoping semantics", () => {
-  // Mirror the adapterInScope helper used in claw3doctor.mjs so the logic can
+  // Mirror the adapterInScope helper used in hermes3doctor.mjs so the logic can
   // be verified independently of the full CLI entrypoint.
   const makeAdapterInScope =
     (args: { allProfiles: boolean; profile: string | null }) =>
@@ -421,7 +421,7 @@ describe("adapterInScope scoping semantics", () => {
     expect(inScope("hermes", false)).toBe(true);
     expect(inScope("openclaw", true)).toBe(false); // openclaw would default to true but is suppressed
     expect(inScope("demo", true)).toBe(false);
-    expect(inScope("custom", false, ["local", "claw3d"])).toBe(false);
+    expect(inScope("custom", false, ["local", "hermes3d"])).toBe(false);
   });
 
   it("--profile openclaw: only openclaw is in scope", () => {
@@ -446,16 +446,16 @@ describe("adapterInScope scoping semantics", () => {
       allProfiles: false,
       profile: "local",
     });
-    expect(inScope("custom", false, ["local", "claw3d"])).toBe(true);
+    expect(inScope("custom", false, ["local", "hermes3d"])).toBe(true);
     expect(inScope("openclaw", true)).toBe(false);
   });
 
-  it("--profile claw3d: custom-runtime checks stay in scope", () => {
+  it("--profile hermes3d: custom-runtime checks stay in scope", () => {
     const inScope = makeAdapterInScope({
       allProfiles: false,
-      profile: "claw3d",
+      profile: "hermes3d",
     });
-    expect(inScope("custom", false, ["local", "claw3d"])).toBe(true);
+    expect(inScope("custom", false, ["local", "hermes3d"])).toBe(true);
     expect(inScope("demo", true)).toBe(false);
   });
 });

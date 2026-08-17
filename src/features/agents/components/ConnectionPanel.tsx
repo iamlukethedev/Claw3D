@@ -42,7 +42,7 @@ export const ConnectionPanel = ({
     selectedAdapterType === "hermes" ||
     selectedAdapterType === "demo" ||
     selectedAdapterType === "local" ||
-    selectedAdapterType === "claw3d" ||
+    selectedAdapterType === "hermes3d" ||
     selectedAdapterType === "custom";
   const applyDemoPreset = () => {
     onAdapterTypeChange("demo");
@@ -56,8 +56,8 @@ export const ConnectionPanel = ({
   const applyLocalPreset = () => {
     onAdapterTypeChange("local");
   };
-  const applyClaw3dPreset = () => {
-    onAdapterTypeChange("claw3d");
+  const applyHermes3dPreset = () => {
+    onAdapterTypeChange("hermes3d");
   };
   const applyOpenClawPreset = () => {
     onAdapterTypeChange("openclaw");
@@ -69,8 +69,8 @@ export const ConnectionPanel = ({
         ? "Hermes owns provider/account routing behind the gateway."
         : selectedAdapterType === "demo"
           ? "Demo can seed a local main agent or connect to the mock gateway."
-          : selectedAdapterType === "claw3d"
-            ? "Claw3D runtime keeps Claw3D transcript semantics over direct HTTP."
+          : selectedAdapterType === "hermes3d"
+            ? "Hermes3D runtime keeps Hermes3D transcript semantics over direct HTTP."
             : selectedAdapterType === "local"
               ? "Local runtime expects a direct orchestrator boundary."
               : "Custom is a generic runtime endpoint, not a provider-native adapter.";
@@ -164,9 +164,9 @@ export const ConnectionPanel = ({
         <button
           className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
           type="button"
-          onClick={applyClaw3dPreset}
+          onClick={applyHermes3dPreset}
         >
-          Claw3D runtime
+          Hermes3D runtime
         </button>
         <button
           className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"

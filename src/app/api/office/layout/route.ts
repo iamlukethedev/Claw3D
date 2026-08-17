@@ -21,7 +21,7 @@ const fetchRemoteOfficeLayoutSnapshot = async (params: {
   const token = params.token?.trim() ?? "";
   if (token) {
     headers.Authorization = `Bearer ${token}`;
-    headers["X-Claw3D-Office-Token"] = token;
+    headers["X-Hermes3D-Office-Token"] = token;
   }
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => {

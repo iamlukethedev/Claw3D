@@ -18,7 +18,7 @@ describe("office floor registry", () => {
       "openclaw-ground",
       "hermes-first",
       "local-runtime",
-      "claw3d-runtime",
+      "hermes3d-runtime",
       "custom-second",
       "training",
       "traders-floor",
@@ -45,7 +45,7 @@ describe("office floor registry", () => {
       "openclaw-ground",
       "hermes-first",
       "local-runtime",
-      "claw3d-runtime",
+      "hermes3d-runtime",
       "custom-second",
     ]);
   });
@@ -65,7 +65,7 @@ describe("office floor registry", () => {
       "openclaw-ground",
       "hermes-first",
       "local-runtime",
-      "claw3d-runtime",
+      "hermes3d-runtime",
       "custom-second",
       "training",
       "traders-floor",

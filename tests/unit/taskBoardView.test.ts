@@ -12,7 +12,7 @@ const createCard = (overrides: Partial<TaskBoardCard> = {}): TaskBoardCard => ({
   title: "New task",
   description: "",
   status: "todo",
-  source: "claw3d_manual",
+  source: "hermes3d_manual",
   sourceEventId: null,
   assignedAgentId: null,
   createdAt: "2026-03-29T10:00:00.000Z",

@@ -39,7 +39,7 @@ type OfficeStoreShape = {
   published: PublishedOfficeRecord[];
 };
 
-const STORE_DIR = "claw3d";
+const STORE_DIR = "hermes3d";
 const STORE_FILE = "office-store.json";
 const STORE_VERSION = 1;
 

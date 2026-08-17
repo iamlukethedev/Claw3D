@@ -1371,7 +1371,7 @@ const AgentsPageScreen = () => {
         <div className="flex min-h-screen items-center justify-center px-6">
           <div className="glass-panel ui-panel w-full max-w-md px-6 py-6 text-center">
             <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              Claw3D
+              Hermes3D
             </div>
             <div className="mt-3 text-sm text-muted-foreground">
               {status === "connecting" ? "Connecting to gateway…" : "Booting Studio…"}
@@ -1457,7 +1457,7 @@ const AgentsPageScreen = () => {
         <div className="flex min-h-screen items-center justify-center px-6">
           <div className="glass-panel ui-panel w-full max-w-md px-6 py-6 text-center">
             <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              Claw3D
+              Hermes3D
             </div>
             <div className="mt-3 text-sm text-muted-foreground">Loading agents…</div>
           </div>

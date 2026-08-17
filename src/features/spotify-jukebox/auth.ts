@@ -3,7 +3,7 @@
 // Spotify PKCE OAuth helpers.
 // No client secret is needed; PKCE is the recommended flow for SPAs.
 
-const STORAGE_PREFIX = "soundclaw_";
+const STORAGE_PREFIX = "soundhermes_";
 const TOKEN_KEY = `${STORAGE_PREFIX}token`;
 const EXPIRY_KEY = `${STORAGE_PREFIX}expiry`;
 const VERIFIER_KEY = `${STORAGE_PREFIX}verifier`;

@@ -1,6 +1,6 @@
 # Agent State Model Spec
 
-> Seventh concrete office-system feature for Claw3D, formalizing operational agent states before any deeper simulation or affective layer is introduced.
+> Seventh concrete office-system feature for Hermes3D, formalizing operational agent states before any deeper simulation or affective layer is introduced.
 
 ## Goal
 
@@ -36,7 +36,7 @@ Any richer or more proprietary internal signal stack can feed these states later
 
 ## Why This Matters
 
-Claw3D already visualizes activity, presence, and meeting participation.
+Hermes3D already visualizes activity, presence, and meeting participation.
 
 What is still missing is a reliable office-wide language for work condition and agent load.
 
@@ -117,7 +117,7 @@ The agent encountered a concrete failure or unrecoverable problem and needs atte
 
 ## Relationship To Existing Presence
 
-Claw3D already uses simpler presence states such as:
+Hermes3D already uses simpler presence states such as:
 
 - idle
 - working
@@ -134,7 +134,7 @@ This distinction matters.
 
 ### Public State
 
-What Claw3D shows in the office:
+What Hermes3D shows in the office:
 
 - stable
 - understandable
@@ -298,7 +298,7 @@ That is fine.
 The public state model should support:
 
 - direct provider-native state
-- derived state from Claw3D activity
+- derived state from Hermes3D activity
 - optional custom stack enrichments
 
 This is especially important for:
@@ -316,7 +316,7 @@ Good future pattern:
 
 - internal stack computes richer latent regime / coherence / workload state
 - adapter maps that into public office states
-- Claw3D shows the public office state plus optional note/reason
+- Hermes3D shows the public office state plus optional note/reason
 
 This preserves:
 

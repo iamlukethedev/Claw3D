@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { restoreAgentStateLocally, trashAgentStateLocally } from "@/lib/agent-state/local";
 
-const mkTmpStateDir = () => fs.mkdtempSync(path.join(os.tmpdir(), "claw3d-test-"));
+const mkTmpStateDir = () => fs.mkdtempSync(path.join(os.tmpdir(), "hermes3d-test-"));
 
 describe("agent state local", () => {
   const originalStateDir = process.env.OPENCLAW_STATE_DIR;

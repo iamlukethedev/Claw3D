@@ -2265,7 +2265,7 @@ export function RetroOffice3D({
   monitorByAgentId = EMPTY_MONITOR_MAP,
   githubSkill = null,
   taskManagerEnabled = false,
-  soundclawEnabled = false,
+  soundhermesEnabled = false,
   officeTitle = "Luke Headquarters",
   officeTitleLoaded = false,
   remoteOfficeEnabled = false,
@@ -2379,7 +2379,7 @@ export function RetroOffice3D({
   monitorByAgentId?: OfficeDeskMonitorMap;
   githubSkill?: SkillStatusEntry | null;
   taskManagerEnabled?: boolean;
-  soundclawEnabled?: boolean;
+  soundhermesEnabled?: boolean;
   officeTitle?: string;
   officeTitleLoaded?: boolean;
   remoteOfficeEnabled?: boolean;
@@ -5421,7 +5421,7 @@ export function RetroOffice3D({
                     key={item._uid}
                     item={item}
                     active={isJukeboxActive}
-                    enabled={soundclawEnabled}
+                    enabled={soundhermesEnabled}
                     isSelected={item._uid === selectedUid}
                     isHovered={item._uid === hoverUid}
                     editMode={editMode}

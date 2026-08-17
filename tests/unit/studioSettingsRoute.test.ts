@@ -140,7 +140,7 @@ describe("studio settings route", () => {
       }),
     );
 
-    const settingsPath = path.join(tempDir, "claw3d", "settings.json");
+    const settingsPath = path.join(tempDir, "hermes3d", "settings.json");
     expect(fs.existsSync(settingsPath)).toBe(true);
     const raw = fs.readFileSync(settingsPath, "utf8");
     const parsed = JSON.parse(raw) as {

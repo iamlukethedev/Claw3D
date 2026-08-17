@@ -18,7 +18,7 @@ describe("message-extract", () => {
     const message = {
       role: "user",
       content:
-        "[Discord Guild #claw3d channel id:123 +0s 2026-02-01 00:00 UTC] hello there",
+        "[Discord Guild #hermes3d channel id:123 +0s 2026-02-01 00:00 UTC] hello there",
     };
 
     expect(extractText(message)).toBe("hello there");

@@ -42,7 +42,7 @@ export function JukeboxPanel({ onClose }: JukeboxPanelProps) {
             state?: string;
           }
         | undefined;
-      if (!payload || payload.type !== "soundclaw-spotify-auth") return;
+      if (!payload || payload.type !== "soundhermes-spotify-auth") return;
       if (payload.error) return;
       if (!payload.code) return;
       if (payload.state !== loadAuthState()) return;
@@ -73,7 +73,7 @@ export function JukeboxPanel({ onClose }: JukeboxPanelProps) {
             <span className="text-2xl">🎵</span>
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-400/70">
-                Soundclaw
+                Soundhermes
               </div>
               <h2 className="text-base font-semibold text-white">Office Jukebox</h2>
             </div>
@@ -117,7 +117,7 @@ function SetupView() {
     setIsRedirecting(true);
     const popup = window.open(
       "",
-      "soundclaw-spotify-auth",
+      "soundhermes-spotify-auth",
       "popup=yes,width=520,height=760,resizable=yes,scrollbars=yes",
     );
     if (!popup) {
@@ -132,7 +132,7 @@ function SetupView() {
   return (
     <div className="space-y-6 p-6">
       <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100">
-        Keep Claw3D open on <code className="rounded bg-slate-900/70 px-1">{localhostOrigin}</code>.
+        Keep Hermes3D open on <code className="rounded bg-slate-900/70 px-1">{localhostOrigin}</code>.
         Spotify will redirect to your ngrok callback, which sends the auth code back into this window.
       </div>
 

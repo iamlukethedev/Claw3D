@@ -1,12 +1,12 @@
 # Universal Backend Plan
 
-> Backend-neutral Claw3D integration plan for OpenClaw, Hermes, Vera, and other runtimes.
+> Backend-neutral Hermes3D integration plan for OpenClaw, Hermes, Vera, and other runtimes.
 
 ## Recommendation
 
 Do not treat PR #70 as the long-term integration architecture.
 
-It is useful as a short-term compatibility shim and a source of a few good UX changes, but it does not make Claw3D backend-neutral. It keeps Claw3D OpenClaw-shaped and makes Hermes imitate OpenClaw.
+It is useful as a short-term compatibility shim and a source of a few good UX changes, but it does not make Hermes3D backend-neutral. It keeps Hermes3D OpenClaw-shaped and makes Hermes imitate OpenClaw.
 
 That matters because:
 
@@ -17,7 +17,7 @@ That matters because:
 The better path is:
 
 1. Keep OpenClaw support intact.
-2. Extract a backend-neutral runtime adapter inside Claw3D.
+2. Extract a backend-neutral runtime adapter inside Hermes3D.
 3. Add Hermes and Vera providers against their native surfaces where possible.
 4. Cherry-pick the high-value UI pieces from PR #70 into that new architecture.
 
@@ -40,7 +40,7 @@ These are not the right long-term seam:
 
 ## Target Architecture
 
-Claw3D should stop treating the browser gateway client as the backend abstraction.
+Hermes3D should stop treating the browser gateway client as the backend abstraction.
 
 Instead, Studio should expose a backend-neutral runtime service with provider adapters:
 
@@ -52,7 +52,7 @@ Browser UI
     -> Vera provider
 ```
 
-The browser can still use WebSocket streaming from Studio, but the messages should be Claw3D-native runtime events rather than implicitly OpenClaw events.
+The browser can still use WebSocket streaming from Studio, but the messages should be Hermes3D-native runtime events rather than implicitly OpenClaw events.
 
 ## Core Adapter Contract
 
@@ -118,7 +118,7 @@ Initial expected support:
 
 Important rule:
 
-If a provider does not support a surface, Claw3D should disable or hide the UI for it. It should not fake a successful write.
+If a provider does not support a surface, Hermes3D should disable or hide the UI for it. It should not fake a successful write.
 
 ## Provider Strategy
 
@@ -155,13 +155,13 @@ Use:
 - `GET /state`
 - `GET /registry`
 
-The Vera provider should map Claw3D agent identities to routed roles or lanes rather than pretending Vera is an OpenClaw gateway.
+The Vera provider should map Hermes3D agent identities to routed roles or lanes rather than pretending Vera is an OpenClaw gateway.
 
 ## Event Model
 
-Current Claw3D expects OpenClaw-flavored `chat`, `agent`, and `presence` events.
+Current Hermes3D expects OpenClaw-flavored `chat`, `agent`, and `presence` events.
 
-That is too narrow for universal providers. Studio should normalize provider-native updates into a Claw3D event model with explicit semantics:
+That is too narrow for universal providers. Studio should normalize provider-native updates into a Hermes3D event model with explicit semantics:
 
 - `presence.changed`
 - `session.activity`
@@ -214,7 +214,7 @@ Keep the shim optional for compatibility, not required.
 Scope:
 
 - Add a `vera` provider against the Vera orchestrator.
-- Map Claw3D agents to Vera roles or lanes.
+- Map Hermes3D agents to Vera roles or lanes.
 - Surface orchestrator state and routed worker identity.
 
 ### PR 5: Optional Compatibility Layer Cleanup
@@ -228,7 +228,7 @@ Scope:
 
 If Luke wants "drop-in Hermes support right now", PR #70 is directionally useful.
 
-If Luke wants "Claw3D should support any backend cleanly", PR #70 should not be the mainline architecture.
+If Luke wants "Hermes3D should support any backend cleanly", PR #70 should not be the mainline architecture.
 
 Best compromise:
 
@@ -244,10 +244,10 @@ This path avoids making Vera imitate OpenClaw.
 Instead, Vera can appear as:
 
 - a routed multi-role intelligence backend,
-- with Claw3D visualizing agents, runs, status, and streamed text,
+- with Hermes3D visualizing agents, runs, status, and streamed text,
 - while preserving Vera-specific routing, lane, and model identity.
 
-That gives Claw3D a broader identity:
+That gives Hermes3D a broader identity:
 
 - similar to the OpenClaw ecosystem,
 - but not subordinate to OpenClaw's protocol and assumptions.

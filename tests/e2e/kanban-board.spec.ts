@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { stubStudioRoute } from "./helpers/studioRoute";
 
 test.skip(
-  process.env.CLAW3D_E2E_GATEWAY !== "1",
+  process.env.HERMES3D_E2E_GATEWAY !== "1",
   "Requires a reachable gateway-backed office shell."
 );
 

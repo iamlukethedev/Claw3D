@@ -23,7 +23,7 @@ export const CompanyStep = ({
           <div className="space-y-2">
             <p className="text-sm font-semibold text-white">Bootstrap your company with AI</p>
             <p className="text-xs leading-5 text-white/60">
-              Describe what your company does and Claw3D can turn that into a full org structure
+              Describe what your company does and Hermes3D can turn that into a full org structure
               with specialized agents, working files, and role instructions.
             </p>
           </div>

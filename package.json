@@ -1,5 +1,5 @@
 {
-  "name": "claw3d",
+  "name": "hermes3d",
   "version": "0.1.4",
   "private": true,
   "license": "MIT",
@@ -14,7 +14,7 @@
     "cleanup:ux-artifacts": "node scripts/cleanup-ux-artifacts.mjs",
     "sync:gateway-client": "node scripts/sync-openclaw-gateway-client.ts",
     "studio:setup": "node scripts/studio-setup.js",
-    "doctor": "node scripts/claw3doctor.mjs",
+    "doctor": "node scripts/hermes3doctor.mjs",
     "smoke:dev-server": "node scripts/smoke-dev-server.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest",

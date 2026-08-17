@@ -1,6 +1,6 @@
 # Roadmap
 
-This file captures the near-term direction for Claw3D so outside contributors can find work that aligns with current priorities.
+This file captures the near-term direction for Hermes3D so outside contributors can find work that aligns with current priorities.
 
 ## Now
 
@@ -35,7 +35,7 @@ This file captures the near-term direction for Claw3D so outside contributors ca
 - Add an agent relationships and communication map so users can configure which agents collaborate, hand off work, or talk to each other without editing raw configuration.
 - Add shared memory management for cross-agent context, since the current experience only exposes per-agent `MEMORY.md`.
 - Add multi-agent orchestration and handoff workflows for common sequences such as PM -> Engineer -> QA, with explicit UI instead of relying on manual coordination.
-- Add config diff and rollback tools so gateway-wide changes can be reviewed and safely reverted from Claw3D.
+- Add config diff and rollback tools so gateway-wide changes can be reviewed and safely reverted from Hermes3D.
 - Add conversation-to-agent bootstrap flows that can turn a successful chat or office interaction into a reusable new agent.
 - Add a richer scenario simulator that extends the current mock phone/text scenarios into broader multi-agent rehearsal and testing flows.
 

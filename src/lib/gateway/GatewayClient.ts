@@ -186,7 +186,7 @@ const normalizeLocalGatewayDefaults = (value: unknown): StudioGatewaySettings | 
     raw.adapterType === "hermes" ||
     raw.adapterType === "openclaw" ||
     raw.adapterType === "local" ||
-    raw.adapterType === "claw3d" ||
+    raw.adapterType === "hermes3d" ||
     raw.adapterType === "custom"
       ? raw.adapterType
       : "openclaw";
@@ -210,7 +210,7 @@ const normalizeGatewayProfilesPublic = (
   if (!value || typeof value !== "object") return undefined;
   const raw = value as Partial<Record<StudioGatewayAdapterType, StudioGatewayProfilePublic>>;
   const profiles: Partial<Record<StudioGatewayAdapterType, { url: string; token: string }>> = {};
-  for (const adapterType of ["openclaw", "hermes", "demo", "local", "claw3d", "custom"] as const) {
+  for (const adapterType of ["openclaw", "hermes", "demo", "local", "hermes3d", "custom"] as const) {
     const profile = normalizeGatewayProfilePublic(raw[adapterType]);
     if (profile) {
       profiles[adapterType] = profile;
@@ -531,16 +531,16 @@ const doctorFixHint =
   "Run `npx openclaw doctor --fix` on the gateway host (or `pnpm openclaw doctor --fix` in a source checkout).";
 
 const protocolMismatchHint =
-  "This gateway looks too old for Claw3D's protocol v3. Upgrade OpenClaw, use the Hermes adapter, or run `npm run demo-gateway` for a no-framework office demo.";
+  "This gateway looks too old for Hermes3D's protocol v3. Upgrade OpenClaw, use the Hermes adapter, or run `npm run demo-gateway` for a no-framework office demo.";
 
 const tailscaleGatewayHint =
   "If this is a remote OpenClaw/Tailscale gateway, confirm the Studio host can reach the `wss://...` address and approve the first device pairing on the gateway host with `openclaw devices approve --latest`.";
 
 const pairingRequiredHint =
-  "This gateway is asking for first-time device approval. Run `openclaw devices approve --latest` on the gateway host, then restart Claw3D and reconnect from this browser.";
+  "This gateway is asking for first-time device approval. Run `openclaw devices approve --latest` on the gateway host, then restart Hermes3D and reconnect from this browser.";
 
 const requiresDeviceIdentityHint =
-  "This gateway rejected the client as a control UI without device identity. For remote OpenClaw/Tailscale connections, update to the latest Claw3D build and approve the device pairing on the gateway host.";
+  "This gateway rejected the client as a control UI without device identity. For remote OpenClaw/Tailscale connections, update to the latest Hermes3D build and approve the device pairing on the gateway host.";
 
 const isGatewayProtocolMismatchError = (error: GatewayResponseError) => {
   if (error.code.trim().toUpperCase() !== "INVALID_REQUEST") return false;
@@ -892,7 +892,7 @@ export const useGatewayConnection = (
     if (
       selectedAdapterType === "custom" ||
       selectedAdapterType === "local" ||
-      selectedAdapterType === "claw3d"
+      selectedAdapterType === "hermes3d"
     ) {
       setStatus("connecting");
       try {
@@ -1190,7 +1190,7 @@ export const useGatewayConnection = (
     if (
       selectedAdapterType === "custom" ||
       selectedAdapterType === "local" ||
-      selectedAdapterType === "claw3d"
+      selectedAdapterType === "hermes3d"
     ) {
       setStatus("disconnected");
       return;
@@ -1212,7 +1212,7 @@ export const useGatewayConnection = (
     status !== "connected" &&
     (selectedAdapterType === "custom" ||
       selectedAdapterType === "local" ||
-      selectedAdapterType === "claw3d" ||
+      selectedAdapterType === "hermes3d" ||
       !hasLastKnownGoodState ||
       !(gatewayUrl ?? "").trim() ||
       (selectedAdapterType === "openclaw" && !(token ?? "").trim()) ||

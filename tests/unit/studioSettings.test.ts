@@ -327,7 +327,7 @@ describe("studio settings normalization", () => {
               title: "Initial task",
               description: "",
               status: "todo",
-              source: "claw3d_manual",
+              source: "hermes3d_manual",
               sourceEventId: null,
               assignedAgentId: null,
               createdAt: "2026-03-29T10:00:00.000Z",
@@ -356,7 +356,7 @@ describe("studio settings normalization", () => {
               title: "Replacement task",
               description: "",
               status: "in_progress",
-              source: "claw3d_manual",
+              source: "hermes3d_manual",
               sourceEventId: null,
               assignedAgentId: null,
               createdAt: "2026-03-29T10:10:00.000Z",
@@ -425,7 +425,7 @@ describe("studio settings normalization", () => {
       url: "http://localhost:7770",
       token: "",
     });
-    expect(resolveDefaultStudioGatewayProfile("claw3d", null)).toEqual({
+    expect(resolveDefaultStudioGatewayProfile("hermes3d", null)).toEqual({
       url: "http://localhost:3000/api/runtime/custom",
       token: "",
     });

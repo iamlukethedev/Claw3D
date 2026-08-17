@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# clawd3d-start — Start all Clawd3D services, auto-resolving port conflicts.
+# hermes3d-start — Start all Hermes3D services, auto-resolving port conflicts.
 #
 # Setup (once):
-#   echo 'alias clawd3d="/absolute/path/to/Claw3D/scripts/clawd3d-start.sh"' >> ~/.zshrc
+#   echo 'alias hermes3d="/absolute/path/to/Hermes3D/scripts/hermes3d-start.sh"' >> ~/.zshrc
 #   source ~/.zshrc
 #
-# Then just run:  clawd3d
+# Then just run:  hermes3d
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-CLAWD3D_DIR="$(cd -- "$SCRIPT_DIR/.." >/dev/null 2>&1 && pwd)"
-LOG_DIR="/tmp/clawd3d-logs"
+HERMES3D_DIR="$(cd -- "$SCRIPT_DIR/.." >/dev/null 2>&1 && pwd)"
+LOG_DIR="/tmp/hermes3d-logs"
 mkdir -p "$LOG_DIR"
 
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
-log()  { echo -e "${GREEN}[clawd3d]${NC} $*"; }
-warn() { echo -e "${YELLOW}[clawd3d]${NC} $*"; }
-info() { echo -e "${BLUE}[clawd3d]${NC} $*"; }
+log()  { echo -e "${GREEN}[hermes3d]${NC} $*"; }
+warn() { echo -e "${YELLOW}[hermes3d]${NC} $*"; }
+info() { echo -e "${BLUE}[hermes3d]${NC} $*"; }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -79,14 +79,14 @@ if ! port_free $ADAPTER_PORT; then
     ADAPTER_PORT=$(find_free_port $((ADAPTER_PORT + 1)))
     warn "Port 18789 taken by another process → using :$ADAPTER_PORT for adapter."
     log "Starting Hermes adapter on :$ADAPTER_PORT..."
-    cd "$CLAWD3D_DIR"
+    cd "$HERMES3D_DIR"
     nohup env HERMES_ADAPTER_PORT="$ADAPTER_PORT" HERMES_API_URL="$HERMES_API_URL" \
       npm run hermes-adapter > "$LOG_DIR/hermes-adapter.log" 2>&1 &
     sleep 1
   fi
 else
   log "Starting Hermes adapter on :$ADAPTER_PORT..."
-  cd "$CLAWD3D_DIR"
+  cd "$HERMES3D_DIR"
   nohup env HERMES_ADAPTER_PORT="$ADAPTER_PORT" HERMES_API_URL="$HERMES_API_URL" \
     npm run hermes-adapter > "$LOG_DIR/hermes-adapter.log" 2>&1 &
   sleep 1
@@ -97,24 +97,24 @@ GATEWAY_WS_URL="ws://localhost:$ADAPTER_PORT"
 APP_PORT=3000
 if ! port_free $APP_PORT; then
   if port_owned_by $APP_PORT "node.*next|next-server|server/index\.js"; then
-    warn "Clawd3D dev server already running on :$APP_PORT — reusing."
+    warn "Hermes3D dev server already running on :$APP_PORT — reusing."
   else
     APP_PORT=$(find_free_port $((APP_PORT + 1)))
-    warn "Port 3000 taken by another process → using :$APP_PORT for Clawd3D."
-    log "Starting Clawd3D dev server on :$APP_PORT..."
-    cd "$CLAWD3D_DIR"
+    warn "Port 3000 taken by another process → using :$APP_PORT for Hermes3D."
+    log "Starting Hermes3D dev server on :$APP_PORT..."
+    cd "$HERMES3D_DIR"
     nohup env PORT="$APP_PORT" NEXT_PUBLIC_GATEWAY_URL="$GATEWAY_WS_URL" \
-      npm run dev > "$LOG_DIR/clawd3d-dev.log" 2>&1 &
+      npm run dev > "$LOG_DIR/hermes3d-dev.log" 2>&1 &
   fi
 else
-  log "Starting Clawd3D dev server on :$APP_PORT..."
-  cd "$CLAWD3D_DIR"
+  log "Starting Hermes3D dev server on :$APP_PORT..."
+  cd "$HERMES3D_DIR"
   nohup env PORT="$APP_PORT" NEXT_PUBLIC_GATEWAY_URL="$GATEWAY_WS_URL" \
-    npm run dev > "$LOG_DIR/clawd3d-dev.log" 2>&1 &
+    npm run dev > "$LOG_DIR/hermes3d-dev.log" 2>&1 &
 fi
 
 # ── 4. Wait until the app responds ───────────────────────────────────────────
-log "Waiting for Clawd3D to be ready at :$APP_PORT..."
+log "Waiting for Hermes3D to be ready at :$APP_PORT..."
 ready=0
 for i in $(seq 1 90); do
   if curl -sf "http://localhost:$APP_PORT" > /dev/null 2>&1; then
@@ -123,7 +123,7 @@ for i in $(seq 1 90); do
   sleep 1
 done
 if [ "$ready" -eq 0 ]; then
-  warn "Timed out waiting for :$APP_PORT — check $LOG_DIR/clawd3d-dev.log"
+  warn "Timed out waiting for :$APP_PORT — check $LOG_DIR/hermes3d-dev.log"
 fi
 
 # ── 5. Open browser ───────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ open "http://localhost:$APP_PORT"
 
 echo ""
 log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-log " Clawd3D      →  http://localhost:$APP_PORT"
+log " Hermes3D      →  http://localhost:$APP_PORT"
 info " Gateway WS   →  $GATEWAY_WS_URL"
 info " Hermes API   →  $HERMES_API_URL"
 info " Logs         →  $LOG_DIR/"

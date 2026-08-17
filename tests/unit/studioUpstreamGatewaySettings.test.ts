@@ -38,9 +38,9 @@ describe("server studio upstream gateway settings", () => {
     tempDir = makeTempDir("studio-upstream-url-keep");
     process.env.OPENCLAW_STATE_DIR = tempDir;
 
-    fs.mkdirSync(path.join(tempDir, "claw3d"), { recursive: true });
+    fs.mkdirSync(path.join(tempDir, "hermes3d"), { recursive: true });
     fs.writeFileSync(
-      path.join(tempDir, "claw3d", "settings.json"),
+      path.join(tempDir, "hermes3d", "settings.json"),
       JSON.stringify({ gateway: { url: "ws://gateway.example:18789", token: "" } }, null, 2),
       "utf8"
     );

@@ -1,6 +1,6 @@
 # PI + Chat Streaming (Studio Side)
 
-This document exists to onboard coding agents quickly when debugging chat issues in Claw3D.
+This document exists to onboard coding agents quickly when debugging chat issues in Hermes3D.
 
 Scope:
 - Describes how Studio connects to the OpenClaw Gateway, how runtime streaming arrives over WebSockets, and how the UI renders it.
@@ -108,7 +108,7 @@ The key wiring is in:
 ## Studio Settings (Where Gateway URL/Token Come From)
 
 Studio persists Gateway connection settings on the Studio host (not in browser persistent storage). The UI still loads them into browser memory at runtime:
-- `~/.openclaw/claw3d/settings.json` (see `README.md` for the canonical location)
+- `~/.openclaw/hermes3d/settings.json` (see `README.md` for the canonical location)
 
 The WS proxy loads these settings server-side and opens the upstream connection.
 
@@ -122,7 +122,7 @@ Connection note:
 - In the browser, `useGatewayConnection()` stores the upstream URL/token in memory (loaded from `/api/studio`) but connects the WebSocket to Studio via `resolveStudioProxyGatewayUrl()`; the upstream URL is passed as `authScopeKey` (not as the WebSocket URL). See `src/lib/gateway/GatewayClient.ts`.
 
 Token resolution note:
-- The Studio server resolves an upstream token from `claw3d/settings.json`, and if it is missing it may fall back to the local OpenClaw config in `openclaw.json` (token + port). This behavior exists in both the WS proxy path (`server/studio-settings.js`) and the `/api/studio` storage layer (`src/lib/studio/settings-store.ts`) and they should remain consistent.
+- The Studio server resolves an upstream token from `hermes3d/settings.json`, and if it is missing it may fall back to the local OpenClaw config in `openclaw.json` (token + port). This behavior exists in both the WS proxy path (`server/studio-settings.js`) and the `/api/studio` storage layer (`src/lib/studio/settings-store.ts`) and they should remain consistent.
 - During `connect`, the WS proxy forwards browser-provided auth (`params.auth.token` or `params.device.signature`) as-is. It injects the host-resolved token only when browser auth is absent. `studio.gateway_token_missing` is returned only when neither browser auth nor host token is available.
 
 ## WebSocket Frame Shapes

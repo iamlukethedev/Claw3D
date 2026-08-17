@@ -249,7 +249,7 @@ export class CustomRuntimeProvider implements RuntimeProvider {
     readonly client: GatewayClient,
     runtimeUrl: string,
     options?: {
-      id?: Extract<RuntimeProviderId, "custom" | "local" | "claw3d">;
+      id?: Extract<RuntimeProviderId, "custom" | "local" | "hermes3d">;
       label?: string;
       runtimeName?: string;
       vendor?: string | null;

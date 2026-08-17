@@ -495,7 +495,7 @@ export function AgentCreateWizardModal({
                         <WizardTextAreaField
                           label="Context"
                           value={draft.user.context}
-                          placeholder="e.g. Building Claw3D, likes practical UI improvements, and wants direct feedback."
+                          placeholder="e.g. Building Hermes3D, likes practical UI improvements, and wants direct feedback."
                           disabled={isWorking}
                           rows={7}
                           onChange={(value) => {

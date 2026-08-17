@@ -136,15 +136,15 @@ describe("skills install gateway", () => {
           source: "openclaw-workspace",
           workspaceDir: "/home/pi/.openclaw/workspace",
           managedSkillsDir: "/home/pi/.openclaw/skills",
-          agentId: "soundclaw",
-          agentName: "soundclaw",
+          agentId: "soundhermes",
+          agentName: "soundhermes",
         },
       })
     ).rejects.toThrow(/gateway root workspace/i);
 
     expect(call).toHaveBeenCalledTimes(3);
     expect(call).toHaveBeenNthCalledWith(1, "agents.files.get", {
-      agentId: "soundclaw",
+      agentId: "soundhermes",
       name: "IDENTITY.md",
     });
   });

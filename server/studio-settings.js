@@ -47,7 +47,7 @@ const resolveStateDir = (env = process.env) => {
 };
 
 const resolveStudioSettingsPath = (env = process.env) => {
-  return path.join(resolveStateDir(env), "claw3d", "settings.json");
+  return path.join(resolveStateDir(env), "hermes3d", "settings.json");
 };
 
 const readJsonFile = (filePath) => {

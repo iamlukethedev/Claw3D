@@ -40,7 +40,7 @@ export const HeaderBar = ({
     <div className="ui-topbar relative z-[180]">
       <div className="grid h-10 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 sm:px-4 md:px-5">
         <div aria-hidden="true" />
-        <p className="truncate text-sm font-semibold tracking-[0.01em] text-foreground">Claw3D</p>
+        <p className="truncate text-sm font-semibold tracking-[0.01em] text-foreground">Hermes3D</p>
         <div className="flex items-center justify-end gap-1">
           {status !== "disconnected" ? (
             <span

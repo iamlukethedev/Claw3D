@@ -34,7 +34,7 @@ export type RuntimeProviderId =
   | "hermes"
   | "demo"
   | "local"
-  | "claw3d"
+  | "hermes3d"
   | "custom";
 
 export type RuntimeProviderMetadata = {

@@ -6,7 +6,7 @@ export async function GET() {
   return NextResponse.json(
     {
       ok: true,
-      service: "claw3d",
+      service: "hermes3d",
     },
     {
       headers: {

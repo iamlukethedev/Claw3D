@@ -1,5 +1,5 @@
 /**
- * OnboardingWizard — Step-based onboarding flow for new Claw3D users.
+ * OnboardingWizard — Step-based onboarding flow for new Hermes3D users.
  *
  * Renders a modal overlay with step navigation, progress indicator,
  * and content slots for each onboarding phase.  Designed to be mounted

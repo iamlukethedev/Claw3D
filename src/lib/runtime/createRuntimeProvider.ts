@@ -19,12 +19,12 @@ export const createRuntimeProvider = (
         runtimeName: "Local Runtime",
         routeProfile: "local",
       });
-    case "claw3d":
+    case "hermes3d":
       return new CustomRuntimeProvider(client, runtimeUrl, {
-        id: "claw3d",
-        label: "Claw3D Runtime",
-        runtimeName: "Claw3D Runtime",
-        routeProfile: "claw3d",
+        id: "hermes3d",
+        label: "Hermes3D Runtime",
+        runtimeName: "Hermes3D Runtime",
+        routeProfile: "hermes3d",
       });
     case "custom":
       return new CustomRuntimeProvider(client, runtimeUrl, {

@@ -11,7 +11,7 @@ describe("studio setup paths", () => {
       OPENCLAW_STATE_DIR: "/tmp/openclaw-state",
     } as unknown as NodeJS.ProcessEnv);
     expect(settingsPath).toBe(
-      path.join(path.resolve("/tmp/openclaw-state"), "claw3d", "settings.json")
+      path.join(path.resolve("/tmp/openclaw-state"), "hermes3d", "settings.json")
     );
   });
 
@@ -19,7 +19,7 @@ describe("studio setup paths", () => {
     const { resolveStudioSettingsPath } = await import("../../server/studio-settings");
     const settingsPath = resolveStudioSettingsPath({} as NodeJS.ProcessEnv);
     expect(settingsPath).toBe(
-      path.join(os.homedir(), ".openclaw", "claw3d", "settings.json")
+      path.join(os.homedir(), ".openclaw", "hermes3d", "settings.json")
     );
   });
 });

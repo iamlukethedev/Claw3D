@@ -1,5 +1,5 @@
 /**
- * WelcomeStep — First onboarding screen introducing Claw3D.
+ * WelcomeStep — First onboarding screen introducing Hermes3D.
  */
 import { Building2, Eye, MessageSquare, Users } from "lucide-react";
 
@@ -30,7 +30,7 @@ export const WelcomeStep = () => (
   <div className="space-y-5">
     <div className="space-y-2">
       <p className="text-sm leading-relaxed text-white/80">
-        Claw3D turns your AI automation into a{" "}
+        Hermes3D turns your AI automation into a{" "}
         <span className="font-medium text-white">visual workplace</span> — an
         office where your AI agents collaborate, code, test, and execute
         tasks in a shared 3D environment.

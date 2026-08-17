@@ -27,7 +27,7 @@ let GET: typeof import("@/app/api/gateway/media/route")["GET"];
 const makeTempDir = (name: string) => fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`));
 
 const writeStudioSettings = (stateDir: string, gatewayUrl: string) => {
-  const settingsDir = path.join(stateDir, "claw3d");
+  const settingsDir = path.join(stateDir, "hermes3d");
   fs.mkdirSync(settingsDir, { recursive: true });
   fs.writeFileSync(
     path.join(settingsDir, "settings.json"),

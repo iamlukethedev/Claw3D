@@ -515,7 +515,7 @@ const RESET_PROMPT_RE =
   /^A new session was started via \/new or \/reset[\s\S]*?reasoning\.\s*/i;
 const SYSTEM_EVENT_BLOCK_RE = /^System:\s*\[[^\]]+\][\s\S]*?\n\s*\n/;
 const MESSAGE_ID_RE = /\s*\[message_id:[^\]]+\]\s*/gi;
-export const EXEC_APPROVAL_AUTO_RESUME_MARKER = "[[claw3d:auto-resume-exec-approval]]";
+export const EXEC_APPROVAL_AUTO_RESUME_MARKER = "[[hermes3d:auto-resume-exec-approval]]";
 const LEGACY_EXEC_APPROVAL_AUTO_RESUME_RE =
   /exec approval was granted[\s\S]*continue where you left off/i;
 const UI_METADATA_PREFIX_RE =

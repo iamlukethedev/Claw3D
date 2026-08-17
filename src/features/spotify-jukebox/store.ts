@@ -15,12 +15,12 @@ import {
   type SpotifyTrack,
 } from "./spotifyApi";
 
-const SOUNDCLAW_PLAYBACK_STARTED_EVENT = "soundclaw:playback-started";
+const SOUNDHERMES_PLAYBACK_STARTED_EVENT = "soundhermes:playback-started";
 
 const emitPlaybackStarted = () => {
   if (typeof window === "undefined") return;
   window.dispatchEvent(
-    new CustomEvent(SOUNDCLAW_PLAYBACK_STARTED_EVENT, {
+    new CustomEvent(SOUNDHERMES_PLAYBACK_STARTED_EVENT, {
       detail: { startedAt: Date.now() },
     }),
   );
@@ -179,4 +179,4 @@ export const useJukeboxStore = create<JukeboxStore>((set, get) => ({
   },
 }));
 
-export const SOUNDCLAW_PLAYBACK_STARTED_EVENT_NAME = SOUNDCLAW_PLAYBACK_STARTED_EVENT;
+export const SOUNDHERMES_PLAYBACK_STARTED_EVENT_NAME = SOUNDHERMES_PLAYBACK_STARTED_EVENT;

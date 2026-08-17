@@ -1,6 +1,6 @@
 # Creating Skills
 
-This repository ships developer-created marketplace skills as packaged assets that Claw3D can install into an OpenClaw workspace through the gateway.
+This repository ships developer-created marketplace skills as packaged assets that Hermes3D can install into an OpenClaw workspace through the gateway.
 
 Use the existing `todo-board` skill as the reference implementation.
 
@@ -69,7 +69,7 @@ Notes:
 
 - `name` is the user-facing skill name.
 - `metadata.openclaw.skillKey` must stay stable and should match the installed folder name.
-- Every skill must define a `## Trigger` section that explains what activates the skill and what the agent should physically do in Claw3D when it activates.
+- Every skill must define a `## Trigger` section that explains what activates the skill and what the agent should physically do in Hermes3D when it activates.
 - Write instructions as if the model will follow them directly.
 - If the skill stores state, define the exact file path and schema.
 - Be explicit about read-before-write, validation, ambiguity handling, and response behavior.
@@ -122,14 +122,14 @@ Current runtime support for `movement.target` values:
 
 Important:
 
-- The JSON block is what Claw3D parses at runtime.
+- The JSON block is what Hermes3D parses at runtime.
 - Keep the prose explanation too, but do not rely on prose alone for the trigger behavior.
 - `activation.anyPhrases` should contain short, stable phrases that are likely to appear in the user request.
-- If a skill has no trigger block, Claw3D can fall back to the central default trigger registry in `src/lib/office/places.ts`.
+- If a skill has no trigger block, Hermes3D can fall back to the central default trigger registry in `src/lib/office/places.ts`.
 
 ## 2. Mirror the files into `src/lib/skills/packaged.ts`
 
-Claw3D installs packaged skills from client-safe embedded strings, not by reading `assets/skills/...` directly at runtime.
+Hermes3D installs packaged skills from client-safe embedded strings, not by reading `assets/skills/...` directly at runtime.
 
 That means every new packaged skill must also be added to `src/lib/skills/packaged.ts`.
 

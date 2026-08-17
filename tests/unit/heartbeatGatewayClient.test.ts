@@ -75,7 +75,7 @@ describe("heartbeat gateway client", () => {
 
     expect(client.call).toHaveBeenCalledWith("wake", {
       mode: "now",
-      text: "Claw3D heartbeat trigger (agent-1).",
+      text: "Hermes3D heartbeat trigger (agent-1).",
     });
   });
 });

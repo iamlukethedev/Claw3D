@@ -1,6 +1,6 @@
 # Meeting Room Workflow Spec
 
-> Third concrete office-system feature for Claw3D, building on existing standup support and extending it into a generalized meeting workflow model.
+> Third concrete office-system feature for Hermes3D, building on existing standup support and extending it into a generalized meeting workflow model.
 
 ## Goal
 
@@ -37,7 +37,7 @@ It should connect naturally to:
 
 ## Existing Foundation
 
-Claw3D already has meaningful meeting-related pieces:
+Hermes3D already has meaningful meeting-related pieces:
 
 - a meeting room in the office layout
 - standup meeting state and API routes
@@ -358,7 +358,7 @@ This work should likely align with:
 - retro office meeting-room positioning and agent movement
 - office state persistence
 
-This is important because Claw3D already has the skeleton of a meeting system.
+This is important because Hermes3D already has the skeleton of a meeting system.
 
 The right path is to extend it, not replace it.
 

@@ -1,15 +1,15 @@
 # Code Documentation
 
-This file is the practical code map for Claw3D contributors.
+This file is the practical code map for Hermes3D contributors.
 
 Use it alongside `README.md` for setup and `ARCHITECTURE.md` for system boundaries. This document is intentionally more hands-on: where code lives, which files matter first, and how to extend the main systems without fighting the current structure.
 
 ## Repo Mental Model
 
-Claw3D is the UI and local Studio/proxy layer around an existing OpenClaw Gateway.
+Hermes3D is the UI and local Studio/proxy layer around an existing OpenClaw Gateway.
 
 - OpenClaw owns agent execution, sessions, tools, config, and runtime events.
-- Claw3D owns visualization, local Studio settings, UI workflows, office rendering, and the same-origin WebSocket/API bridge.
+- Hermes3D owns visualization, local Studio settings, UI workflows, office rendering, and the same-origin WebSocket/API bridge.
 - When a feature needs authoritative runtime state, prefer Gateway data over local UI state.
 - When a feature is only a local preference, it usually belongs in Studio settings.
 - Before publishing new bundled assets or vendored code, also update `THIRD_PARTY_ASSETS.md` or `THIRD_PARTY_CODE.md`.
@@ -299,11 +299,11 @@ A few patterns are used repeatedly in the repo:
 
 ## When You Need Upstream OpenClaw Context
 
-Sometimes Claw3D behavior depends on the upstream event contract or session behavior. In those cases:
+Sometimes Hermes3D behavior depends on the upstream event contract or session behavior. In those cases:
 
 1. Inspect the relevant client or gateway contract in `src/lib/gateway`.
 2. If the answer is not in this repo, inspect your separate local OpenClaw checkout.
-3. Apply changes in Claw3D unless the user explicitly asked for upstream OpenClaw work.
+3. Apply changes in Hermes3D unless the user explicitly asked for upstream OpenClaw work.
 
 ## Documentation Philosophy
 

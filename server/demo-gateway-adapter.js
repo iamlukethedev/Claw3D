@@ -400,7 +400,7 @@ async function handleMethod(method, params, id, sendEvent) {
 function startAdapter() {
   const httpServer = http.createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "text/plain" });
-    res.end("Claw3D Demo Gateway Adapter\n");
+    res.end("Hermes3D Demo Gateway Adapter\n");
   });
 
   const wss = new WebSocketServer({ server: httpServer });

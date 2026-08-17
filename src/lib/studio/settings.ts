@@ -36,14 +36,14 @@ export type StudioGatewayAdapterType =
   | "hermes"
   | "demo"
   | "local"
-  | "claw3d"
+  | "hermes3d"
   | "custom";
 export const STUDIO_GATEWAY_ADAPTER_TYPES = [
   "openclaw",
   "hermes",
   "demo",
   "local",
-  "claw3d",
+  "hermes3d",
   "custom",
 ] as const;
 
@@ -284,7 +284,7 @@ const SETTINGS_VERSION = 1 as const;
 const DEFAULT_OPENCLAW_GATEWAY_URL = "ws://localhost:18789";
 const DEFAULT_LOCAL_ADAPTER_GATEWAY_URL = "ws://localhost:18789";
 const DEFAULT_LOCAL_RUNTIME_URL = "http://localhost:7770";
-const DEFAULT_CLAW3D_RUNTIME_URL = "http://localhost:3000/api/runtime/custom";
+const DEFAULT_HERMES3D_RUNTIME_URL = "http://localhost:3000/api/runtime/custom";
 const DEFAULT_CUSTOM_RUNTIME_URL = "http://localhost:7770";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -500,7 +500,7 @@ const normalizeTaskBoardCard = (
     status: isTaskBoardStatus(record.status) ? record.status : (fallback?.status ?? "todo"),
     source: isTaskBoardSource(record.source)
       ? record.source
-      : (fallback?.source ?? "claw3d_manual"),
+      : (fallback?.source ?? "hermes3d_manual"),
     sourceEventId:
       normalizeOptionalIsoString(record.sourceEventId, fallback?.sourceEventId ?? null) ??
       null,
@@ -816,7 +816,7 @@ const normalizeGatewayProfiles = (
     "hermes",
     "demo",
     "local",
-    "claw3d",
+    "hermes3d",
     "custom",
   ] as const) {
     const normalized = normalizeGatewayProfile(value[adapterType]);
@@ -883,7 +883,7 @@ const mergeGatewayProfiles = (
     "hermes",
     "demo",
     "local",
-    "claw3d",
+    "hermes3d",
     "custom",
   ] as const) {
     const profilePatch = patch[adapterType];
@@ -940,7 +940,7 @@ const normalizeGatewayAdapterType = (
     adapterType === "hermes" ||
     adapterType === "openclaw" ||
     adapterType === "local" ||
-    adapterType === "claw3d" ||
+    adapterType === "hermes3d" ||
     adapterType === "custom"
   ) {
     return adapterType;
@@ -968,8 +968,8 @@ export const resolveDefaultStudioGatewayProfile = (
   }
 
   switch (adapterType) {
-    case "claw3d":
-      return { url: DEFAULT_CLAW3D_RUNTIME_URL, token: "" };
+    case "hermes3d":
+      return { url: DEFAULT_HERMES3D_RUNTIME_URL, token: "" };
     case "local":
       return { url: DEFAULT_LOCAL_RUNTIME_URL, token: "" };
     case "custom":

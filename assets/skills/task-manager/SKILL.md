@@ -36,8 +36,8 @@ Also use this skill even when those exact phrases are absent if the latest user 
 
 The authoritative task file is:
 
-- `${OPENCLAW_STATE_DIR}/claw3d/task-manager/tasks.json` when `OPENCLAW_STATE_DIR` is set.
-- `~/.openclaw/claw3d/task-manager/tasks.json` otherwise.
+- `${OPENCLAW_STATE_DIR}/hermes3d/task-manager/tasks.json` when `OPENCLAW_STATE_DIR` is set.
+- `~/.openclaw/hermes3d/task-manager/tasks.json` otherwise.
 
 Always treat that file as the shared source of truth for the Kanban board.
 
@@ -101,7 +101,7 @@ Each task must include:
       "title": "Research mtulsa.com",
       "description": "Review mtulsa.com and summarize the site, positioning, and improvement opportunities.",
       "status": "in_progress",
-      "source": "claw3d_manual",
+      "source": "hermes3d_manual",
       "sourceEventId": null,
       "assignedAgentId": "main",
       "createdAt": "2026-03-30T00:00:00.000Z",

@@ -1,6 +1,6 @@
 # Hierarchy And Teams Spec
 
-> Sixth concrete office-system feature for Claw3D, turning visible office roles into an actual organizational model for delegation, permissions, and team coordination.
+> Sixth concrete office-system feature for Hermes3D, turning visible office roles into an actual organizational model for delegation, permissions, and team coordination.
 
 ## Goal
 
@@ -418,6 +418,6 @@ Once V1 is stable, follow-up work can add:
 
 ## Summary
 
-Hierarchy and teams should give Claw3D a real organizational model.
+Hierarchy and teams should give Hermes3D a real organizational model.
 
 That model should support delegation, ownership, and coordination without losing the clarity and playfulness of the office metaphor.
