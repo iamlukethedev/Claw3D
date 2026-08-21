@@ -10,7 +10,10 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/claw3d
+  # IMAGE_NAME is assembled in the "Prepare Docker tags" step rather than here:
+  # GHCR requires a lowercase namespace, `github.repository_owner` preserves the
+  # owner's original casing, and `env:` cannot lowercase a value.
+  IMAGE_BASENAME: claw3d
 
 jobs:
   publish:
@@ -38,6 +41,8 @@ jobs:
         run: |
           set -euo pipefail
           tags=()
+          owner="$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          IMAGE_NAME="${REGISTRY}/${owner}/${IMAGE_BASENAME}"
           ref_name="$(printf '%s' "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | tr '/_' '-' | tr -cd 'a-z0-9.-')"
           if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
             tags+=("${IMAGE_NAME}:main")
