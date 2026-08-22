@@ -5,6 +5,7 @@ import type { AgentState } from "@/features/agents/state/store";
 import { TaskBoardView } from "@/features/office/tasks/TaskBoardView";
 import type { TaskBoardCard, TaskBoardStatus } from "@/features/office/tasks/types";
 import type { CronJobSummary } from "@/lib/cron/types";
+import type { AgentLogEntry } from "@/features/office/tasks/AgentLogsPanel";
 
 export function TaskBoardPanel({
   agents,
@@ -15,12 +16,22 @@ export function TaskBoardPanel({
   cronLoading,
   cronError,
   taskCaptureDebug,
-  onCreateCard,
-  onMoveCard,
-  onSelectCard,
-  onUpdateCard,
-  onDeleteCard,
-  onRefreshCronJobs,
+  logEntries,
+  taskManagerReady = false,
+  taskManagerInstalling = false,
+  taskManagerInstallProgressPercent = 0,
+  taskManagerInstallProgressMessage = null,
+  taskManagerInstallError = null,
+  taskManagerInstallAvailable = true,
+  taskManagerInstallUnavailableReason = null,
+  onInstallTaskManagerAction,
+  onCreateCardAction,
+  onMoveCardAction,
+  onSelectCardAction,
+  onUpdateCardAction,
+  onDeleteCardAction,
+  onRefreshCronJobsAction,
+  onClearLogsAction,
 }: {
   agents: AgentState[];
   cardsByStatus: Record<TaskBoardStatus, TaskBoardCard[]>;
@@ -30,12 +41,22 @@ export function TaskBoardPanel({
   cronLoading: boolean;
   cronError: string | null;
   taskCaptureDebug?: ComponentProps<typeof TaskBoardView>["taskCaptureDebug"];
-  onCreateCard: () => void;
-  onMoveCard: (cardId: string, status: TaskBoardStatus) => void;
-  onSelectCard: (cardId: string | null) => void;
-  onUpdateCard: (cardId: string, patch: Partial<TaskBoardCard>) => void;
-  onDeleteCard: (cardId: string) => void;
-  onRefreshCronJobs: () => void;
+  logEntries?: AgentLogEntry[];
+  taskManagerReady?: boolean;
+  taskManagerInstalling?: boolean;
+  taskManagerInstallProgressPercent?: number;
+  taskManagerInstallProgressMessage?: string | null;
+  taskManagerInstallError?: string | null;
+  taskManagerInstallAvailable?: boolean;
+  taskManagerInstallUnavailableReason?: string | null;
+  onInstallTaskManagerAction?: () => void;
+  onCreateCardAction: () => void;
+  onMoveCardAction: (cardId: string, status: TaskBoardStatus) => void;
+  onSelectCardAction: (cardId: string | null) => void;
+  onUpdateCardAction: (cardId: string, patch: Partial<TaskBoardCard>) => void;
+  onDeleteCardAction: (cardId: string) => void;
+  onRefreshCronJobsAction: () => void;
+  onClearLogsAction?: () => void;
 }) {
   return (
     <TaskBoardView
@@ -49,12 +70,22 @@ export function TaskBoardPanel({
       cronLoading={cronLoading}
       cronError={cronError}
       taskCaptureDebug={taskCaptureDebug}
-      onCreateCard={onCreateCard}
-      onMoveCard={onMoveCard}
-      onSelectCard={onSelectCard}
-      onUpdateCard={onUpdateCard}
-      onDeleteCard={onDeleteCard}
-      onRefreshCronJobs={onRefreshCronJobs}
+      logEntries={logEntries}
+      taskManagerReady={taskManagerReady}
+      taskManagerInstalling={taskManagerInstalling}
+      taskManagerInstallProgressPercent={taskManagerInstallProgressPercent}
+      taskManagerInstallProgressMessage={taskManagerInstallProgressMessage}
+      taskManagerInstallError={taskManagerInstallError}
+      taskManagerInstallAvailable={taskManagerInstallAvailable}
+      taskManagerInstallUnavailableReason={taskManagerInstallUnavailableReason}
+      onInstallTaskManagerAction={onInstallTaskManagerAction}
+      onCreateCardAction={onCreateCardAction}
+      onMoveCardAction={onMoveCardAction}
+      onSelectCardAction={onSelectCardAction}
+      onUpdateCardAction={onUpdateCardAction}
+      onDeleteCardAction={onDeleteCardAction}
+      onRefreshCronJobsAction={onRefreshCronJobsAction}
+      onClearLogsAction={onClearLogsAction}
     />
   );
 }

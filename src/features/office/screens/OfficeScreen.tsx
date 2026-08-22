@@ -946,6 +946,21 @@ const inferRunningFromAgentSessions = async (params: {
   };
 };
 
+const ANIMATION_CLOCK_TICK_MS = 250;
+
+const useAnimationClockMs = () => {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, ANIMATION_CLOCK_TICK_MS);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+  return nowMs;
+};
+
 type OfficeScreenProps = {
   showOpenClawConsole?: boolean;
 };
@@ -1164,6 +1179,52 @@ export function OfficeScreen({
     () => getOfficeFloor(resolveActiveOfficeFloorId(activeFloorId)),
     [activeFloorId],
   );
+  const activeFloorIsDemo =
+    activeFloor.kind === "lobby" && activeFloor.provider === "demo";
+
+  // Lobby is the stable starting point — hydrate the demo agent so it walks
+  // around while the app waits to connect, but never override the configured
+  // adapter type or kill an in-progress connection.  Auto-navigate away from
+  // the lobby fires separately once a real connection succeeds.
+  useEffect(() => {
+    if (!activeFloorIsDemo) return;
+
+    setPendingFloorRuntimeSwitch(null);
+    if (state.agents.length === 0) {
+      hydrateAgents([createDemoMainAgentSeed()], MAIN_AGENT_ID);
+      dispatch({ type: "selectAgent", agentId: MAIN_AGENT_ID });
+    }
+    if (!agentsLoaded) {
+      setAgentsLoaded(true);
+    }
+    setFloorRosterCache((previous) => {
+      const current = previous[activeFloor.id];
+      if (
+        current?.status === "loaded" &&
+        current.entries.some((entry) => entry.agentId === MAIN_AGENT_ID)
+      ) {
+        return previous;
+      }
+      return {
+        ...previous,
+        [activeFloor.id]: buildFloorRosterState({
+          floorId: activeFloor.id,
+          hydratedAt: Date.now(),
+          result: {
+            seeds: [createDemoMainAgentSeed()],
+            suggestedSelectedAgentId: MAIN_AGENT_ID,
+          },
+        }),
+      };
+    });
+  }, [
+    activeFloor.id,
+    activeFloorIsDemo,
+    agentsLoaded,
+    dispatch,
+    hydrateAgents,
+    state.agents.length,
+  ]);
 
   useEffect(() => {
     activeFloorIdRef.current = activeFloorId;
@@ -1179,7 +1240,18 @@ export function OfficeScreen({
       try {
         const settings = await settingsCoordinator.loadSettings({ maxAgeMs: 30_000 });
         if (!settings || cancelled) return;
-        setActiveFloorId(resolveStudioActiveFloorId(settings));
+        const resolvedFloorId = resolveStudioActiveFloorId(settings);
+        const resolvedFloor = getOfficeFloor(resolvedFloorId);
+        // The Lobby is the neutral unconnected state.  A stale persisted runtime
+        // floor should not force OpenClaw/Hermes to render on boot before the
+        // gateway has actually connected; successful real connections still
+        // auto-navigate to their runtime floor in the connected effect below.
+        if (resolvedFloor.kind === "runtime") {
+          setActiveFloorId("lobby");
+          settingsCoordinator.schedulePatch({ activeFloorId: "lobby" }, 0);
+          return;
+        }
+        setActiveFloorId(resolvedFloorId);
       } catch (error) {
         if (!cancelled) {
           console.error("Failed to load active floor preference.", error);
@@ -1388,7 +1460,9 @@ export function OfficeScreen({
     voiceId: voiceRepliesPreference.voiceId,
     speed: voiceRepliesPreference.speed,
   });
-  const showOnboardingWizard = showOnboarding || forceShowOnboarding;
+  const showOnboardingWizard =
+    forceShowOnboarding ||
+    (showOnboarding && !activeFloorIsDemo && state.agents.length === 0);
   const handleOpenOnboarding = useCallback(() => {
     resetOnboarding();
     setCompanyCreatedSignal(0);
@@ -1452,6 +1526,37 @@ export function OfficeScreen({
       setActiveFloorId(resolved);
       settingsCoordinator.schedulePatch({ activeFloorId: resolved }, 0);
       setOfficeCameraCenterSignal((current) => current + 1);
+
+      if (floor.kind !== "runtime") {
+        setPendingFloorRuntimeSwitch(null);
+        if (status === "connected" || status === "connecting") {
+          disconnect();
+        }
+        if (floor.provider === "demo") {
+          setSelectedAdapterType("demo");
+          hydrateAgents([createDemoMainAgentSeed()], MAIN_AGENT_ID);
+          setAgentsLoaded(true);
+          focusLocalAgent(MAIN_AGENT_ID, {
+            openChat: false,
+            persistFloorId: resolved,
+            selectStore: true,
+          });
+          setFloorRosterCache((previous) => ({
+            ...previous,
+            [resolved]: buildFloorRosterState({
+              floorId: resolved,
+              hydratedAt: Date.now(),
+              result: {
+                seeds: [createDemoMainAgentSeed()],
+                suggestedSelectedAgentId: MAIN_AGENT_ID,
+              },
+            }),
+          }));
+          return;
+        }
+        setAgentsLoaded(true);
+        return;
+      }
 
       const adapterType = floor.provider as StudioGatewayAdapterType;
       let nextGatewayUrl = gatewayUrl.trim();
@@ -1518,13 +1623,16 @@ export function OfficeScreen({
     },
     [
       adapterProfiles,
+      disconnect,
       focusLocalAgent,
       gatewayUrl,
+      hydrateAgents,
       localGatewayDefaults,
       setGatewayUrl,
       setToken,
       setSelectedAdapterType,
       settingsCoordinator,
+      status,
       token,
     ],
   );
@@ -2757,7 +2865,7 @@ export function OfficeScreen({
       lastLoadAgentsStartedAtRef.current = 0;
       setLoading(false);
       if (stateRef.current.agents.length === 0) {
-        if (selectedAdapterType === "demo") {
+        if (activeFloorIsDemo || selectedAdapterType === "demo") {
           hydrateAgents([createDemoMainAgentSeed()], MAIN_AGENT_ID);
           setAgentsLoaded(true);
         } else {
@@ -2772,15 +2880,14 @@ export function OfficeScreen({
       prevAssistantPreviewRef.current = {};
       lastGatewayActivityAtRef.current = 0;
     }
-  }, [hydrateAgents, selectedAdapterType, setLoading, status]);
+  }, [activeFloorIsDemo, hydrateAgents, selectedAdapterType, setLoading, status]);
 
   useEffect(() => {
-    if (selectedAdapterType !== "demo") return;
-    if (status !== "disconnected") return;
+    if (!activeFloorIsDemo && selectedAdapterType !== "demo") return;
     if (state.agents.length > 0) return;
     hydrateAgents([createDemoMainAgentSeed()], MAIN_AGENT_ID);
     setAgentsLoaded(true);
-  }, [hydrateAgents, selectedAdapterType, state.agents.length, status]);
+  }, [activeFloorIsDemo, hydrateAgents, selectedAdapterType, state.agents.length]);
 
   useEffect(() => {
     if (!agentsLoaded) return;
@@ -3181,7 +3288,7 @@ export function OfficeScreen({
     enabled: runtimeSupportsSkills,
     agents: state.agents,
   });
-  const animationNowMs = Date.now();
+  const animationNowMs = useAnimationClockMs();
   const officeAnimationState = useMemo(() => {
     const base = buildOfficeAnimationState({
       state: officeTriggerState,
@@ -3243,13 +3350,24 @@ export function OfficeScreen({
     textMessageByAgentId,
     workingUntilByAgentId,
   } = officeAnimationState;
-  const immediateGymHoldByAgentId = useMemo(
-    () => ({
+  const immediateGymHoldRef = useRef<Record<string, boolean>>({});
+  const immediateGymHoldByAgentId = useMemo(() => {
+    const candidate: Record<string, boolean> = {
       ...marketplaceGymHoldByAgentId,
       ...skillGymHoldByAgentId,
-    }),
-    [marketplaceGymHoldByAgentId, skillGymHoldByAgentId],
-  );
+    };
+    const previous = immediateGymHoldRef.current;
+    const previousKeys = Object.keys(previous);
+    const candidateKeys = Object.keys(candidate);
+    if (
+      previousKeys.length === candidateKeys.length &&
+      candidateKeys.every((key) => previous[key] === candidate[key])
+    ) {
+      return previous;
+    }
+    immediateGymHoldRef.current = candidate;
+    return candidate;
+  }, [marketplaceGymHoldByAgentId, skillGymHoldByAgentId]);
 
   useEffect(() => {
     const now = Date.now();
@@ -3336,6 +3454,10 @@ export function OfficeScreen({
     spokenPhoneCallKeysRef.current = new Set(
       [...spokenPhoneCallKeysRef.current].filter((key) => activeKeys.has(key)),
     );
+    const hasStalePreparedPhoneCalls = Object.values(
+      preparedPhoneCallsByAgentId,
+    ).some((entry) => !activeKeys.has(entry.requestKey));
+    if (!hasStalePreparedPhoneCalls) return;
     setPreparedPhoneCallsByAgentId((previous) => {
       const next = Object.fromEntries(
         Object.entries(previous).filter(([, entry]) => activeKeys.has(entry.requestKey)),
@@ -3348,7 +3470,7 @@ export function OfficeScreen({
       }
       return next;
     });
-  }, [phoneCallByAgentId]);
+  }, [phoneCallByAgentId, preparedPhoneCallsByAgentId]);
 
   useEffect(() => {
     const requests = Object.entries(phoneCallByAgentId);
@@ -3496,6 +3618,10 @@ export function OfficeScreen({
     preparedTextMessageKeysRef.current = new Set(
       [...preparedTextMessageKeysRef.current].filter((key) => activeKeys.has(key)),
     );
+    const hasStalePreparedTextMessages = Object.values(
+      preparedTextMessagesByAgentId,
+    ).some((entry) => !activeKeys.has(entry.requestKey));
+    if (!hasStalePreparedTextMessages) return;
     setPreparedTextMessagesByAgentId((previous) => {
       const next = Object.fromEntries(
         Object.entries(previous).filter(([, entry]) => activeKeys.has(entry.requestKey)),
@@ -3508,7 +3634,7 @@ export function OfficeScreen({
       }
       return next;
     });
-  }, [textMessageByAgentId]);
+  }, [preparedTextMessagesByAgentId, textMessageByAgentId]);
 
   useEffect(() => {
     const requests = Object.entries(textMessageByAgentId);
@@ -4679,16 +4805,22 @@ export function OfficeScreen({
 
   const showGatewayLoadingOverlay =
     !agentsLoaded &&
+    !activeFloorIsDemo &&
+    selectedAdapterType !== "demo" &&
     (!connectPromptReady ||
       (gatewayUrl.trim().length > 0 &&
         !shouldPromptForConnect &&
         ((!didAttemptGatewayConnect && showDelayedGatewayLoadingOverlay) ||
           (status === "connecting" && showDelayedGatewayLoadingOverlay))));
+  // On the demo lobby the demo agent is already walking (agentsLoaded=true), so
+  // the !agentsLoaded gate alone would permanently suppress this overlay.  Allow
+  // it when we're in the lobby and there is a real reason to prompt (no saved
+  // connection, failed auto-connect, manual disconnect, etc.).
   const showGatewayConnectOverlay =
     connectPromptReady &&
     status === "disconnected" &&
-    !agentsLoaded &&
-    (shouldPromptForConnect || showDelayedGatewayConnectOverlay);
+    (shouldPromptForConnect || showDelayedGatewayConnectOverlay) &&
+    (!agentsLoaded || activeFloorIsDemo);
 
   const runningCount = state.agents.filter(
     (agent) =>
@@ -4741,7 +4873,13 @@ export function OfficeScreen({
               showApprovalHint={didAttemptGatewayConnect}
               onGatewayUrlChange={setGatewayUrl}
               onTokenChange={setToken}
-              onAdapterTypeChange={setSelectedAdapterType}
+              onAdapterTypeChange={(adapterType) => {
+                setSelectedAdapterType(adapterType);
+                if (adapterType === "demo") {
+                  setActiveFloorId("lobby");
+                  settingsCoordinator.schedulePatch({ activeFloorId: "lobby" }, 0);
+                }
+              }}
               onUseLocalDefaults={useLocalGatewayDefaults}
               onConnect={() => void connect()}
             />
@@ -4774,7 +4912,7 @@ export function OfficeScreen({
           monitorAgentId={monitorAgentId}
           monitorByAgentId={monitorByAgentId}
           githubSkill={githubSkill}
-          taskManagerEnabled={taskManagerReady}
+          taskManagerEnabled={true}
           soundclawEnabled={soundclawReady}
           officeTitle={officeTitle}
           officeTitleLoaded={officeTitleLoaded}
@@ -4877,7 +5015,8 @@ export function OfficeScreen({
             setJukeboxOpen(true);
           }}
           onKanbanInteract={() => {
-            setKanbanInstallPromptOpen(true);
+            setActiveSidebarTab("kanban");
+            setSidebarOpen(true);
           }}
           taskBoardAgents={state.agents}
           taskBoardCardsByStatus={taskBoard.cardsByStatus}
@@ -5088,19 +5227,85 @@ export function OfficeScreen({
                 taskBoard.sharedTasksError ?? taskBoard.gatewayTasksError ?? taskBoard.cronError
               }
               taskCaptureDebug={showOpenClawConsole ? taskBoard.taskCaptureDebug : undefined}
-              onCreateCard={() => {
+              logEntries={showOpenClawConsole ? openClawLogEntries : undefined}
+              taskManagerReady={taskManagerReady}
+              taskManagerInstalling={kanbanInstallProgress.active}
+              taskManagerInstallProgressPercent={kanbanInstallProgress.percent}
+              taskManagerInstallProgressMessage={kanbanInstallProgress.message}
+              taskManagerInstallError={kanbanInstallProgress.error}
+              taskManagerInstallAvailable={runtimeSupportsSkills && status === "connected"}
+              taskManagerInstallUnavailableReason={
+                status !== "connected"
+                  ? "Connect to a runtime before installing TASK-MANAGER."
+                  : selectedAdapterType === "demo" || activeFloorIsDemo
+                    ? "Demo seeds local agents, but the demo runtime does not implement skill installation."
+                  : runtimeSupportsSkills
+                    ? null
+                    : "The current runtime does not expose skill installs."
+              }
+              onInstallTaskManagerAction={() => {
+                const targetAgentId =
+                  (selectedChatAgentId ?? state.selectedAgentId ?? state.agents[0]?.agentId ?? "")
+                    .trim() || null;
+                setKanbanInstallProgress({
+                  active: true,
+                  percent: 8,
+                  message: "Starting task-manager installation.",
+                  error: null,
+                });
+                void (async () => {
+                  try {
+                    await marketplace.handleInstallPackagedSkillAndEnable({
+                      skillKey: "task-manager",
+                      agentId: targetAgentId,
+                      onProgress: ({ percent, message }) => {
+                        setKanbanInstallProgress({
+                          active: true,
+                          percent,
+                          message,
+                          error: null,
+                        });
+                      },
+                    });
+                    setKanbanInstallProgress({
+                      active: true,
+                      percent: 100,
+                      message: "Refreshing task-manager state in Claw3D.",
+                      error: null,
+                    });
+                    setKanbanInstallPromptOpen(false);
+                    setKanbanInstallProgress({
+                      active: false,
+                      percent: 0,
+                      message: "",
+                      error: null,
+                    });
+                  } catch (error) {
+                    setKanbanInstallProgress((current) => ({
+                      ...current,
+                      active: false,
+                      error:
+                        error instanceof Error
+                          ? error.message
+                          : "Failed to install task-manager.",
+                    }));
+                  }
+                })();
+              }}
+              onCreateCardAction={() => {
                 taskBoard.createManualCard();
                 setActiveSidebarTab("kanban");
               }}
-              onMoveCard={taskBoard.moveCard}
-              onSelectCard={taskBoard.selectCard}
-              onUpdateCard={taskBoard.updateCard}
-              onDeleteCard={taskBoard.removeCard}
-              onRefreshCronJobs={() => {
+              onMoveCardAction={taskBoard.moveCard}
+              onSelectCardAction={taskBoard.selectCard}
+              onUpdateCardAction={taskBoard.updateCard}
+              onDeleteCardAction={taskBoard.removeCard}
+              onRefreshCronJobsAction={() => {
                 void taskBoard.refreshSharedTasks();
                 void taskBoard.refreshRemoteTasks();
                 void taskBoard.refreshCronJobs();
               }}
+              onClearLogsAction={handleClearOpenClawConsole}
             />
           }
           playbooksPanel={

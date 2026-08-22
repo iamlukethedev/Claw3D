@@ -6429,14 +6429,14 @@ export function RetroOffice3D({
           cronLoading={taskBoardCronLoading}
           cronError={taskBoardCronError}
           taskCaptureDebug={taskBoardCaptureDebug}
-          onCreateCard={() => onTaskBoardCreateCard?.()}
-          onMoveCard={(cardId, status) => onTaskBoardMoveCard?.(cardId, status)}
-          onSelectCard={(cardId) => onTaskBoardSelectCard?.(cardId)}
-          onUpdateCard={(cardId, patch) =>
+          onCreateCardAction={() => onTaskBoardCreateCard?.()}
+          onMoveCardAction={(cardId: string, status: TaskBoardStatus) => onTaskBoardMoveCard?.(cardId, status)}
+          onSelectCardAction={(cardId: string | null) => onTaskBoardSelectCard?.(cardId)}
+          onUpdateCardAction={(cardId: string, patch: Partial<TaskBoardCard>) =>
             onTaskBoardUpdateCard?.(cardId, patch)
           }
-          onDeleteCard={(cardId) => onTaskBoardDeleteCard?.(cardId)}
-          onRefreshCronJobs={() => onTaskBoardRefreshCronJobs?.()}
+          onDeleteCardAction={(cardId: string) => onTaskBoardDeleteCard?.(cardId)}
+          onRefreshCronJobsAction={() => onTaskBoardRefreshCronJobs?.()}
           onClose={() => setActiveKanbanUid(null)}
         />
       ) : null}

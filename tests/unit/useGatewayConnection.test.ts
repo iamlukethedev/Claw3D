@@ -189,7 +189,7 @@ describe("useGatewayConnection", () => {
     render(createElement(Probe));
 
     await waitFor(() => {
-      expect(captured.url).toBe("ws://localhost:3000/api/gateway/ws");
+      expect(captured.url).toBe("ws://127.0.0.1:3000/api/gateway/ws");
     });
     expect(captured.token).toBe("");
     expect(captured.authScopeKey).toBe("wss://remote.example");
@@ -236,7 +236,7 @@ describe("useGatewayConnection", () => {
     render(createElement(Probe));
 
     await waitFor(() => {
-      expect(captured.url).toBe("ws://localhost:3000/api/gateway/ws");
+      expect(captured.url).toBe("ws://127.0.0.1:3000/api/gateway/ws");
     });
     expect(captured.authScopeKey).toBe("wss://pi5.myth-coho.ts.net");
     expect(captured.clientName).toBe("webchat-ui");
@@ -282,7 +282,7 @@ describe("useGatewayConnection", () => {
     render(createElement(Probe));
 
     await waitFor(() => {
-      expect(captured.url).toBe("ws://localhost:3000/api/gateway/ws");
+      expect(captured.url).toBe("ws://127.0.0.1:3000/api/gateway/ws");
     });
     expect(captured.authScopeKey).toBe("ws://localhost:18789");
     expect(captured.clientName).toBe("openclaw-control-ui");
@@ -486,7 +486,7 @@ describe("useGatewayConnection", () => {
     expect(screen.getByTestId("token")).toHaveTextContent("local-token");
   });
 
-  it("loads_and_persists_selected_adapter_type", async () => {
+  it("loads_selected_adapter_type_without_persisting_unchanged_settings", async () => {
     const { useGatewayConnection } = await setupAndImportHook(null);
     const patches: unknown[] = [];
     const coordinator = {
@@ -534,23 +534,7 @@ describe("useGatewayConnection", () => {
     await waitFor(() => {
       expect(screen.getByTestId("activeAdapterType")).toHaveTextContent("hermes");
     });
-    expect(patches).toHaveLength(1);
-    const firstPatch = patches[0] as {
-      gateway?: {
-        url?: string;
-        token?: string;
-        adapterType?: string;
-        profiles?: Record<string, { url?: string; token?: string }>;
-      };
-    };
-    expect(firstPatch.gateway?.token).toBeUndefined();
-    expect(firstPatch.gateway?.adapterType).toBe("hermes");
-    expect(firstPatch.gateway?.profiles?.openclaw?.token).toBe("");
-    expect(firstPatch.gateway?.profiles?.hermes?.token).toBeUndefined();
-    expect(firstPatch.gateway?.profiles?.demo?.token).toBe("");
-    expect(firstPatch.gateway?.profiles?.local?.token).toBe("");
-    expect(firstPatch.gateway?.profiles?.claw3d?.token).toBe("");
-    expect(firstPatch.gateway?.profiles?.custom?.token).toBe("");
+    expect(patches).toHaveLength(0);
   });
 
   it("prefers_the_saved_selected_adapter_over_a_different_last_known_good_backend", async () => {
