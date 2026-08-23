@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { synthesizeVoiceReply, type VoiceReplyProvider } from "@/lib/voiceReply/provider";
+import {
+  synthesizeVoiceReply,
+  type MiniMaxVoiceRegion,
+  type VoiceReplyProvider,
+} from "@/lib/voiceReply/provider";
 
 export const runtime = "nodejs";
 
@@ -8,6 +12,7 @@ type VoiceReplyRequestBody = {
   provider?: VoiceReplyProvider;
   voiceId?: string | null;
   speed?: number;
+  region?: MiniMaxVoiceRegion;
 };
 
 const MAX_REPLY_CHARS = 5_000;
@@ -30,6 +35,7 @@ export async function POST(request: Request) {
       provider: body.provider,
       voiceId: body.voiceId,
       speed: body.speed,
+      region: body.region,
     });
     return new Response(response.body, {
       status: 200,
@@ -41,7 +47,7 @@ export async function POST(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to synthesize the voice reply.";
-    const status = message.includes("Missing ELEVENLABS_API_KEY") ? 503 : 500;
+    const status = message.startsWith("Missing ") ? 503 : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }
