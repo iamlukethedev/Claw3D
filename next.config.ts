@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 
+// Set CLAW3D_BEHIND_TLS=1 only when Studio is actually served over HTTPS.
+// When it is served over plain HTTP (e.g. behind an HTTP-only reverse proxy),
+// `upgrade-insecure-requests` / HSTS would force the browser to https:// and
+// wss:// endpoints that do not exist, breaking asset loading and the gateway
+// WebSocket. Keep these HTTPS-only directives off unless TLS is present.
+const behindTls =
+  process.env.CLAW3D_BEHIND_TLS === "1" ||
+  process.env.CLAW3D_BEHIND_TLS === "true";
+
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
@@ -24,7 +33,8 @@ const securityHeaders = [
       "media-src 'self' blob: data: http: https:",
       "worker-src 'self' blob:",
       "object-src 'none'",
-      "upgrade-insecure-requests",
+      // Only upgrade to https/wss when the deployment is actually TLS-terminated.
+      ...(behindTls ? ["upgrade-insecure-requests"] : []),
     ].join("; "),
   },
   {
@@ -49,7 +59,7 @@ const securityHeaders = [
   },
 ];
 
-if (process.env.NODE_ENV === "production") {
+if (process.env.NODE_ENV === "production" && behindTls) {
   securityHeaders.push({
     key: "Strict-Transport-Security",
     value: "max-age=31536000; includeSubDomains",
