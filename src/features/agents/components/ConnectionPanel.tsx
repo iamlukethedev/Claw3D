@@ -1,6 +1,7 @@
 import type { GatewayStatus } from "@/lib/gateway/GatewayClient";
 import type { StudioGatewayAdapterType } from "@/lib/studio/settings";
 import { X } from "lucide-react";
+import { NovaSpineSetupCard } from "@/features/agents/components/NovaSpineSetupCard";
 import { resolveGatewayStatusBadgeClass, resolveGatewayStatusLabel } from "./colorSemantics";
 
 type ConnectionPanelProps = {
@@ -188,6 +189,7 @@ export const ConnectionPanel = ({
           {error}
         </p>
       ) : null}
+      {selectedAdapterType === "openclaw" ? <NovaSpineSetupCard compact /> : null}
     </div>
   );
 };

@@ -1,0 +1,9 @@
+Copyright (c) 2026 Desmond Pottle
+All rights reserved.
+
+This package is distributed publicly for evaluation, installation, and use only
+as explicitly permitted by the copyright holder.
+
+No permission is granted to copy, modify, redistribute, sublicense, sell, or
+create derivative works from this package without prior written permission from
+the copyright holder.

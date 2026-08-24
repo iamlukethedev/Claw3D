@@ -54,4 +54,3 @@ describe("gateway agent files helpers", () => {
     ).rejects.toThrow("agentId is required.");
   });
 });
-

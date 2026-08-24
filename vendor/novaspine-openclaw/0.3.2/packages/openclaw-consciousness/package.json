@@ -1,0 +1,39 @@
+{
+  "name": "nova-consciousness",
+  "version": "0.6.0",
+  "private": false,
+  "description": "Nova Consciousness Suite integration for OpenClaw with passive continuity, learning, and thread preservation.",
+  "type": "module",
+  "main": "./index.js",
+  "files": [
+    "index.js",
+    "openclaw.plugin.json",
+    "README.md",
+    "LICENSE.txt"
+  ],
+  "keywords": [
+    "openclaw",
+    "plugin",
+    "consciousness",
+    "continuity",
+    "nova"
+  ],
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maddwiz/NovaSpine.git",
+    "directory": "packages/openclaw-consciousness"
+  },
+  "homepage": "https://github.com/maddwiz/NovaSpine#readme",
+  "bugs": {
+    "url": "https://github.com/maddwiz/NovaSpine/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.js"
+    ]
+  }
+}
