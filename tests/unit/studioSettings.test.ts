@@ -175,6 +175,43 @@ describe("studio settings normalization", () => {
     );
   });
 
+  it("normalizes office state animation mappings per gateway", () => {
+    const normalized = normalizeStudioSettings({
+      office: {
+        " [REDACTED] ": {
+          stateAnimationMappings: [
+            {
+              id: " Writing State ",
+              sourceState: " Writing ",
+              label: "Writing",
+              animationTarget: "desk",
+              effect: "none",
+              soundCueId: " key-tap ",
+              priority: 125,
+            },
+            {
+              sourceState: "",
+              animationTarget: "bad",
+            },
+          ],
+        },
+      },
+    });
+
+    expect(normalized.office["[REDACTED]"]?.stateAnimationMappings).toEqual([
+      {
+        id: "writing-state",
+        sourceState: "writing",
+        label: "Writing",
+        animationTarget: "desk",
+        effect: "none",
+        soundCueId: "key-tap",
+        priority: 100,
+        enabled: true,
+      },
+    ]);
+  });
+
   it("merges office title patches", () => {
     const current = normalizeStudioSettings({
       office: {

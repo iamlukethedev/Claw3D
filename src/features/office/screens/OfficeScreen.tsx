@@ -198,6 +198,7 @@ import {
   type OfficePhoneCallRequest,
   type OfficeTextMessageRequest,
 } from "@/lib/office/eventTriggers";
+import { buildOfficeStateAnimationMappingResult } from "@/lib/office/stateAnimationMapping";
 import { buildOfficeSkillTriggerHoldMaps } from "@/lib/office/places";
 import type { MockPhoneCallScenario } from "@/lib/office/call/types";
 import type { MockTextMessageScenario } from "@/lib/office/text/types";
@@ -1327,6 +1328,7 @@ export function OfficeScreen({
   const {
     loaded: officeTitleLoaded,
     title: officeTitle,
+    stateAnimationMappings,
     remoteOfficeEnabled,
     remoteOfficeSourceKind,
     remoteOfficeLabel,
@@ -3192,6 +3194,45 @@ export function OfficeScreen({
     const skillTriggerHoldMaps = buildOfficeSkillTriggerHoldMaps(
       skillTriggers.movementTargetByAgentId,
     );
+    if (stateAnimationMappings.length === 0) {
+      return {
+        ...base,
+        danceUntilByAgentId: danceUntilByAgentId,
+        deskHoldByAgentId: {
+          ...base.deskHoldByAgentId,
+          ...skillTriggerHoldMaps.deskHoldByAgentId,
+        },
+        githubHoldByAgentId: {
+          ...base.githubHoldByAgentId,
+          ...skillTriggerHoldMaps.githubHoldByAgentId,
+        },
+        gymHoldByAgentId: {
+          ...base.gymHoldByAgentId,
+          ...skillTriggerHoldMaps.gymHoldByAgentId,
+        },
+        jukeboxHoldByAgentId: {
+          ...base.jukeboxHoldByAgentId,
+          ...skillTriggerHoldMaps.jukeboxHoldByAgentId,
+        },
+        qaHoldByAgentId: {
+          ...base.qaHoldByAgentId,
+          ...skillTriggerHoldMaps.qaHoldByAgentId,
+        },
+        skillGymHoldByAgentId: {
+          ...base.skillGymHoldByAgentId,
+          ...skillTriggerHoldMaps.skillGymHoldByAgentId,
+        },
+      };
+    }
+    const configuredStateHoldMaps =
+      stateAnimationMappings.length > 0
+        ? buildOfficeStateAnimationMappingResult({
+            agents: state.agents,
+            animationState: base,
+            mappings: stateAnimationMappings,
+            nowMs: animationNowMs,
+          })
+        : null;
 
     return {
       ...base,
@@ -3199,26 +3240,40 @@ export function OfficeScreen({
       deskHoldByAgentId: {
         ...base.deskHoldByAgentId,
         ...skillTriggerHoldMaps.deskHoldByAgentId,
+        ...(configuredStateHoldMaps?.deskHoldByAgentId ?? {}),
       },
       githubHoldByAgentId: {
         ...base.githubHoldByAgentId,
         ...skillTriggerHoldMaps.githubHoldByAgentId,
+        ...(configuredStateHoldMaps?.githubHoldByAgentId ?? {}),
       },
       gymHoldByAgentId: {
         ...base.gymHoldByAgentId,
         ...skillTriggerHoldMaps.gymHoldByAgentId,
+        ...(configuredStateHoldMaps?.gymHoldByAgentId ?? {}),
       },
       jukeboxHoldByAgentId: {
         ...base.jukeboxHoldByAgentId,
         ...skillTriggerHoldMaps.jukeboxHoldByAgentId,
+        ...(configuredStateHoldMaps?.jukeboxHoldByAgentId ?? {}),
+      },
+      phoneBoothHoldByAgentId: {
+        ...base.phoneBoothHoldByAgentId,
+        ...(configuredStateHoldMaps?.phoneBoothHoldByAgentId ?? {}),
       },
       qaHoldByAgentId: {
         ...base.qaHoldByAgentId,
         ...skillTriggerHoldMaps.qaHoldByAgentId,
+        ...(configuredStateHoldMaps?.qaHoldByAgentId ?? {}),
+      },
+      smsBoothHoldByAgentId: {
+        ...base.smsBoothHoldByAgentId,
+        ...(configuredStateHoldMaps?.smsBoothHoldByAgentId ?? {}),
       },
       skillGymHoldByAgentId: {
         ...base.skillGymHoldByAgentId,
         ...skillTriggerHoldMaps.skillGymHoldByAgentId,
+        ...(configuredStateHoldMaps?.skillGymHoldByAgentId ?? {}),
       },
     };
   }, [
@@ -3227,6 +3282,7 @@ export function OfficeScreen({
     marketplaceGymHoldByAgentId,
     officeTriggerState,
     skillTriggers.movementTargetByAgentId,
+    stateAnimationMappings,
     state.agents,
   ]);
   const {

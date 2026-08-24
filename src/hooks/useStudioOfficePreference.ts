@@ -7,6 +7,7 @@ import {
   resolveOfficePreferencePublic,
   type StudioOfficePreferencePublic,
 } from "@/lib/studio/settings";
+import type { OfficeStateAnimationMapping } from "@/lib/office/stateMappingConfig";
 
 type UseStudioOfficePreferenceParams = {
   gatewayUrl: string;
@@ -193,10 +194,30 @@ export const useStudioOfficePreference = ({
     [gatewayUrl, settingsCoordinator]
   );
 
+  const setStateAnimationMappings = useCallback(
+    (stateAnimationMappings: OfficeStateAnimationMapping[]) => {
+      const gatewayKey = gatewayUrl.trim();
+      setPreference((current) => ({ ...current, stateAnimationMappings }));
+      if (!gatewayKey) return;
+      settingsCoordinator.schedulePatch(
+        {
+          office: {
+            [gatewayKey]: {
+              stateAnimationMappings,
+            },
+          },
+        },
+        0
+      );
+    },
+    [gatewayUrl, settingsCoordinator]
+  );
+
   return {
     loaded,
     preference,
     title: preference.title,
+    stateAnimationMappings: preference.stateAnimationMappings,
     remoteOfficeEnabled: preference.remoteOfficeEnabled,
     remoteOfficeSourceKind: preference.remoteOfficeSourceKind,
     remoteOfficeLabel: preference.remoteOfficeLabel,
@@ -210,5 +231,6 @@ export const useStudioOfficePreference = ({
     setRemoteOfficePresenceUrl,
     setRemoteOfficeGatewayUrl,
     setRemoteOfficeToken,
+    setStateAnimationMappings,
   };
 };
