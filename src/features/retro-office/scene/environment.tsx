@@ -14,6 +14,7 @@ import {
 } from "@/features/retro-office/core/constants";
 import {
   CITY_PATH_ZONE,
+  FOOTPRINT_FITS_DEFAULT_OFFICE,
   LOCAL_OFFICE_CANVAS_HEIGHT,
   LOCAL_OFFICE_CANVAS_WIDTH,
   REMOTE_OFFICE_ZONE,
@@ -357,7 +358,9 @@ export const FloorAndWalls = memo(function FloorAndWalls({
         </>
       ) : null}
 
-      {gymZoneFloorWidth > 0 && roomZoneFloorHeight > 0 ? (
+      {FOOTPRINT_FITS_DEFAULT_OFFICE &&
+      gymZoneFloorWidth > 0 &&
+      roomZoneFloorHeight > 0 ? (
         <>
           <mesh
             position={[gymZoneCenterX, 0.002, roomZoneCenterZ]}
@@ -388,7 +391,9 @@ export const FloorAndWalls = memo(function FloorAndWalls({
         </>
       ) : null}
 
-      {qaZoneFloorWidth > 0 && roomZoneFloorHeight > 0 ? (
+      {FOOTPRINT_FITS_DEFAULT_OFFICE &&
+      qaZoneFloorWidth > 0 &&
+      roomZoneFloorHeight > 0 ? (
         <>
           <mesh
             position={[qaZoneCenterX, 0.003, roomZoneCenterZ]}
