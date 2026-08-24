@@ -6,6 +6,7 @@ import {
   serializePersonalityFiles,
   type PersonalityBuilderDraft,
 } from "@/lib/agents/personalityBuilder";
+import { applyEscobarGovernanceDefaults } from "@/lib/agents/escobarGovernance";
 import type { AgentFileName } from "@/lib/agents/agentFiles";
 import type {
   CompanyAgentBlueprint,
@@ -273,7 +274,10 @@ const buildRoleSoulDraft = (params: {
   draft.tools = buildRoleToolsMarkdown(params.role);
   draft.heartbeat = buildRoleHeartbeatMarkdown(params.role);
   draft.memory = buildRoleMemoryMarkdown(params);
-  return draft;
+  return applyEscobarGovernanceDefaults(draft, {
+    agentName: params.role.title,
+    rolePurpose: params.role.purpose,
+  });
 };
 
 const normalizeRole = (value: ParsedCompanyRole, index: number): CompanyBuilderRole | null => {
@@ -353,7 +357,8 @@ export const buildGenerateCompanyPlanPrompt = (brief: string) =>
     "  ]",
     "}",
     "Create between 2 and 6 roles unless the brief clearly needs more or less.",
-    "Prefer silly but useful role titles when it helps the brand, but keep the org practical.",
+    "Prefer Disney-character-inspired role names that match the function or personality, but keep the org practical.",
+    "Do not use protected logos, images, voices, assets, or exact character impersonation.",
     "Role names should be short single words like Builder, Analyst, Closer, Captain, Scout, or Designer.",
     "All role names must be unique.",
     "Make collaborators reference role names.",

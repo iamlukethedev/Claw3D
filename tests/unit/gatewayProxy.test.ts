@@ -40,6 +40,9 @@ describe("createGatewayProxy", () => {
     }
     const upstreamUrl = `ws://127.0.0.1:${address.port}`;
 
+    let seenClientId: string | null = null;
+    let seenRole: string | null = null;
+    let seenScopes: string[] = [];
     let seenToken: string | null = null;
     let seenOrigin: string | undefined;
     upstream.on("connection", (ws, req) => {
@@ -47,6 +50,9 @@ describe("createGatewayProxy", () => {
       ws.on("message", (raw) => {
         const parsed = JSON.parse(String(raw));
         if (parsed?.method === "connect") {
+          seenClientId = parsed?.params?.client?.id ?? null;
+          seenRole = parsed?.params?.role ?? null;
+          seenScopes = Array.isArray(parsed?.params?.scopes) ? parsed.params.scopes : [];
           seenToken = parsed?.params?.auth?.token ?? null;
           ws.send(
             JSON.stringify({
@@ -92,6 +98,9 @@ describe("createGatewayProxy", () => {
       await waitForEvent(browser, "message");
 
       expect(seenToken).toBe("token-123");
+      expect(seenClientId).toBe("openclaw-control-ui");
+      expect(seenRole).toBe("operator");
+      expect(seenScopes).toContain("operator.read");
       expect(seenOrigin).toBe(`http://localhost:${address.port}`);
     } finally {
       for (const client of upstream.clients) {
@@ -269,7 +278,7 @@ describe("createGatewayProxy", () => {
     }
   });
 
-  it("preserves browser auth token when both browser and host tokens are present", async () => {
+  it("uses host auth token when both browser and host tokens are present", async () => {
     const upstream = new WebSocketServer({ port: 0 });
     const address = upstream.address();
     if (!address || typeof address === "string") {
@@ -277,11 +286,15 @@ describe("createGatewayProxy", () => {
     }
     const upstreamUrl = `ws://127.0.0.1:${address.port}`;
 
+    let seenClientId: string | null = null;
+    let seenScopes: string[] = [];
     let seenToken: string | null = null;
     upstream.on("connection", (ws) => {
       ws.on("message", (raw) => {
         const parsed = JSON.parse(String(raw));
         if (parsed?.method === "connect") {
+          seenClientId = parsed?.params?.client?.id ?? null;
+          seenScopes = Array.isArray(parsed?.params?.scopes) ? parsed.params.scopes : [];
           seenToken = parsed?.params?.auth?.token ?? null;
           ws.send(
             JSON.stringify({
@@ -326,7 +339,10 @@ describe("createGatewayProxy", () => {
       const [rawMessage] = await waitForEvent<[WebSocket.RawData]>(browser, "message");
       const response = JSON.parse(String(rawMessage ?? ""));
       expect(response).toMatchObject({ type: "res", id: "connect-browser-precedence", ok: true });
-      expect(seenToken).toBe("browser-token-789");
+      expect(seenToken).toBe("host-token-456");
+      expect(seenClientId).toBe("openclaw-control-ui");
+      expect(seenScopes).toContain("operator.read");
+      expect(seenScopes).toContain("operator.admin");
     } finally {
       for (const client of upstream.clients) {
         client.close();

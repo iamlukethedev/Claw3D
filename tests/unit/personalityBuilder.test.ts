@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { createAgentFilesState } from "@/lib/agents/agentFiles";
 import {
+  createEscobarGovernedPersonalityDraft,
+  ESCOBAR_CONTROLLER_AGENT,
+} from "@/lib/agents/escobarGovernance";
+import {
   parsePersonalityFiles,
   serializePersonalityFiles,
   type PersonalityBuilderDraft,
@@ -199,5 +203,22 @@ describe("personalityBuilder", () => {
     expect(files["TOOLS.md"]).toBe("Tool conventions.");
     expect(files["HEARTBEAT.md"]).toBe("Heartbeat notes.");
     expect(files["MEMORY.md"]).toBe("Durable memory.");
+  });
+
+  it("createEscobarGovernedPersonalityDraft_adds_tiana_governance_to_new_agents", () => {
+    const draft = createEscobarGovernedPersonalityDraft({
+      name: "Merlin",
+      creature: "operations wizard",
+      vibe: "strategic",
+      emoji: "wand",
+    });
+
+    const files = serializePersonalityFiles(draft);
+
+    expect(files["AGENTS.md"]).toContain(`${ESCOBAR_CONTROLLER_AGENT} is the senior control agent`);
+    expect(files["AGENTS.md"]).toContain("New agents should use Disney-character-inspired naming");
+    expect(files["USER.md"]).toContain("America/Sao_Paulo");
+    expect(files["HEARTBEAT.md"]).toContain("00:01-06:00");
+    expect(files["MEMORY.md"]).toContain("Escobar OS / EM Marketing Digital");
   });
 });

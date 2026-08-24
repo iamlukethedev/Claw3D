@@ -239,7 +239,7 @@ describe("useGatewayConnection", () => {
       expect(captured.url).toBe("ws://localhost:3000/api/gateway/ws");
     });
     expect(captured.authScopeKey).toBe("wss://pi5.myth-coho.ts.net");
-    expect(captured.clientName).toBe("webchat-ui");
+    expect(captured.clientName).toBe("openclaw-control-ui");
   });
 
   it("keeps_control_ui_identity_for_local_openclaw_connections", async () => {
@@ -288,7 +288,7 @@ describe("useGatewayConnection", () => {
     expect(captured.clientName).toBe("openclaw-control-ui");
   });
 
-  it("does_not_auto_connect_without_a_last_known_good_state", async () => {
+  it("auto_connects_auto_managed_adapters_with_a_persisted_url", async () => {
     const { useGatewayConnection, captured } = await setupAndImportHook(null);
     const coordinator = {
       loadSettingsEnvelope: async () => ({
@@ -334,8 +334,10 @@ describe("useGatewayConnection", () => {
     await waitFor(() => {
       expect(screen.getByTestId("gatewayUrl")).toHaveTextContent("ws://localhost:18789");
     });
-    expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("yes");
-    expect(captured.url).toBeNull();
+    expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("no");
+    await waitFor(() => {
+      expect(captured.url).toBe("ws://localhost:3000/api/gateway/ws");
+    });
   });
 
   it("uses_a_small_initial_auto_connect_delay_for_hermes_and_demo_only", async () => {
@@ -357,12 +359,15 @@ describe("useGatewayConnection", () => {
     expect(mod.resolveInitialGatewayConnectAttemptCount("openclaw", true)).toBe(1);
   });
 
-  it("uses_webchat_client_id_only_for_remote_openclaw", async () => {
+  it("uses_control_ui_client_id_for_openclaw_connections", async () => {
     const mod = await import("@/lib/gateway/GatewayClient");
     expect(mod.resolveGatewayClientName("openclaw", "wss://pi5.myth-coho.ts.net")).toBe(
-      "webchat-ui"
+      "openclaw-control-ui"
     );
     expect(mod.resolveGatewayClientName("openclaw", "ws://localhost:18789")).toBe(
+      "openclaw-control-ui"
+    );
+    expect(mod.resolveGatewayClientName("openclaw", "/api/gateway/ws")).toBe(
       "openclaw-control-ui"
     );
     expect(mod.resolveGatewayClientName("hermes", "ws://localhost:18789")).toBe(
@@ -606,8 +611,10 @@ describe("useGatewayConnection", () => {
       expect(screen.getByTestId("gatewayUrl")).toHaveTextContent("ws://localhost:18789");
     });
     expect(screen.getByTestId("selectedAdapterType")).toHaveTextContent("hermes");
-    expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("yes");
-    expect(captured.url).toBeNull();
+    expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("no");
+    await waitFor(() => {
+      expect(captured.url).toBe("ws://localhost:3000/api/gateway/ws");
+    });
   });
 
   it("loads_custom_adapter_type_without_requiring_a_token", async () => {

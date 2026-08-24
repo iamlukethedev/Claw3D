@@ -121,6 +121,16 @@ const injectAuthToken = (params, token) => {
   return next;
 };
 
+const promoteToControlUi = (params) => {
+  const next = isObject(params) ? { ...params } : {};
+  const client = isObject(next.client) ? { ...next.client } : {};
+  client.id = "openclaw-control-ui";
+  next.client = client;
+  next.role = "operator";
+  next.scopes = ["operator.read", "operator.admin", "operator.approvals", "operator.pairing"];
+  return next;
+};
+
 const resolveOriginForUpstream = (upstreamUrl) => {
   const url = new URL(upstreamUrl);
   const proto = url.protocol === "wss:" ? "https:" : "http:";
@@ -228,14 +238,14 @@ function createGatewayProxy(options) {
     };
 
     const forwardConnectFrame = (frame) => {
-      const browserHasAuth =
+      const browserHasCredential =
         hasNonEmptyToken(frame.params) ||
         hasNonEmptyPassword(frame.params) ||
         hasNonEmptyDeviceToken(frame.params) ||
         hasCompleteDeviceAuth(frame.params);
 
       const requiresToken = upstreamAdapterType === "openclaw";
-      if (requiresToken && !upstreamToken && !browserHasAuth) {
+      if (requiresToken && !upstreamToken && !browserHasCredential) {
         sendConnectError(
           "studio.gateway_token_missing",
           "Upstream gateway token is not configured on the Studio host."
@@ -243,7 +253,8 @@ function createGatewayProxy(options) {
         return;
       }
 
-      const baseConnectFrame = browserHasAuth
+      const shouldInjectServerToken = requiresToken && Boolean(upstreamToken);
+      const baseConnectFrame = !shouldInjectServerToken && browserHasCredential
         ? frame
         : {
             ...frame,
@@ -253,25 +264,18 @@ function createGatewayProxy(options) {
       const connectParams = isObject(baseConnectFrame.params)
         ? { ...baseConnectFrame.params }
         : {};
-      const hasDeviceAuth = hasCompleteDeviceAuth(connectParams);
-      const client = isObject(connectParams.client) ? { ...connectParams.client } : {};
-      const clientId = typeof client.id === "string" ? client.id.trim() : "";
+      const effectiveConnectParams = shouldInjectServerToken
+        ? promoteToControlUi(connectParams)
+        : connectParams;
+      const hasDeviceAuth = hasCompleteDeviceAuth(effectiveConnectParams);
 
-      if (
-        upstreamAdapterType === "openclaw" &&
-        clientId === "openclaw-control-ui" &&
-        !hasDeviceAuth
-      ) {
-        client.id = "webchat-ui";
-        connectParams.client = client;
-        if (isObject(connectParams.device) && !hasCompleteDeviceAuth(connectParams)) {
-          delete connectParams.device;
-        }
+      if (isObject(effectiveConnectParams.device) && (shouldInjectServerToken || !hasDeviceAuth)) {
+        delete effectiveConnectParams.device;
       }
 
       const connectFrame = {
         ...baseConnectFrame,
-        params: connectParams,
+        params: effectiveConnectParams,
       };
       upstreamWs.send(JSON.stringify(connectFrame));
     };

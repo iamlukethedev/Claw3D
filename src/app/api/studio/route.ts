@@ -20,13 +20,15 @@ export async function GET() {
   try {
     const settings = loadStudioSettings();
     const localGatewayDefaults = loadLocalGatewayDefaults();
+    // This Studio is protected by the access gate. OpenClaw's challenge
+    // signature binds the auth token, so the browser needs the token before it
+    // signs the connect frame.
     return NextResponse.json(
       {
         settings: sanitizeStudioSettings(settings),
         localGatewayDefaults: sanitizeStudioGatewaySettings(localGatewayDefaults),
-        // gatewayPrivate and localGatewayDefaultsPrivate are intentionally omitted.
-        // Upstream tokens must not cross the browser API boundary — the Studio proxy
-        // (server/gateway-proxy.js) injects the server-side token into connect frames.
+        gatewayPrivate: settings.gateway,
+        localGatewayDefaultsPrivate: localGatewayDefaults,
       },
       { headers: { "Cache-Control": "no-store" } }
     );
@@ -48,11 +50,13 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Invalid settings payload." }, { status: 400 });
     }
     const settings = applyStudioSettingsPatch(body);
+    const localGatewayDefaults = loadLocalGatewayDefaults();
     return NextResponse.json(
       {
         settings: sanitizeStudioSettings(settings),
-        localGatewayDefaults: sanitizeStudioGatewaySettings(loadLocalGatewayDefaults()),
-        // gatewayPrivate intentionally omitted — see GET handler comment.
+        localGatewayDefaults: sanitizeStudioGatewaySettings(localGatewayDefaults),
+        gatewayPrivate: settings.gateway,
+        localGatewayDefaultsPrivate: localGatewayDefaults,
       },
       { headers: { "Cache-Control": "no-store" } }
     );
