@@ -25,8 +25,14 @@ export const useRuntimeConnection = (
 ): RuntimeConnectionState => {
   const gateway = useGatewayConnection(settingsCoordinator);
   const provider = useMemo(
-    () => createRuntimeProvider(gateway.activeAdapterType, gateway.client, gateway.gatewayUrl),
-    [gateway.activeAdapterType, gateway.client, gateway.gatewayUrl]
+    () =>
+      createRuntimeProvider(
+        gateway.activeAdapterType,
+        gateway.client,
+        gateway.gatewayUrl,
+        gateway.token
+      ),
+    [gateway.activeAdapterType, gateway.client, gateway.gatewayUrl, gateway.token]
   );
   const capabilities = provider.capabilities;
 

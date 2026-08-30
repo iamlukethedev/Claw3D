@@ -31,6 +31,7 @@ const PROVIDER_LABEL: Record<FloorProvider, string> = {
   custom: "Custom",
   local: "Local",
   claw3d: "Claw3D",
+  orcarouter: "OrcaRouter",
 };
 
 const renderFloorButton = (params: {

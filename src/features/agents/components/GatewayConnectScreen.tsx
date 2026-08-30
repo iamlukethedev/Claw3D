@@ -52,6 +52,7 @@ export const GatewayConnectScreen = ({
     selectedAdapterType === "demo" ||
     selectedAdapterType === "local" ||
     selectedAdapterType === "claw3d" ||
+    selectedAdapterType === "orcarouter" ||
     selectedAdapterType === "custom";
   const isLocal = useMemo(() => isLocalGatewayUrl(gatewayUrl), [gatewayUrl]);
   const localPort = useMemo(() => resolveLocalGatewayPort(gatewayUrl), [gatewayUrl]);
@@ -78,6 +79,9 @@ export const GatewayConnectScreen = ({
   };
   const useCustomPreset = () => {
     onAdapterTypeChange("custom");
+  };
+  const useOrcaRouterPreset = () => {
+    onAdapterTypeChange("orcarouter");
   };
   const useLocalPreset = () => {
     onAdapterTypeChange("local");
@@ -109,6 +113,8 @@ export const GatewayConnectScreen = ({
         return "Local runtime expects a direct HTTP runtime/orchestrator boundary, not a provider catalog.";
       case "claw3d":
         return "Claw3D runtime preserves Claw3D transcript conventions over the direct runtime seam.";
+      case "orcarouter":
+        return "OrcaRouter is a provider-native OpenAI-compatible gateway. Point it at your OrcaRouter endpoint and paste your API key as the upstream token.";
       case "custom":
       default:
         return "Custom is the generic direct runtime seam. Use it for compatible orchestrators, not for provider-specific auth flows.";
@@ -303,6 +309,13 @@ export const GatewayConnectScreen = ({
             <button
               type="button"
               className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
+              onClick={useOrcaRouterPreset}
+            >
+              OrcaRouter backend
+            </button>
+            <button
+              type="button"
+              className="ui-btn-secondary px-3 py-1.5 text-[11px] font-semibold tracking-[0.05em]"
               onClick={useCustomPreset}
             >
               Custom backend
@@ -353,6 +366,14 @@ export const GatewayConnectScreen = ({
               <span className="font-mono text-foreground"> Custom backend</span> and point the URL at
               your orchestrator or runtime boundary. These profiles already preserve separate saved URLs
               and tokens, but transport-specific chat handoff still needs a follow-up slice.
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-3">
+            <p className="text-xs font-medium text-foreground">Using OrcaRouter as your model gateway?</p>
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">
+              Choose <span className="font-mono text-foreground">OrcaRouter backend</span>, keep the
+              default <span className="font-mono text-foreground">https://api.orcarouter.ai</span> URL,
+              and paste your OrcaRouter API key as the upstream token.
             </p>
           </div>
           <div className="rounded-md border border-border bg-muted/30 px-3 py-3">

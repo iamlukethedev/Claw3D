@@ -59,6 +59,7 @@ type CustomRuntimeStateResponse = {
 
 type CustomRuntimeRegistryResponse = {
   models?: Record<string, unknown> | null;
+  data?: Array<{ id?: unknown } | null> | null;
   [key: string]: unknown;
 };
 
@@ -150,8 +151,19 @@ const isAbortLikeError = (error: unknown, controller?: AbortController | null): 
 };
 
 const normalizeModelChoices = (registry: CustomRuntimeRegistryResponse | null): string[] => {
-  if (!registry || !isRecord(registry.models)) return [];
-  return Object.keys(registry.models).map((value) => value.trim()).filter(Boolean);
+  if (!registry) return [];
+  // OpenAI-conformant catalog: { data: [{ id, ... }] }.
+  if (Array.isArray(registry.data)) {
+    const ids = registry.data
+      .map((entry) => (isRecord(entry) && typeof entry.id === "string" ? entry.id.trim() : ""))
+      .filter(Boolean);
+    if (ids.length > 0) return ids;
+  }
+  // Claw3D direct-runtime catalog: { models: { "id": ... } }.
+  if (isRecord(registry.models)) {
+    return Object.keys(registry.models).map((value) => value.trim()).filter(Boolean);
+  }
+  return [];
 };
 
 const resolveOptionalString = (value: unknown): string | null =>
@@ -241,6 +253,8 @@ export class CustomRuntimeProvider implements RuntimeProvider {
   readonly capabilities = CUSTOM_RUNTIME_CAPABILITIES;
   readonly metadata;
   private readonly baseUrl: string;
+  private readonly token: string;
+  private readonly openAIConformant: boolean;
   private readonly sessions = new Map<string, SessionRecord>();
   private readonly activeRunsByRunId = new Map<string, ActiveRunRecord>();
   private readonly activeRunIdBySessionKey = new Map<string, string>();
@@ -249,16 +263,26 @@ export class CustomRuntimeProvider implements RuntimeProvider {
     readonly client: GatewayClient,
     runtimeUrl: string,
     options?: {
-      id?: Extract<RuntimeProviderId, "custom" | "local" | "claw3d">;
+      id?: Extract<RuntimeProviderId, "custom" | "local" | "claw3d" | "orcarouter">;
       label?: string;
       runtimeName?: string;
       vendor?: string | null;
       routeProfile?: string | null;
+      /** Optional Bearer token forwarded to the upstream runtime. */
+      token?: string;
+      /**
+       * Treat the upstream as an OpenAI-conformant gateway: probe `/v1/models`
+       * for the model catalog instead of the Claw3D direct-runtime
+       * `/health` + `/state` + `/registry` triple.
+       */
+      openAIConformant?: boolean;
     }
   ) {
     this.id = options?.id ?? "custom";
     this.label = options?.label ?? "Custom";
     this.baseUrl = normalizeCustomBaseUrl(runtimeUrl);
+    this.token = options?.token ?? "";
+    this.openAIConformant = options?.openAIConformant ?? false;
     this.metadata = {
       id: this.id,
       label: this.label,
@@ -338,29 +362,38 @@ export class CustomRuntimeProvider implements RuntimeProvider {
   }
 
   async fetchRegistry(): Promise<CustomRuntimeRegistryResponse> {
-    return this.fetchJson<CustomRuntimeRegistryResponse>("/registry");
+    return this.fetchJson<CustomRuntimeRegistryResponse>(
+      this.openAIConformant ? "/v1/models" : "/registry"
+    );
   }
 
   async describeRuntime() {
-    const [health, state, registry] = await Promise.all([
-      this.fetchHealth().catch(() => null),
-      this.fetchState().catch(() => null),
-      this.fetchRegistry().catch(() => null),
+    const health = this.openAIConformant
+      ? Promise.resolve(null)
+      : this.fetchHealth().catch(() => null);
+    const state = this.openAIConformant
+      ? Promise.resolve(null)
+      : this.fetchState().catch(() => null);
+    const registry = this.fetchRegistry().catch(() => null);
+    const [healthResult, stateResult, registryResult] = await Promise.all([
+      health,
+      state,
+      registry,
     ]);
 
-    const routeProfile = resolveRouteProfile(state);
+    const routeProfile = resolveRouteProfile(stateResult);
     const runtimeName =
-      typeof state?.runtime?.name === "string" && state.runtime.name.trim()
-        ? state.runtime.name.trim()
+      typeof stateResult?.runtime?.name === "string" && stateResult.runtime.name.trim()
+        ? stateResult.runtime.name.trim()
         : this.metadata.runtimeName;
     const runtimeVersion =
-      typeof state?.runtime?.version === "string" && state.runtime.version.trim()
-        ? state.runtime.version.trim()
+      typeof stateResult?.runtime?.version === "string" && stateResult.runtime.version.trim()
+        ? stateResult.runtime.version.trim()
         : null;
     const vendor =
-      typeof state?.runtime?.vendor === "string" && state.runtime.vendor.trim()
-        ? state.runtime.vendor.trim()
-        : null;
+      typeof stateResult?.runtime?.vendor === "string" && stateResult.runtime.vendor.trim()
+        ? stateResult.runtime.vendor.trim()
+        : this.metadata.vendor;
 
     return {
       metadata: {
@@ -370,9 +403,9 @@ export class CustomRuntimeProvider implements RuntimeProvider {
         vendor,
         routeProfile,
       },
-      health,
-      state,
-      registry,
+      health: healthResult,
+      state: stateResult,
+      registry: registryResult,
     };
   }
 
@@ -533,6 +566,7 @@ export class CustomRuntimeProvider implements RuntimeProvider {
         pathname: "/v1/chat/completions",
         method: "POST",
         signal: controller.signal,
+        token: this.token,
         body: {
           model: session.model ?? undefined,
           stream: false,
@@ -710,6 +744,6 @@ export class CustomRuntimeProvider implements RuntimeProvider {
   }
 
   private async fetchJson<T = unknown>(pathname: string): Promise<T> {
-    return fetchCustomRuntimeJson<T>(this.baseUrl, pathname);
+    return fetchCustomRuntimeJson<T>(this.baseUrl, pathname, this.token);
   }
 }

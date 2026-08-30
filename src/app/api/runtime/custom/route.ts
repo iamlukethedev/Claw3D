@@ -7,6 +7,7 @@ type CustomRuntimeRequestBody = {
   pathname?: string;
   method?: string;
   body?: unknown;
+  token?: string;
 };
 
 const isRuntimeUrlAllowed = (runtimeUrl: string): boolean => {
@@ -84,12 +85,14 @@ export async function POST(request: Request) {
     const runtimeUrl = normalizeRuntimeUrl(payload.runtimeUrl ?? "");
     const pathname = normalizePathname(payload.pathname);
     const method = normalizeMethod(payload.method);
+    const token = typeof payload.token === "string" ? payload.token.trim() : "";
     // Propagate the browser abort signal so that cancelling the client-side fetch
     // (e.g. hitting Stop) also cancels the upstream runtime request.
     const response = await fetch(`${runtimeUrl}${pathname}`, {
       method,
       headers: {
         Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : null),
         ...(method === "POST" ? { "Content-Type": "application/json" } : null),
       },
       body: method === "POST" ? JSON.stringify(payload.body ?? {}) : undefined,

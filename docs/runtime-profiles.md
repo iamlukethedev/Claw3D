@@ -9,6 +9,7 @@ Claw3D now treats runtime backends as named saved profiles instead of one global
 - `demo`
 - `local`
 - `claw3d`
+- `orcarouter`
 - `custom`
 
 Each profile keeps its own saved URL and token in Studio settings.
@@ -71,6 +72,22 @@ Typical URL:
 http://localhost:3000/api/runtime/custom
 ```
 
+### `orcarouter`
+
+A provider-native OpenAI-compatible gateway profile for [OrcaRouter](https://www.orcarouter.ai).
+
+OrcaRouter exposes a provider/model namespace across many models behind a single
+endpoint, combined with adaptive routing, automatic failover, observability, and
+guardrails. Claw3D treats it as a named backend rather than an anonymous custom
+base URL: the connect flow probes `/v1/models` and the upstream token is
+forwarded as a Bearer token on every request.
+
+Typical URL:
+
+```text
+https://api.orcarouter.ai
+```
+
 ### `custom`
 
 The generic HTTP runtime seam when you want to point Claw3D at any compatible orchestrator boundary.
@@ -91,6 +108,11 @@ The direct runtime seam currently probes for:
 - `POST /v1/chat/completions`
 
 That means `local`, `claw3d`, and `custom` are first-class saved profiles today.
+
+`orcarouter` is a first-class saved profile as well, but it speaks the
+OpenAI-conformant transport instead of the Claw3D direct-runtime triple: it
+probes `GET /v1/models` and chats over `POST /v1/chat/completions`, with the
+saved upstream token forwarded as a `Bearer` token.
 
 On top of the normal chat/session calls, runtime providers now expose a shared multi-agent message seam:
 

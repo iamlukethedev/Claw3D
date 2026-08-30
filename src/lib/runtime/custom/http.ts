@@ -20,6 +20,8 @@ type CustomRuntimeProxyInput = {
   method?: "GET" | "POST";
   body?: unknown;
   signal?: AbortSignal;
+  /** Optional Bearer token forwarded to the upstream runtime by the proxy. */
+  token?: string;
 };
 
 export async function requestCustomRuntime<T = unknown>({
@@ -28,6 +30,7 @@ export async function requestCustomRuntime<T = unknown>({
   method = "GET",
   body,
   signal,
+  token,
 }: CustomRuntimeProxyInput): Promise<T> {
   const normalizedRuntimeUrl = normalizeCustomBaseUrl(runtimeUrl);
   if (!normalizedRuntimeUrl) {
@@ -46,6 +49,7 @@ export async function requestCustomRuntime<T = unknown>({
       pathname,
       method,
       body,
+      ...(token ? { token } : {}),
     }),
   });
   if (!response.ok) {
@@ -64,11 +68,20 @@ export async function requestCustomRuntime<T = unknown>({
 
 export async function fetchCustomRuntimeJson<T = unknown>(
   runtimeUrl: string,
-  pathname: string
+  pathname: string,
+  token?: string
 ): Promise<T> {
-  return requestCustomRuntime<T>({ runtimeUrl, pathname, method: "GET" });
+  return requestCustomRuntime<T>({ runtimeUrl, pathname, method: "GET", token });
 }
 
 export async function probeCustomRuntime(runtimeUrl: string): Promise<void> {
   await fetchCustomRuntimeJson(runtimeUrl, "/health");
+}
+
+/** Probe an OpenAI-compatible remote gateway (e.g. OrcaRouter) via its model catalog. */
+export async function probeOpenAIConformantRuntime(
+  runtimeUrl: string,
+  token?: string
+): Promise<void> {
+  await fetchCustomRuntimeJson(runtimeUrl, "/v1/models", token);
 }

@@ -9,7 +9,8 @@ import type { StudioGatewayAdapterType } from "@/lib/studio/settings";
 export const createRuntimeProvider = (
   providerId: RuntimeProvider["id"] | StudioGatewayAdapterType,
   client: GatewayClient,
-  runtimeUrl: string
+  runtimeUrl: string,
+  token?: string
 ): RuntimeProvider => {
   switch (providerId) {
     case "local":
@@ -25,6 +26,16 @@ export const createRuntimeProvider = (
         label: "Claw3D Runtime",
         runtimeName: "Claw3D Runtime",
         routeProfile: "claw3d",
+      });
+    case "orcarouter":
+      return new CustomRuntimeProvider(client, runtimeUrl, {
+        id: "orcarouter",
+        label: "OrcaRouter",
+        runtimeName: "OrcaRouter",
+        vendor: "orcarouter",
+        routeProfile: "orcarouter",
+        token,
+        openAIConformant: true,
       });
     case "custom":
       return new CustomRuntimeProvider(client, runtimeUrl, {
