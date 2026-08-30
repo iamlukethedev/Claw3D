@@ -5,7 +5,8 @@ export type FloorProvider =
   | "custom"
   | "demo"
   | "local"
-  | "claw3d";
+  | "claw3d"
+  | "orcarouter";
 export type FloorZone = "building" | "outside";
 
 export type FloorId =
@@ -14,6 +15,7 @@ export type FloorId =
   | "hermes-first"
   | "local-runtime"
   | "claw3d-runtime"
+  | "orcarouter-floor"
   | "custom-second"
   | "training"
   | "traders-floor"
@@ -88,6 +90,17 @@ export const OFFICE_FLOORS: readonly FloorDefinition[] = [
     enabled: true,
     sortOrder: 28,
     runtimeProfileId: "claw3d-default",
+  },
+  {
+    id: "orcarouter-floor",
+    label: "OrcaRouter Floor",
+    shortLabel: "OrcaRouter",
+    provider: "orcarouter",
+    kind: "runtime",
+    zone: "building",
+    enabled: true,
+    sortOrder: 29,
+    runtimeProfileId: "orcarouter-default",
   },
   {
     id: "custom-second",

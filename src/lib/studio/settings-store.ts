@@ -77,6 +77,7 @@ const normalizeAdapterType = (value: string | undefined): StudioGatewayAdapterTy
     normalized === "demo" ||
     normalized === "local" ||
     normalized === "claw3d" ||
+    normalized === "orcarouter" ||
     normalized === "custom"
   ) {
     return normalized;

@@ -37,7 +37,10 @@ const gatewayDebugLog = (message: string, details?: Record<string, unknown>) => 
   }
   console.info("[gateway-client]", message);
 };
-import { probeCustomRuntime } from "@/lib/runtime/custom/http";
+import {
+  probeCustomRuntime,
+  probeOpenAIConformantRuntime,
+} from "@/lib/runtime/custom/http";
 
 export type ReqFrame = {
   type: "req";
@@ -187,6 +190,7 @@ const normalizeLocalGatewayDefaults = (value: unknown): StudioGatewaySettings | 
     raw.adapterType === "openclaw" ||
     raw.adapterType === "local" ||
     raw.adapterType === "claw3d" ||
+    raw.adapterType === "orcarouter" ||
     raw.adapterType === "custom"
       ? raw.adapterType
       : "openclaw";
@@ -210,7 +214,7 @@ const normalizeGatewayProfilesPublic = (
   if (!value || typeof value !== "object") return undefined;
   const raw = value as Partial<Record<StudioGatewayAdapterType, StudioGatewayProfilePublic>>;
   const profiles: Partial<Record<StudioGatewayAdapterType, { url: string; token: string }>> = {};
-  for (const adapterType of ["openclaw", "hermes", "demo", "local", "claw3d", "custom"] as const) {
+  for (const adapterType of ["openclaw", "hermes", "demo", "local", "claw3d", "orcarouter", "custom"] as const) {
     const profile = normalizeGatewayProfilePublic(raw[adapterType]);
     if (profile) {
       profiles[adapterType] = profile;
@@ -892,12 +896,17 @@ export const useGatewayConnection = (
     if (
       selectedAdapterType === "custom" ||
       selectedAdapterType === "local" ||
-      selectedAdapterType === "claw3d"
+      selectedAdapterType === "claw3d" ||
+      selectedAdapterType === "orcarouter"
     ) {
       setStatus("connecting");
       try {
         await settingsCoordinator.flushPending();
-        await probeCustomRuntime(gatewayUrl);
+        if (selectedAdapterType === "orcarouter") {
+          await probeOpenAIConformantRuntime(gatewayUrl, token);
+        } else {
+          await probeCustomRuntime(gatewayUrl);
+        }
         setDetectedAdapterType(selectedAdapterType);
         setStatus("connected");
         setConnectErrorCode(null);
@@ -1190,7 +1199,8 @@ export const useGatewayConnection = (
     if (
       selectedAdapterType === "custom" ||
       selectedAdapterType === "local" ||
-      selectedAdapterType === "claw3d"
+      selectedAdapterType === "claw3d" ||
+      selectedAdapterType === "orcarouter"
     ) {
       setStatus("disconnected");
       return;
@@ -1213,6 +1223,7 @@ export const useGatewayConnection = (
     (selectedAdapterType === "custom" ||
       selectedAdapterType === "local" ||
       selectedAdapterType === "claw3d" ||
+      selectedAdapterType === "orcarouter" ||
       !hasLastKnownGoodState ||
       !(gatewayUrl ?? "").trim() ||
       (selectedAdapterType === "openclaw" && !(token ?? "").trim()) ||

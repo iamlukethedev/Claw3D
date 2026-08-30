@@ -37,6 +37,7 @@ export type StudioGatewayAdapterType =
   | "demo"
   | "local"
   | "claw3d"
+  | "orcarouter"
   | "custom";
 export const STUDIO_GATEWAY_ADAPTER_TYPES = [
   "openclaw",
@@ -44,6 +45,7 @@ export const STUDIO_GATEWAY_ADAPTER_TYPES = [
   "demo",
   "local",
   "claw3d",
+  "orcarouter",
   "custom",
 ] as const;
 
@@ -285,6 +287,7 @@ const DEFAULT_OPENCLAW_GATEWAY_URL = "ws://localhost:18789";
 const DEFAULT_LOCAL_ADAPTER_GATEWAY_URL = "ws://localhost:18789";
 const DEFAULT_LOCAL_RUNTIME_URL = "http://localhost:7770";
 const DEFAULT_CLAW3D_RUNTIME_URL = "http://localhost:3000/api/runtime/custom";
+const DEFAULT_ORCAROUTER_URL = "https://api.orcarouter.ai";
 const DEFAULT_CUSTOM_RUNTIME_URL = "http://localhost:7770";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -817,6 +820,7 @@ const normalizeGatewayProfiles = (
     "demo",
     "local",
     "claw3d",
+    "orcarouter",
     "custom",
   ] as const) {
     const normalized = normalizeGatewayProfile(value[adapterType]);
@@ -884,6 +888,7 @@ const mergeGatewayProfiles = (
     "demo",
     "local",
     "claw3d",
+    "orcarouter",
     "custom",
   ] as const) {
     const profilePatch = patch[adapterType];
@@ -941,6 +946,7 @@ const normalizeGatewayAdapterType = (
     adapterType === "openclaw" ||
     adapterType === "local" ||
     adapterType === "claw3d" ||
+    adapterType === "orcarouter" ||
     adapterType === "custom"
   ) {
     return adapterType;
@@ -972,6 +978,8 @@ export const resolveDefaultStudioGatewayProfile = (
       return { url: DEFAULT_CLAW3D_RUNTIME_URL, token: "" };
     case "local":
       return { url: DEFAULT_LOCAL_RUNTIME_URL, token: "" };
+    case "orcarouter":
+      return { url: DEFAULT_ORCAROUTER_URL, token: "" };
     case "custom":
       return { url: DEFAULT_CUSTOM_RUNTIME_URL, token: "" };
     case "hermes":

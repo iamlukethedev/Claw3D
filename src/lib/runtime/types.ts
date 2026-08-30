@@ -35,6 +35,7 @@ export type RuntimeProviderId =
   | "demo"
   | "local"
   | "claw3d"
+  | "orcarouter"
   | "custom";
 
 export type RuntimeProviderMetadata = {
