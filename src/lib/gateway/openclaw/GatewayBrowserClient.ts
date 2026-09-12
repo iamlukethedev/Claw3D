@@ -648,6 +648,7 @@ export class GatewayBrowserClient {
         const nonce = payload && typeof payload.nonce === "string" ? payload.nonce : null;
         if (nonce) {
           this.connectNonce = nonce;
+          this.connectSent = false;
           void this.sendConnect();
         }
         return;
@@ -721,7 +722,10 @@ export class GatewayBrowserClient {
       !this.opts.disableDeviceAuth &&
       typeof crypto !== "undefined" &&
       !!crypto.subtle;
-    const delayMs = expectChallenge ? 5_000 : 75;
+    // Hermes (disableDeviceAuth) still emits connect.challenge. A 75ms fallback
+    // often sends connect before the nonce arrives through the Studio proxy,
+    // after which sendConnect() no-ops and hello-ok never lands.
+    const delayMs = expectChallenge || this.opts.disableDeviceAuth ? 5_000 : 75;
     gatewayBrowserDebugLog("queue-connect", { delayMs });
     this.connectTimer = window.setTimeout(() => {
       void this.sendConnect();

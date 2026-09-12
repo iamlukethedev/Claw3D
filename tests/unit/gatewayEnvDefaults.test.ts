@@ -198,4 +198,55 @@ describe("loadLocalGatewayDefaults with CLAW3D_GATEWAY_URL", () => {
       },
     });
   });
+
+  it("does not inherit an OpenClaw token when persisted Studio settings are Hermes", async () => {
+    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw3d-hermes-settings-"));
+    process.env.OPENCLAW_STATE_DIR = stateDir;
+    delete process.env.CLAW3D_GATEWAY_URL;
+    delete process.env.CLAW3D_GATEWAY_TOKEN;
+    delete process.env.CLAW3D_GATEWAY_ADAPTER_TYPE;
+    delete process.env.HERMES_ADAPTER_PORT;
+
+    fs.mkdirSync(path.join(stateDir, "claw3d"), { recursive: true });
+    fs.writeFileSync(
+      path.join(stateDir, "claw3d", "settings.json"),
+      JSON.stringify({
+        version: 1,
+        gateway: {
+          url: "ws://127.0.0.1:18790",
+          token: "",
+          adapterType: "hermes",
+          profiles: {
+            hermes: { url: "ws://127.0.0.1:18790", token: "" },
+            openclaw: { url: "ws://127.0.0.1:18789", token: "file-token" },
+          },
+        },
+      }),
+      "utf8"
+    );
+    fs.writeFileSync(
+      path.join(stateDir, "openclaw.json"),
+      JSON.stringify({
+        gateway: {
+          port: 18789,
+          auth: { token: "file-token" },
+        },
+      }),
+      "utf8"
+    );
+
+    const { loadStudioSettings } = await import("../../src/lib/studio/settings-store");
+    const settings = loadStudioSettings();
+    expect(settings.gateway).toEqual(
+      expect.objectContaining({
+        url: "ws://localhost:18790",
+        token: "",
+        adapterType: "hermes",
+        profiles: {
+          hermes: { url: "ws://localhost:18790", token: "" },
+          openclaw: { url: "ws://localhost:18789", token: "file-token" },
+        },
+      })
+    );
+  });
 });

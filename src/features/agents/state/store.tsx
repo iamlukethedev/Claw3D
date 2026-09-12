@@ -274,6 +274,15 @@ const reducer = (state: AgentStoreState, action: Action): AgentStoreState => {
               agents.some((agent) => agent.agentId === state.selectedAgentId)
           ? state.selectedAgentId
           : agents[0]?.agentId ?? null;
+      if (
+        agents.length === 0 &&
+        state.agents.length === 0 &&
+        selectedAgentId === state.selectedAgentId &&
+        state.loading === false &&
+        state.error === null
+      ) {
+        return state;
+      }
       return {
         ...state,
         agents,
@@ -283,8 +292,10 @@ const reducer = (state: AgentStoreState, action: Action): AgentStoreState => {
       };
     }
     case "setError":
+      if (state.error === action.error && state.loading === false) return state;
       return { ...state, error: action.error, loading: false };
     case "setLoading":
+      if (state.loading === action.loading) return state;
       return { ...state, loading: action.loading };
     case "updateAgent":
       return {

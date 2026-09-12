@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
 import { AgentStoreProvider } from "@/features/agents/state/store";
-import { OfficeScreen } from "@/features/office/screens/OfficeScreen";
+import { OfficeGatewayGate } from "@/features/office/screens/OfficeGatewayGate";
 
 const ENABLED_RE = /^(1|true|yes|on)$/i;
 
@@ -36,7 +36,7 @@ export default function OfficePage() {
   return (
     <AgentStoreProvider>
       <Suspense fallback={<OfficeLoadingFallback />}>
-        <OfficeScreen showOpenClawConsole={showOpenClawConsole} />
+        <OfficeGatewayGate showOpenClawConsole={showOpenClawConsole} />
       </Suspense>
     </AgentStoreProvider>
   );

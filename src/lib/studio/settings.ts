@@ -282,6 +282,7 @@ export type StudioSettingsPatch = {
 
 const SETTINGS_VERSION = 1 as const;
 const DEFAULT_OPENCLAW_GATEWAY_URL = "ws://localhost:18789";
+const DEFAULT_HERMES_GATEWAY_URL = "ws://127.0.0.1:18790";
 const DEFAULT_LOCAL_ADAPTER_GATEWAY_URL = "ws://localhost:18789";
 const DEFAULT_LOCAL_RUNTIME_URL = "http://localhost:7770";
 const DEFAULT_CLAW3D_RUNTIME_URL = "http://localhost:3000/api/runtime/custom";
@@ -975,6 +976,10 @@ export const resolveDefaultStudioGatewayProfile = (
     case "custom":
       return { url: DEFAULT_CUSTOM_RUNTIME_URL, token: "" };
     case "hermes":
+      return {
+        url: normalizeGatewayUrl(DEFAULT_HERMES_GATEWAY_URL) || DEFAULT_HERMES_GATEWAY_URL,
+        token: "",
+      };
     case "demo":
       return { url: DEFAULT_LOCAL_ADAPTER_GATEWAY_URL, token: "" };
     case "openclaw":
@@ -1004,7 +1009,7 @@ export const resolveStudioGatewayProfiles = ({
   if (gateway?.url?.trim()) {
     profiles[selectedAdapterType] = {
       url: gateway.url,
-      token: gateway.token ?? "",
+      token: selectedAdapterType === "openclaw" ? (gateway.token ?? "") : "",
     };
   }
 
@@ -1014,7 +1019,8 @@ export const resolveStudioGatewayProfiles = ({
   if (!profiles[selectedAdapterType] && lastKnownGoodForSelected?.url) {
     profiles[selectedAdapterType] = {
       url: lastKnownGoodForSelected.url,
-      token: lastKnownGoodForSelected.token ?? "",
+      token:
+        selectedAdapterType === "openclaw" ? (lastKnownGoodForSelected.token ?? "") : "",
     };
   }
 
@@ -1022,6 +1028,16 @@ export const resolveStudioGatewayProfiles = ({
     if (profiles[adapterType]?.url) continue;
     profiles[adapterType] = resolveDefaultStudioGatewayProfile(adapterType, localDefaults);
   }
+
+  if (profiles.hermes) {
+    profiles.hermes = { url: profiles.hermes.url, token: "" };
+  }
+
+  separateCrossContaminatedGatewayProfiles({
+    profiles,
+    selectedAdapterType,
+    gateway,
+  });
 
   return {
     selectedAdapterType,
@@ -1031,6 +1047,54 @@ export const resolveStudioGatewayProfiles = ({
     profiles,
     lastKnownGoodForSelected,
   };
+};
+
+const separateCrossContaminatedGatewayProfiles = ({
+  profiles,
+  selectedAdapterType,
+  gateway,
+}: {
+  profiles: Partial<Record<StudioGatewayAdapterType, StudioGatewayProfile>>;
+  selectedAdapterType: StudioGatewayAdapterType;
+  gateway: StudioGatewaySettings | null;
+}) => {
+  const hermes = profiles.hermes;
+  const openclaw = profiles.openclaw;
+  if (!hermes?.url || !openclaw?.url) return;
+
+  const hermesUrl = normalizeGatewayUrl(hermes.url) || hermes.url;
+  const openclawUrl = normalizeGatewayUrl(openclaw.url) || openclaw.url;
+  if (hermesUrl !== openclawUrl) return;
+
+  const explicitProfiles = gateway?.profiles ?? {};
+  const hermesExplicit = Boolean(explicitProfiles.hermes?.url) ||
+    (selectedAdapterType === "hermes" && Boolean(gateway?.url?.trim()));
+  const openclawExplicit = Boolean(explicitProfiles.openclaw?.url) ||
+    (selectedAdapterType === "openclaw" && Boolean(gateway?.url?.trim()));
+  if (!hermesExplicit || !openclawExplicit) return;
+
+  const hermesDefault =
+    normalizeGatewayUrl(DEFAULT_HERMES_GATEWAY_URL) || DEFAULT_HERMES_GATEWAY_URL;
+  const openclawDefault = DEFAULT_OPENCLAW_GATEWAY_URL;
+
+  if (hermesUrl === hermesDefault) {
+    profiles.openclaw = { url: openclawDefault, token: openclaw.token ?? "" };
+    profiles.hermes = { url: hermesUrl, token: "" };
+    return;
+  }
+
+  if (hermesUrl === openclawDefault) {
+    profiles.hermes = { url: hermesDefault, token: "" };
+    return;
+  }
+
+  if (selectedAdapterType === "hermes") {
+    profiles.openclaw = { url: openclawDefault, token: openclaw.token ?? "" };
+    profiles.hermes = { url: hermesUrl, token: "" };
+    return;
+  }
+
+  profiles.hermes = { url: hermesDefault, token: "" };
 };
 
 const normalizeFocused = (value: unknown): Record<string, StudioFocusedPreference> => {

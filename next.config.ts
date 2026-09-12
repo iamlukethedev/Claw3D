@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 
+const embedOrigin = process.env.CLAW3D_EMBED_ORIGIN?.trim();
+
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
@@ -8,7 +10,7 @@ const securityHeaders = [
       "default-src 'self'",
       "base-uri 'self'",
       "form-action 'self'",
-      "frame-ancestors 'self'",
+      `frame-ancestors 'self'${embedOrigin ? ` ${embedOrigin}` : ""}`,
       "img-src 'self' data: blob: http: https:",
       "font-src 'self' data: https:",
       "style-src 'self' 'unsafe-inline' https:",
@@ -35,18 +37,20 @@ const securityHeaders = [
     key: "X-Content-Type-Options",
     value: "nosniff",
   },
-  {
-    key: "X-Frame-Options",
-    value: "SAMEORIGIN",
-  },
+  ...(!embedOrigin
+    ? [{ key: "X-Frame-Options", value: "SAMEORIGIN" }]
+    : []),
   {
     key: "Permissions-Policy",
     value: "camera=(), microphone=(self), geolocation=(), browsing-topics=()",
   },
   {
     key: "Cross-Origin-Resource-Policy",
-    value: "same-origin",
+    value: embedOrigin ? "cross-origin" : "same-origin",
   },
+  ...(embedOrigin
+    ? [{ key: "Cross-Origin-Embedder-Policy", value: "credentialless" }]
+    : []),
 ];
 
 if (process.env.NODE_ENV === "production") {

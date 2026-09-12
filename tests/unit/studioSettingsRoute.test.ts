@@ -158,4 +158,55 @@ describe("studio settings route", () => {
       }),
     );
   });
+
+  it("GET does not mark Hermes as token-configured from openclaw.json", async () => {
+    tempDir = makeTempDir("studio-settings-get-hermes-tokenless");
+    process.env.OPENCLAW_STATE_DIR = tempDir;
+    fs.mkdirSync(path.join(tempDir, "claw3d"), { recursive: true });
+    fs.writeFileSync(
+      path.join(tempDir, "claw3d", "settings.json"),
+      JSON.stringify({
+        version: 1,
+        gateway: {
+          url: "ws://127.0.0.1:18790",
+          token: "",
+          adapterType: "hermes",
+          profiles: {
+            hermes: { url: "ws://127.0.0.1:18790", token: "" },
+            openclaw: { url: "ws://127.0.0.1:18789", token: "local-token" },
+          },
+        },
+      }),
+      null,
+      2
+    );
+    fs.writeFileSync(
+      path.join(tempDir, "openclaw.json"),
+      JSON.stringify({ gateway: { port: 18789, auth: { token: "local-token" } } }, null, 2),
+      "utf8"
+    );
+
+    const response = await GET();
+    const body = (await response.json()) as {
+      settings?: {
+        gateway?: {
+          url?: string;
+          tokenConfigured?: boolean;
+          adapterType?: string;
+          profiles?: Record<string, { url?: string; tokenConfigured?: boolean }>;
+        } | null;
+      };
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.settings?.gateway).toEqual({
+      url: "ws://localhost:18790",
+      tokenConfigured: false,
+      adapterType: "hermes",
+      profiles: {
+        hermes: { url: "ws://localhost:18790", tokenConfigured: false },
+        openclaw: { url: "ws://localhost:18789", tokenConfigured: true },
+      },
+    });
+  });
 });

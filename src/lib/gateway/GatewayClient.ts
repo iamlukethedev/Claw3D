@@ -280,6 +280,10 @@ export class GatewayClient {
       throw new Error("Gateway URL is required.");
     }
     if (this.client) {
+      if (this.pendingConnect) return this.pendingConnect;
+      if (this.status === "connected" || this.status === "connecting") {
+        return;
+      }
       throw new Error("Gateway is already connected or connecting.");
     }
 
@@ -867,7 +871,6 @@ export const useGatewayConnection = (
         clearTimeout(retryTimerRef.current);
         retryTimerRef.current = null;
       }
-      client.disconnect();
     };
   }, [client]);
 
@@ -927,7 +930,13 @@ export const useGatewayConnection = (
       for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
         try {
           await client.connect({
-            gatewayUrl: resolveStudioProxyGatewayUrl(),
+            // Hermes is tokenless on loopback; use the upstream socket so the
+            // handshake does not sit behind the Studio page's HTTP/1.1 + HMR
+            // connection budget. OpenClaw still goes through the same-origin
+            // proxy so the server can inject the upstream token.
+            gatewayUrl: resolveStudioProxyGatewayUrl(
+              selectedAdapterType === "hermes" ? gatewayUrl : undefined,
+            ),
             token,
             authScopeKey: gatewayUrl,
             clientName: resolveGatewayClientName(selectedAdapterType, gatewayUrl),
@@ -1000,7 +1009,6 @@ export const useGatewayConnection = (
     if (!hasLastKnownGoodState) return;
     if (!gatewayUrl.trim()) return;
     if (!isAutoManagedAdapter(selectedAdapterType)) return;
-    didAutoConnect.current = true;
     const delayMs = resolveInitialGatewayAutoConnectDelayMs(selectedAdapterType);
     gatewayDebugLog("auto-connect", {
       selectedAdapterType,
@@ -1009,6 +1017,8 @@ export const useGatewayConnection = (
     });
     autoConnectTimerRef.current = window.setTimeout(() => {
       autoConnectTimerRef.current = null;
+      if (didAutoConnect.current) return;
+      didAutoConnect.current = true;
       void connect();
     }, delayMs);
     return () => {

@@ -437,6 +437,71 @@ describe("studio settings normalization", () => {
       url: "ws://localhost:18789",
       token: "",
     });
+    expect(resolveDefaultStudioGatewayProfile("hermes", null)).toEqual({
+      url: "ws://localhost:18790",
+      token: "",
+    });
+    expect(resolveDefaultStudioGatewayProfile("openclaw", null)).toEqual({
+      url: "ws://localhost:18789",
+      token: "",
+    });
+  });
+
+  it("does not copy an OpenClaw token onto the Hermes profile", () => {
+    const resolved = resolveStudioGatewayProfiles({
+      gateway: normalizeStudioSettings({
+        gateway: {
+          url: "ws://127.0.0.1:18790",
+          token: "openclaw-token",
+          adapterType: "hermes",
+          profiles: {
+            openclaw: { url: "ws://localhost:18789", token: "openclaw-token" },
+          },
+        },
+      }).gateway,
+      localDefaults: null,
+    });
+
+    expect(resolved.selectedAdapterType).toBe("hermes");
+    expect(resolved.activeProfile).toEqual({
+      url: "ws://localhost:18790",
+      token: "",
+    });
+    expect(resolved.profiles.hermes).toEqual({
+      url: "ws://localhost:18790",
+      token: "",
+    });
+    expect(resolved.profiles.openclaw).toEqual({
+      url: "ws://localhost:18789",
+      token: "openclaw-token",
+    });
+  });
+
+  it("splits Hermes and OpenClaw profiles that were persisted on the same local adapter port", () => {
+    const resolved = resolveStudioGatewayProfiles({
+      gateway: normalizeStudioSettings({
+        gateway: {
+          url: "ws://localhost:18790",
+          token: "",
+          adapterType: "hermes",
+          profiles: {
+            hermes: { url: "ws://localhost:18790", token: "leftover" },
+            openclaw: { url: "ws://localhost:18790", token: "open-token" },
+          },
+        },
+      }).gateway,
+      localDefaults: null,
+    });
+
+    expect(resolved.selectedAdapterType).toBe("hermes");
+    expect(resolved.profiles.hermes).toEqual({
+      url: "ws://localhost:18790",
+      token: "",
+    });
+    expect(resolved.profiles.openclaw).toEqual({
+      url: "ws://localhost:18789",
+      token: "open-token",
+    });
   });
 
   it("merging lastKnownGood with an empty-string token does not overwrite a stored token", () => {

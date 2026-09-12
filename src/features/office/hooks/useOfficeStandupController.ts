@@ -133,8 +133,9 @@ export type OfficeStandupController = {
 export const useOfficeStandupController = (params: {
   gatewayUrl: string;
   agents: StandupAgentSnapshot[];
+  enabled?: boolean;
 }): OfficeStandupController => {
-  const { gatewayUrl, agents } = params;
+  const { gatewayUrl, agents, enabled = true } = params;
   const [config, setConfig] = useState<StudioStandupPreferencePublic | null>(null);
   const [meeting, setMeeting] = useState<StandupMeeting | null>(null);
   const [loading, setLoading] = useState(true);
@@ -186,6 +187,7 @@ export const useOfficeStandupController = (params: {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
     setLoading(true);
     Promise.all([refreshConfig({ allowHidden: true }), refreshMeeting({ allowHidden: true })])
@@ -202,9 +204,10 @@ export const useOfficeStandupController = (params: {
     return () => {
       cancelled = true;
     };
-  }, [refreshConfig, refreshMeeting]);
+  }, [enabled, refreshConfig, refreshMeeting]);
 
   useEffect(() => {
+    if (!enabled) return;
     const intervalId = window.setInterval(() => {
       if (!pageVisible()) return;
       void refreshMeeting().catch((err) => {
@@ -216,9 +219,10 @@ export const useOfficeStandupController = (params: {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [meeting, refreshMeeting]);
+  }, [enabled, meeting, refreshMeeting]);
 
   useEffect(() => {
+    if (!enabled) return;
     const handleVisibilityOrFocus = () => {
       if (!pageVisible()) return;
       void Promise.all([refreshConfig(), refreshMeeting()]).catch((err) => {
@@ -233,7 +237,7 @@ export const useOfficeStandupController = (params: {
       window.removeEventListener("focus", handleVisibilityOrFocus);
       document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
     };
-  }, [refreshConfig, refreshMeeting]);
+  }, [enabled, refreshConfig, refreshMeeting]);
 
   const saveConfig = useCallback(
     async (patch: StudioStandupPreferencePatch) => {
@@ -413,17 +417,32 @@ export const useOfficeStandupController = (params: {
     [config?.schedule.autoOpenBoard]
   );
 
-  return {
-    config,
-    meeting,
-    loading,
-    saving,
-    error,
-    saveConfig,
-    updateManualEntry,
-    startMeeting,
-    reportArrivals,
-    openBoardByDefault,
-    refreshMeeting,
-  };
+  return useMemo(
+    () => ({
+      config,
+      meeting,
+      loading,
+      saving,
+      error,
+      saveConfig,
+      updateManualEntry,
+      startMeeting,
+      reportArrivals,
+      openBoardByDefault,
+      refreshMeeting,
+    }),
+    [
+      config,
+      error,
+      loading,
+      meeting,
+      openBoardByDefault,
+      refreshMeeting,
+      reportArrivals,
+      saveConfig,
+      saving,
+      startMeeting,
+      updateManualEntry,
+    ],
+  );
 };

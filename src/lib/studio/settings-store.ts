@@ -176,22 +176,33 @@ export const loadStudioSettings = (): StudioSettings => {
   const raw = fs.readFileSync(settingsPath, "utf8");
   const parsed = JSON.parse(raw) as unknown;
   const settings = normalizeStudioSettings(parsed);
-  if (!settings.gateway?.token) {
-    const gateway = loadLocalGatewayDefaults();
-    if (gateway) {
-      return {
-        ...settings,
-        gateway: settings.gateway?.url?.trim()
-          ? {
-              url: settings.gateway.url.trim(),
-              token: gateway.token,
-              adapterType: settings.gateway.adapterType,
-            }
-          : gateway,
-      };
-    }
+  const adapterType = settings.gateway?.adapterType ?? "openclaw";
+  if (adapterType !== "openclaw" || settings.gateway?.token) {
+    return settings;
   }
-  return settings;
+  const gateway = loadLocalGatewayDefaults();
+  if (!gateway?.token) {
+    return settings;
+  }
+  if (!settings.gateway?.url?.trim()) {
+    return {
+      ...settings,
+      gateway,
+    };
+  }
+  return {
+    ...settings,
+    gateway: {
+      ...settings.gateway,
+      url: settings.gateway.url.trim(),
+      token: gateway.token,
+      adapterType,
+      profiles: {
+        ...(gateway.profiles ?? {}),
+        ...(settings.gateway.profiles ?? {}),
+      },
+    },
+  };
 };
 
 export const saveStudioSettings = (next: StudioSettings) => {

@@ -2636,13 +2636,10 @@ export function RetroOffice3D({
   );
   const canvasResetKey = useMemo(
     () =>
-      [
-        remoteOfficeEnabled ? "remote" : "local",
-        gatewayStatus ?? "unknown",
-        String(agents.length),
-        String(officeCenterSignal),
-      ].join(":"),
-    [agents.length, gatewayStatus, officeCenterSignal, remoteOfficeEnabled],
+      [remoteOfficeEnabled ? "remote" : "local", String(officeCenterSignal)].join(
+        ":",
+      ),
+    [officeCenterSignal, remoteOfficeEnabled],
   );
   // New Idea 7: heatmap mode.
   const [heatmapMode, setHeatmapMode] = useState(false);

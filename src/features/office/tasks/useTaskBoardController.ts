@@ -801,7 +801,7 @@ export const useTaskBoardController = ({
         }));
       }
     },
-    [applySharedTaskRecord, sharedTasksSupported],
+    [applySharedTaskRecord, sharedTasksSupported, status],
   );
 
   useEffect(() => {
@@ -856,7 +856,7 @@ export const useTaskBoardController = ({
 
   const refreshCronJobs = useCallback(async () => {
     if (!cronEnabled || status !== "connected") {
-      setCronJobs([]);
+      setCronJobs((current) => (current.length === 0 ? current : []));
       setCronError(null);
       setCronLoading(false);
       return;
@@ -876,6 +876,10 @@ export const useTaskBoardController = ({
   }, [client, cronEnabled, status]);
 
   const refreshSharedTasks = useCallback(async () => {
+    if (status !== "connected") {
+      setSharedTasksLoading(false);
+      return;
+    }
     if (!sharedTasksSupported) {
       setSharedTasksLoading(false);
       return;
@@ -907,7 +911,7 @@ export const useTaskBoardController = ({
       sharedRefreshInFlightRef.current = false;
       setSharedTasksLoading(false);
     }
-  }, [applySharedTaskRecord, sharedTasksSupported]);
+  }, [applySharedTaskRecord, sharedTasksSupported, status]);
 
   const refreshRemoteTasks = useCallback(async () => {
     if (status !== "connected") {
@@ -960,16 +964,30 @@ export const useTaskBoardController = ({
     void refreshRemoteTasks();
   }, [refreshRemoteTasks]);
 
+  const lastSeedSnapshotRef = useRef<string | null>(null);
   useEffect(() => {
     if (!hydratedRef.current) return;
     const playbookCards = buildPlaybookCards(cronJobs, stateRef.current.cards);
     const standupCards = buildStandupSeedCards(standup, stateRef.current.cards);
     if (playbookCards.length === 0 && standupCards.length === 0) return;
+    const nextCards = [...playbookCards, ...standupCards];
+    const snapshot = JSON.stringify(
+      nextCards.map((card) => ({
+        id: card.id,
+        title: card.title,
+        status: card.status,
+        updatedAt: card.updatedAt,
+        assignedAgentId: card.assignedAgentId ?? null,
+        playbookJobId: card.playbookJobId ?? null,
+      })),
+    );
+    if (lastSeedSnapshotRef.current === snapshot) return;
+    lastSeedSnapshotRef.current = snapshot;
     dispatch({
       type: "upsertMany",
-      cards: [...playbookCards, ...standupCards],
+      cards: nextCards,
     });
-  }, [cronJobs, standup]);
+  }, [cronJobs, standup.config]);
 
   useEffect(() => {
     if (!hydratedRef.current) return;

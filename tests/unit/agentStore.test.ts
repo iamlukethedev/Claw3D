@@ -28,6 +28,22 @@ describe("agent store", () => {
     expect(next.agents[0].outputLines).toEqual([]);
   });
 
+  it("does not allocate a new empty agent list on redundant hydrate", () => {
+    const next = agentStoreReducer(initialAgentStoreState, {
+      type: "hydrateAgents",
+      agents: [],
+    });
+    expect(next).toBe(initialAgentStoreState);
+  });
+
+  it("does not allocate a new state object on redundant setLoading", () => {
+    const next = agentStoreReducer(initialAgentStoreState, {
+      type: "setLoading",
+      loading: false,
+    });
+    expect(next).toBe(initialAgentStoreState);
+  });
+
   it("hydrates agents with a requested selection when present", () => {
     const seeds: AgentStoreSeed[] = [
       {

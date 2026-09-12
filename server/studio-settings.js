@@ -57,6 +57,7 @@ const readJsonFile = (filePath) => {
 };
 
 const DEFAULT_GATEWAY_URL = "ws://localhost:18789";
+const DEFAULT_HERMES_GATEWAY_URL = "ws://127.0.0.1:18790";
 const OPENCLAW_CONFIG_FILENAME = "openclaw.json";
 
 const isRecord = (value) => Boolean(value && typeof value === "object");
@@ -86,12 +87,28 @@ const loadUpstreamGatewaySettings = (env = process.env) => {
   const settingsPath = resolveStudioSettingsPath(env);
   const parsed = readJsonFile(settingsPath);
   const gateway = parsed && typeof parsed === "object" ? parsed.gateway : null;
-  const url = typeof gateway?.url === "string" ? gateway.url.trim() : "";
-  const token = typeof gateway?.token === "string" ? gateway.token.trim() : "";
   const adapterType =
     typeof gateway?.adapterType === "string" && gateway.adapterType.trim()
       ? gateway.adapterType.trim()
       : "openclaw";
+  const profiles = isRecord(gateway?.profiles) ? gateway.profiles : null;
+  const selectedProfile = isRecord(profiles?.[adapterType]) ? profiles[adapterType] : null;
+  const profileUrl = typeof selectedProfile?.url === "string" ? selectedProfile.url.trim() : "";
+  const profileToken = typeof selectedProfile?.token === "string" ? selectedProfile.token.trim() : "";
+  const topUrl = typeof gateway?.url === "string" ? gateway.url.trim() : "";
+  const topToken = typeof gateway?.token === "string" ? gateway.token.trim() : "";
+  let url = profileUrl || topUrl;
+  let token = adapterType === "openclaw" ? profileToken || topToken : "";
+
+  if (adapterType === "hermes") {
+    return {
+      url: url || DEFAULT_HERMES_GATEWAY_URL,
+      token: "",
+      adapterType,
+      settingsPath,
+    };
+  }
+
   if (!token && adapterType === "openclaw") {
     const defaults = readOpenclawGatewayDefaults(env);
     if (defaults) {
