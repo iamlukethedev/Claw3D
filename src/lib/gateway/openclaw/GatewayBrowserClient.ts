@@ -575,6 +575,12 @@ export class GatewayBrowserClient {
         platform: this.opts.platform ?? navigator.platform ?? "web",
         mode: effectiveMode,
         instanceId: this.opts.instanceId,
+        // Claw3D presents as the CONTROL_UI client id for local gateways (see
+        // resolveGatewayClientName) but is never the gateway's own bundled
+        // build, so it can never satisfy the gateway's control-ui build-parity
+        // check. "dev" is the gateway's documented sentinel for unbundled/dev
+        // UI builds and exempts the connection from that check.
+        buildId: "dev",
       },
       role,
       scopes,
