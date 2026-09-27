@@ -1,4 +1,4 @@
-import type { AgentFileName } from "@/lib/agents/agentFiles";
+import type { AgentFileName, KnownAgentFileName } from "@/lib/agents/agentFiles";
 
 export type PersonalityBuilderDraft = {
   identity: {
@@ -28,9 +28,14 @@ export type PersonalityBuilderDraft = {
   memory: string;
 };
 
-type AgentFilesInput = Record<
-  AgentFileName,
-  { content: string; exists: boolean; path: string | null; workspace: string | null }
+// Partial: callers pass either the narrower fetched set (AgentFileName, e.g. AgentBrainPanel) or the
+// wizard's full local set (KnownAgentFileName, including legacy TOOLS.md/HEARTBEAT.md) — never assume
+// every key is present.
+type AgentFilesInput = Partial<
+  Record<
+    KnownAgentFileName,
+    { content: string; exists: boolean; path: string | null; workspace: string | null }
+  >
 >;
 
 export const createEmptyPersonalityDraft = (): PersonalityBuilderDraft => ({
@@ -258,7 +263,7 @@ const serializeSoulMarkdown = (draft: PersonalityBuilderDraft["soul"]) => {
 export const parsePersonalityFiles = (files: AgentFilesInput): PersonalityBuilderDraft => {
   const draft = createEmptyPersonalityDraft();
 
-  const identity = parseLabelMap(files["IDENTITY.md"].content);
+  const identity = parseLabelMap((files["IDENTITY.md"]?.content ?? ""));
   const identityName = readFirst(identity, ["name"]);
   const identityCreature = readFirst(identity, ["creature"]);
   const identityVibe = readFirst(identity, ["vibe"]);
@@ -270,13 +275,13 @@ export const parsePersonalityFiles = (files: AgentFilesInput): PersonalityBuilde
   draft.identity.emoji = isIdentityPlaceholder(identityEmoji) ? "" : identityEmoji;
   draft.identity.avatar = isIdentityPlaceholder(identityAvatar) ? "" : identityAvatar;
 
-  const user = parseLabelMap(files["USER.md"].content);
+  const user = parseLabelMap((files["USER.md"]?.content ?? ""));
   const userName = readFirst(user, ["name"]);
   const userCallThem = readFirst(user, ["what to call them", "preferred address", "how to address them"]);
   const userPronouns = readFirst(user, ["pronouns"]);
   const userTimezone = readFirst(user, ["timezone", "time zone"]);
   const userNotes = readFirst(user, ["notes"]);
-  const userContext = parseSection(files["USER.md"].content, "Context");
+  const userContext = parseSection((files["USER.md"]?.content ?? ""), "Context");
   draft.user.name = isUserPlaceholder(userName) ? "" : userName;
   draft.user.callThem = isUserPlaceholder(userCallThem) ? "" : userCallThem;
   draft.user.pronouns = isUserPlaceholder(userPronouns) ? "" : userPronouns;
@@ -284,22 +289,22 @@ export const parsePersonalityFiles = (files: AgentFilesInput): PersonalityBuilde
   draft.user.notes = isUserPlaceholder(userNotes) ? "" : userNotes;
   draft.user.context = isUserContextPlaceholder(userContext) ? "" : userContext;
 
-  draft.soul.coreTruths = parseSection(files["SOUL.md"].content, "Core Truths");
-  draft.soul.boundaries = parseSection(files["SOUL.md"].content, "Boundaries");
-  draft.soul.vibe = parseSection(files["SOUL.md"].content, "Vibe");
-  draft.soul.continuity = parseSection(files["SOUL.md"].content, "Continuity");
+  draft.soul.coreTruths = parseSection((files["SOUL.md"]?.content ?? ""), "Core Truths");
+  draft.soul.boundaries = parseSection((files["SOUL.md"]?.content ?? ""), "Boundaries");
+  draft.soul.vibe = parseSection((files["SOUL.md"]?.content ?? ""), "Vibe");
+  draft.soul.continuity = parseSection((files["SOUL.md"]?.content ?? ""), "Continuity");
 
-  draft.agents = files["AGENTS.md"].content;
-  draft.tools = files["TOOLS.md"].content;
-  draft.heartbeat = files["HEARTBEAT.md"].content;
-  draft.memory = files["MEMORY.md"].content;
+  draft.agents = (files["AGENTS.md"]?.content ?? "");
+  draft.tools = (files["TOOLS.md"]?.content ?? "");
+  draft.heartbeat = (files["HEARTBEAT.md"]?.content ?? "");
+  draft.memory = (files["MEMORY.md"]?.content ?? "");
 
   return draft;
 };
 
 export const serializePersonalityFiles = (
   draft: PersonalityBuilderDraft
-): Record<AgentFileName, string> => ({
+): Partial<Record<KnownAgentFileName, string>> => ({
   "AGENTS.md": draft.agents,
   "SOUL.md": serializeSoulMarkdown(draft.soul),
   "IDENTITY.md": serializeIdentityMarkdown(draft.identity),

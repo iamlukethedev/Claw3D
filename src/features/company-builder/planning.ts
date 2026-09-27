@@ -6,7 +6,7 @@ import {
   serializePersonalityFiles,
   type PersonalityBuilderDraft,
 } from "@/lib/agents/personalityBuilder";
-import type { AgentFileName } from "@/lib/agents/agentFiles";
+import { pickAllowedAgentFiles } from "@/lib/agents/agentFiles";
 import type {
   CompanyAgentBlueprint,
   CompanyBuilderPlan,
@@ -438,7 +438,7 @@ export const buildCompanyAgentBlueprints = (plan: CompanyBuilderPlan): CompanyAg
     usedNames.add(nextName.toLowerCase());
     const roleWithName = { ...role, title: nextName };
     const draft = buildRoleSoulDraft({ plan, role: roleWithName });
-    const files = serializePersonalityFiles(draft) as Record<AgentFileName, string>;
+    const files = pickAllowedAgentFiles(serializePersonalityFiles(draft));
     return {
       agentName: nextName,
       role: roleWithName,

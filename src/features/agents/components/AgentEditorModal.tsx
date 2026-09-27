@@ -7,12 +7,10 @@ import {
   ChevronRight,
   Database,
   FileText,
-  HeartPulse,
   Palette,
   Shield,
   Trash2,
   UserRound,
-  Wrench,
   X,
 } from "lucide-react";
 import type { AgentState } from "@/features/agents/state/store";
@@ -79,22 +77,10 @@ const editorSections: Array<{
     icon: UserRound,
   },
   {
-    id: "TOOLS.md",
-    label: "Tools",
-    hint: AGENT_FILE_META["TOOLS.md"].hint,
-    icon: Wrench,
-  },
-  {
     id: "MEMORY.md",
     label: "Memory",
     hint: AGENT_FILE_META["MEMORY.md"].hint,
     icon: Database,
-  },
-  {
-    id: "HEARTBEAT.md",
-    label: "Heartbeat",
-    hint: AGENT_FILE_META["HEARTBEAT.md"].hint,
-    icon: HeartPulse,
   },
 ];
 

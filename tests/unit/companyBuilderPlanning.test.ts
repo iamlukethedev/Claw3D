@@ -150,7 +150,10 @@ describe("buildCompanyAgentBlueprints", () => {
     expect(blueprints[0]?.files["AGENTS.md"]).toContain("Bug Bistro");
     expect(blueprints[0]?.files["AGENTS.md"]).toContain("Ships code.");
     expect(blueprints[0]?.files["SOUL.md"]).toContain("Calm and methodical.");
-    expect(blueprints[1]?.files["HEARTBEAT.md"]).toContain("Review risk daily.");
+    // HEARTBEAT.md is no longer a gateway-writable file (see agentFiles.ts); the draft still carries
+    // the content, it's just excluded from blueprint.files by pickAllowedAgentFiles.
+    expect(blueprints[1]?.draft.heartbeat).toContain("Review risk daily.");
+    expect(blueprints[1]?.files).not.toHaveProperty("HEARTBEAT.md");
   });
 });
 

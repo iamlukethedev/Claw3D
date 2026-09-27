@@ -103,7 +103,7 @@ export const AgentBrainPanel = ({
       const nextDraft = parsePersonalityFiles(agentFiles);
       nextDraft.identity[field] = value;
       const serialized = serializePersonalityFiles(nextDraft);
-      setAgentFileContent("IDENTITY.md", serialized["IDENTITY.md"]);
+      setAgentFileContent("IDENTITY.md", serialized["IDENTITY.md"] ?? "");
     },
     [agentFiles, setAgentFileContent]
   );

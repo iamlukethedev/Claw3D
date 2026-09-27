@@ -45,5 +45,5 @@ export type CompanyAgentBlueprint = {
   agentName: string;
   role: CompanyBuilderRole;
   draft: PersonalityBuilderDraft;
-  files: Record<AgentFileName, string>;
+  files: Partial<Record<AgentFileName, string>>;
 };

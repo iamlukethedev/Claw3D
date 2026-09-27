@@ -25,7 +25,7 @@ export async function runCompanyBootstrapOperation(params: {
   createAgent: (name: string) => Promise<{ id: string }>;
   writeAgentFiles: (
     agentId: string,
-    files: Record<AgentFileName, string>,
+    files: Partial<Record<AgentFileName, string>>,
   ) => Promise<void>;
   saveAvatar: (agentId: string) => void;
   loadAgents: () => Promise<void>;
