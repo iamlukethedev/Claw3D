@@ -97,7 +97,10 @@ const setupAndImportHook = async (gatewayUrl: string | null) => {
   };
 };
 
-describe("useGatewayConnection", () => {
+// Every test resets modules and cold-imports the gateway stack, which can
+// exceed the default 5s timeout under parallel load. A timed-out test keeps
+// running and leaks its render into the next one, so give it headroom.
+describe("useGatewayConnection", { timeout: 30_000 }, () => {
   afterEach(() => {
     cleanup();
     process.env = { ...ORIGINAL_ENV };
@@ -288,7 +291,7 @@ describe("useGatewayConnection", () => {
     expect(captured.clientName).toBe("openclaw-control-ui");
   });
 
-  it("does_not_auto_connect_without_a_last_known_good_state", async () => {
+  it("auto_connects_an_auto_managed_adapter_with_a_persisted_url_and_no_last_known_good", async () => {
     const { useGatewayConnection, captured } = await setupAndImportHook(null);
     const coordinator = {
       loadSettingsEnvelope: async () => ({
@@ -334,8 +337,12 @@ describe("useGatewayConnection", () => {
     await waitFor(() => {
       expect(screen.getByTestId("gatewayUrl")).toHaveTextContent("ws://localhost:18789");
     });
-    expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("yes");
-    expect(captured.url).toBeNull();
+    // Since #140, a persisted URL for an auto-managed adapter (hermes/openclaw/demo)
+    // is enough to auto-connect even without a matching lastKnownGood entry.
+    await waitFor(() => {
+      expect(captured.authScopeKey).toBe("ws://localhost:18789");
+    });
+    expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("no");
   });
 
   it("uses_a_small_initial_auto_connect_delay_for_hermes_and_demo_only", async () => {
@@ -606,8 +613,11 @@ describe("useGatewayConnection", () => {
       expect(screen.getByTestId("gatewayUrl")).toHaveTextContent("ws://localhost:18789");
     });
     expect(screen.getByTestId("selectedAdapterType")).toHaveTextContent("hermes");
-    expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("yes");
-    expect(captured.url).toBeNull();
+    // The saved hermes profile wins over the openclaw lastKnownGood backend.
+    await waitFor(() => {
+      expect(captured.authScopeKey).toBe("ws://localhost:18789");
+    });
+    expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("no");
   });
 
   it("loads_custom_adapter_type_without_requiring_a_token", async () => {

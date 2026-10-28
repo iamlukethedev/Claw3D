@@ -228,9 +228,13 @@ export async function hydrateAgentFleetFromGateway(params: {
           if (!recoveredName || isTemporarySkillAgentName(recoveredName)) {
             return agent;
           }
+          // Only the identity is missing here; a stable listed name is the
+          // runtime's own name and must survive identity recovery.
+          const hasStableListedName =
+            Boolean(listedName) && !isTemporarySkillAgentName(listedName);
           return {
             ...agent,
-            name: recoveredName,
+            name: hasStableListedName ? listedName : recoveredName,
             identity: {
               ...(agent.identity ?? {}),
               name: recoveredName,

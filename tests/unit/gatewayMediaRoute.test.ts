@@ -124,7 +124,7 @@ describe("/api/gateway/media route", () => {
     expect(options.maxBuffer).toBeGreaterThan(payloadBytes.length);
   });
 
-  it("rejects symlinked local media paths", async () => {
+  it("rejects symlinked local media paths", async (ctx) => {
     tempDir = makeTempDir("gateway-media-route-local-symlink");
     const realHome = os.homedir();
     const allowedRoot = path.join(realHome, ".openclaw");
@@ -136,22 +136,32 @@ describe("/api/gateway/media route", () => {
     const outsideFile = path.join(outsideDir, "secret.png");
     fs.writeFileSync(outsideFile, "not-allowed", "utf8");
     const symlinkPath = path.join(imagesDir, "linked.png");
-    fs.symlinkSync(outsideFile, symlinkPath);
+    try {
+      fs.symlinkSync(outsideFile, symlinkPath);
+    } catch (error) {
+      // Windows only allows symlinks with Developer Mode or elevated rights.
+      if ((error as NodeJS.ErrnoException).code === "EPERM") {
+        ctx.skip("symlink creation is not permitted in this environment");
+      }
+      throw error;
+    }
 
-    process.env.OPENCLAW_STATE_DIR = tempDir;
-    writeStudioSettings(tempDir, "ws://localhost:18789");
+    try {
+      process.env.OPENCLAW_STATE_DIR = tempDir;
+      writeStudioSettings(tempDir, "ws://localhost:18789");
 
-    const response = await GET(
-      new Request(
-        `http://localhost/api/gateway/media?path=${encodeURIComponent(symlinkPath)}`
-      )
-    );
-    const body = (await response.json()) as { error?: string };
+      const response = await GET(
+        new Request(
+          `http://localhost/api/gateway/media?path=${encodeURIComponent(symlinkPath)}`
+        )
+      );
+      const body = (await response.json()) as { error?: string };
 
-    expect(response.status).toBe(400);
-    expect(body.error).toMatch(/symlink/i);
-
-    fs.rmSync(symlinkPath, { force: true });
+      expect(response.status).toBe(400);
+      expect(body.error).toMatch(/symlink/i);
+    } finally {
+      fs.rmSync(symlinkPath, { force: true });
+    }
   });
 });
 

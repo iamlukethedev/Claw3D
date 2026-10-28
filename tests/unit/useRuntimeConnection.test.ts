@@ -2,7 +2,10 @@ import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
-describe("useRuntimeConnection", () => {
+// Every test resets modules and cold-imports the gateway stack, which can
+// exceed the default 5s timeout under parallel load. A timed-out test keeps
+// running and leaks its render into the next one, so give it headroom.
+describe("useRuntimeConnection", { timeout: 30_000 }, () => {
   afterEach(() => {
     cleanup();
     vi.resetModules();
