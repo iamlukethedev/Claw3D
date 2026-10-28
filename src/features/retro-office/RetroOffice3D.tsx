@@ -2530,19 +2530,6 @@ export function RetroOffice3D({
           : defaultRemoteLayoutFurniture,
     [defaultRemoteLayoutFurniture, remoteLayoutSnapshot, remoteOfficeEnabled],
   );
-  useEffect(() => {
-    setFurniture(
-      buildInitialFurnitureLayout(storageNamespace, layoutPreset).filter(
-        (item) => !isRetiredPingPongLamp(item),
-      ),
-    );
-    setSelectedUid(null);
-    setDeskActionUid(null);
-    setDeskAssignPickerOpen(false);
-    setDrag({ kind: "idle" });
-    setGhostPos(null);
-    setWallDrawStart(null);
-  }, [layoutPreset, storageNamespace]);
   const [editMode, setEditMode] = useState(false);
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
   const [hoverUid, setHoverUid] = useState<string | null>(null);
@@ -2574,6 +2561,29 @@ export function RetroOffice3D({
   } | null>(null);
   const [deskActionUid, setDeskActionUid] = useState<string | null>(null);
   const [deskAssignPickerOpen, setDeskAssignPickerOpen] = useState(false);
+  // Reset layout and edit state when the office namespace or preset changes.
+  // Adjusted during render (not in an effect) so the stale layout never paints.
+  const [layoutSource, setLayoutSource] = useState({
+    storageNamespace,
+    layoutPreset,
+  });
+  if (
+    layoutSource.storageNamespace !== storageNamespace ||
+    layoutSource.layoutPreset !== layoutPreset
+  ) {
+    setLayoutSource({ storageNamespace, layoutPreset });
+    setFurniture(
+      buildInitialFurnitureLayout(storageNamespace, layoutPreset).filter(
+        (item) => !isRetiredPingPongLamp(item),
+      ),
+    );
+    setSelectedUid(null);
+    setDeskActionUid(null);
+    setDeskAssignPickerOpen(false);
+    setDrag({ kind: "idle" });
+    setGhostPos(null);
+    setWallDrawStart(null);
+  }
   // New Idea 3: speech bubble agent IDs.
   const [speechAgentIds, setSpeechAgentIds] = useState<Set<string>>(new Set());
   const statusFeedEvents = useMemo(

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
+import { useLocalStorageFlag } from "@/hooks/useLocalStorageFlag";
 import {
   OFFICE_FLOORS,
   getAdjacentEnabledOfficeFloorId,
@@ -111,30 +111,13 @@ export function OfficeFloorNav({
     OFFICE_FLOORS.find((floor) => floor.id === displayActiveFloorId) ?? OFFICE_FLOORS[0];
   const activeRoster = floorRosterCache[activeFloor.id];
 
-  const [directoryCollapsed, setDirectoryCollapsed] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const stored = window.localStorage.getItem(DIRECTORY_COLLAPSED_STORAGE_KEY);
-      if (stored === "true") setDirectoryCollapsed(true);
-    } catch {
-      // localStorage may be unavailable (private mode, SSR, etc.); ignore.
-    }
-  }, []);
+  const [storedDirectoryCollapsed, setDirectoryCollapsed] = useLocalStorageFlag(
+    DIRECTORY_COLLAPSED_STORAGE_KEY,
+  );
+  const directoryCollapsed = storedDirectoryCollapsed === true;
 
   const toggleDirectoryCollapsed = () => {
-    setDirectoryCollapsed((current) => {
-      const next = !current;
-      if (typeof window !== "undefined") {
-        try {
-          window.localStorage.setItem(DIRECTORY_COLLAPSED_STORAGE_KEY, String(next));
-        } catch {
-          // Persist is best-effort; collapsed state still works for the session.
-        }
-      }
-      return next;
-    });
+    setDirectoryCollapsed(!directoryCollapsed);
   };
 
   return (

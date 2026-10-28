@@ -215,7 +215,7 @@ export const AgentBrainPanel = ({
         />
       </section>
     ),
-    [agentFilesLoading, agentFilesSaving, draft.identity, setIdentityField],
+    [agentFiles, agentFilesLoading, agentFilesSaving, draft.identity, setIdentityField],
   );
 
   const renderedSections = useMemo(() => {

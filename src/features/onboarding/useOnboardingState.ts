@@ -4,31 +4,10 @@
  * Uses localStorage so the wizard only shows once per browser.
  * The key is scoped to the Claw3D app to avoid collisions.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import { useLocalStorageFlag } from "@/hooks/useLocalStorageFlag";
 
 const STORAGE_KEY = "claw3d:onboarding:completed";
-
-const readCompleted = (): boolean => {
-  if (typeof window === "undefined") return false;
-  try {
-    return window.localStorage.getItem(STORAGE_KEY) === "true";
-  } catch {
-    return false;
-  }
-};
-
-const writeCompleted = (value: boolean): void => {
-  if (typeof window === "undefined") return;
-  try {
-    if (value) {
-      window.localStorage.setItem(STORAGE_KEY, "true");
-    } else {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
-  } catch {
-    // Storage might be unavailable in some environments.
-  }
-};
 
 export type OnboardingStateReturn = {
   /** Whether the wizard should be shown. */
@@ -40,21 +19,17 @@ export type OnboardingStateReturn = {
 };
 
 export const useOnboardingState = (): OnboardingStateReturn => {
-  const [completed, setCompleted] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    setCompleted(readCompleted());
-  }, []);
+  // `null` until the browser value is known, so the wizard never flashes
+  // during server render or hydration.
+  const [completed, setCompleted] = useLocalStorageFlag(STORAGE_KEY);
 
   const completeOnboarding = useCallback(() => {
     setCompleted(true);
-    writeCompleted(true);
-  }, []);
+  }, [setCompleted]);
 
   const resetOnboarding = useCallback(() => {
     setCompleted(false);
-    writeCompleted(false);
-  }, []);
+  }, [setCompleted]);
 
   return {
     showOnboarding: completed === false,
