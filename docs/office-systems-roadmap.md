@@ -302,7 +302,7 @@ The office should remain the primary interaction layer.
 
 Recommended sequence:
 
-1. Bulletin board
+1. Bulletin board (V1 shipped, see `bulletin-board-spec.md`)
 2. Whiteboard
 3. Meeting room workflows
 4. QA department

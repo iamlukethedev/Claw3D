@@ -33,6 +33,7 @@ Built and maintained by **LukeTheDev**. Follow on X: [@iamlukethedev](https://x.
 
 - **Watch your AI agents work in real time** inside a shared 3D office.
 - **Run standups** with agents connected to GitHub and Jira.
+- **Keep the office aligned** on a shared bulletin board for goals, blockers, handoffs, and standup minutes.
 - **Review pull requests** from inside the office.
 - **Monitor QA pipelines** and logs without leaving the workspace.
 - **Train agents in the gym** to develop new skills.
@@ -79,6 +80,7 @@ The current app already includes a substantial Claw3D surface:
 - Agent creation, settings, session controls, approvals, and gateway-backed configuration editing.
 - A 3D retro office with desks, rooms, navigation, animations, and event-driven activity cues.
 - Immersive operational spaces for standups, GitHub review flows, analytics, and system monitoring.
+- An in-office bulletin board that pins goals, announcements, blockers, handoffs, and meeting notes, and mirrors blocked Kanban tasks and standup output automatically.
 - Local Studio persistence for gateway connection details, focused-agent preferences, desk assignments, office state, and related UI settings.
 - A custom same-origin WebSocket proxy so the browser talks to Studio, and Studio talks to the upstream OpenClaw Gateway.
 
@@ -295,6 +297,8 @@ See [`.env.example`](.env.example) for the full local development template.
 - [`docs/pi-chat-streaming.md`](docs/pi-chat-streaming.md): gateway runtime streaming and transcript rendering.
 - [`docs/permissions-sandboxing.md`](docs/permissions-sandboxing.md): Studio permissions and OpenClaw behavior.
 - [`docs/hermes-gateway.md`](docs/hermes-gateway.md): Hermes adapter setup, capabilities, and current limitations.
+- [`docs/office_sys/bulletin-board-spec.md`](docs/office_sys/bulletin-board-spec.md): bulletin board product spec and what V1 implements.
+- [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md): current caveats and unresolved follow-up items.
 
 ## Current Limitations
 

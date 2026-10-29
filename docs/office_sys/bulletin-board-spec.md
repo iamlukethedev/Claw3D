@@ -374,6 +374,21 @@ V1 is successful if:
 - cards can link back into agents/sessions/tasks
 - the system works with Hermes, OpenClaw, and demo mode
 
+## V1 Implementation Status
+
+Shipped in `src/features/office/bulletin`:
+
+- Card model, normalization, and limits: `types.ts`. Cards persist per gateway under `bulletinBoard` in Studio settings, next to `taskBoard`.
+- Pure board operations: `bulletinBoard.ts`. Create, edit, pin, archive, filter, group by the information hierarchy above, and summarize for the in-world prop.
+- Automation, conservative and idempotent through a stable `sourceKey` per automated card:
+  - a blocked Kanban task posts one system blocker card. The system archives it when the task is unblocked and reopens it if the task blocks again. A card a person archived is never reopened.
+  - a running standup posts a live announcement. On completion, the board archives the announcement and posts the minutes plus one blocker card per agent that reported blockers. Minutes are not back-filled for meetings older than 24 hours.
+- `useBulletinBoard.ts` loads, automates, and persists the board. It stays read-only if loading fails, so an empty board never overwrites stored cards.
+- UI: a cork-board dialog (`components/BulletinBoardPanel.tsx`), opened from the in-world prop or the `BULLETIN` button on the HQ rail. The rail button shows the open blocker count.
+- In-world prop: `src/features/retro-office/objects/bulletinBoard.tsx`. Cards on the prop use the same colors as the dialog, and a red lamp pulses while urgent blockers are open.
+
+System cards are read-only (archive only). Human cards are editable. Agent-authored cards are supported by the model, but there is no runtime-neutral way for agents to post yet.
+
 ## Future Extensions
 
 Once V1 is stable, this can grow into:

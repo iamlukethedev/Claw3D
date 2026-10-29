@@ -18,10 +18,11 @@ Current publication caveats and unresolved follow-up items. Keep this list short
 
 - Heartbeat runs cannot be stopped from Studio yet. The stop button is disabled with an explanation while a heartbeat run is active.
 - Phone and SMS booth voice replies use ElevenLabs directly. A runtime-neutral Claw3D voice/text skill is still to be built (see the TODO in `src/lib/voiceReply/provider.ts`).
+- The bulletin board stores cards locally in Studio settings, per gateway. It has no multi-user editing, and agents cannot post cards yet because there is no runtime-neutral posting contract.
 
 ## Code health
 
-- `src/features/retro-office/RetroOffice3D.tsx` (~7k lines) and `src/features/office/screens/OfficeScreen.tsx` (~6k lines) are monoliths. Build new office systems as feature modules and wire them in through props rather than growing these files.
+- `src/features/retro-office/RetroOffice3D.tsx` (~7k lines) and `src/features/office/screens/OfficeScreen.tsx` (~6k lines) are monoliths. Build new office systems as feature modules and wire them in through props, as `src/features/office/bulletin` does, rather than growing these files.
 
 ## Assets and licensing
 
