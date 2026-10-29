@@ -822,7 +822,9 @@ export const useTaskBoardController = ({
       if (cancelled) return;
       console.error("Failed to load task board settings.", error);
       dispatch({ type: "hydrate", preference: defaultTaskBoardPreference() });
-      hydratedRef.current = true;
+      // Stay un-hydrated so the persist effect never writes this empty
+      // fallback over the cards that are still on disk.
+      hydratedRef.current = false;
       setLoading(false);
     });
     return () => {
