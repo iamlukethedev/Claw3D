@@ -235,13 +235,15 @@ describe("AgentBrainPanel", () => {
       })
     );
 
+    // The "missing file" copy also renders before files load, so wait for the
+    // provenance path, which only appears once the gateway response arrives.
     await waitFor(() => {
-      expect(screen.getByText("This agent does not have a custom SOUL.md yet. Saving here will create the real workspace file.")).toBeInTheDocument();
+      expect(screen.getByText("/workspace/agent-2/SOUL.md")).toBeInTheDocument();
     });
 
+    expect(screen.getByText("This agent does not have a custom SOUL.md yet. Saving here will create the real workspace file.")).toBeInTheDocument();
     expect(screen.getByLabelText("SOUL.md")).toHaveValue("");
     expect(screen.getByLabelText("SOUL.md")).toHaveAttribute("placeholder", "No SOUL.md yet.");
-    expect(screen.getByText("/workspace/agent-2/SOUL.md")).toBeInTheDocument();
   });
 
   it("can_initialize_missing_personality_files_for_an_agent", async () => {

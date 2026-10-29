@@ -12,5 +12,8 @@ export default defineConfig({
     setupFiles: "./tests/setup.ts",
     include: ["tests/unit/**/*.test.ts"],
     exclude: ["tests/e2e/**"],
+    // Many suites reset modules and cold-import large module graphs per test;
+    // the 5s default is too tight when ~170 files run in parallel.
+    testTimeout: 20_000,
   },
 });

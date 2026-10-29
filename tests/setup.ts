@@ -1,4 +1,9 @@
 import "@testing-library/jest-dom/vitest";
+import { configure } from "@testing-library/react";
+
+// waitFor/findBy default to 1s, which cold-import paths (vi.resetModules +
+// dynamic import) exceed when the full suite runs in parallel.
+configure({ asyncUtilTimeout: 5_000 });
 
 const ensureLocalStorage = () => {
   if (typeof window === "undefined") return;
