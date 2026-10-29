@@ -196,7 +196,7 @@ export function BulletinCardComposer({ card, agents, onCreate, onUpdate, onDone 
         </button>
         <button
           type="submit"
-          className="rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-stone-950 transition hover:bg-amber-300 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200"
+          className="rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-300 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200"
         >
           {card ? "Save note" : "Pin note"}
         </button>

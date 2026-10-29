@@ -328,7 +328,7 @@ export function BulletinBoardPanel({
               type="button"
               disabled={board.status !== "ready"}
               onClick={() => setComposer({ mode: "create" })}
-              className="inline-flex items-center gap-1.5 rounded-md bg-amber-400 px-3.5 py-2 text-sm font-semibold text-stone-950 transition hover:bg-amber-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200"
+              className="inline-flex items-center gap-1.5 rounded-md bg-amber-400 px-3.5 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
               <span>Pin a note</span>
