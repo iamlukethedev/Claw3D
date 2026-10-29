@@ -97,6 +97,9 @@ const setupAndImportHook = async (gatewayUrl: string | null) => {
   };
 };
 
+// Auto-connect runs after settings load and a cold import; allow it time under load.
+const AUTO_CONNECT_TIMEOUT_MS = 10_000;
+
 // Every test resets modules and cold-imports the gateway stack, which can
 // exceed the default 5s timeout under parallel load. A timed-out test keeps
 // running and leaks its render into the next one, so give it headroom.
@@ -339,9 +342,12 @@ describe("useGatewayConnection", { timeout: 30_000 }, () => {
     });
     // Since #140, a persisted URL for an auto-managed adapter (hermes/openclaw/demo)
     // is enough to auto-connect even without a matching lastKnownGood entry.
-    await waitFor(() => {
-      expect(captured.authScopeKey).toBe("ws://localhost:18789");
-    });
+    await waitFor(
+      () => {
+        expect(captured.authScopeKey).toBe("ws://localhost:18789");
+      },
+      { timeout: AUTO_CONNECT_TIMEOUT_MS },
+    );
     expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("no");
   });
 
@@ -614,9 +620,12 @@ describe("useGatewayConnection", { timeout: 30_000 }, () => {
     });
     expect(screen.getByTestId("selectedAdapterType")).toHaveTextContent("hermes");
     // The saved hermes profile wins over the openclaw lastKnownGood backend.
-    await waitFor(() => {
-      expect(captured.authScopeKey).toBe("ws://localhost:18789");
-    });
+    await waitFor(
+      () => {
+        expect(captured.authScopeKey).toBe("ws://localhost:18789");
+      },
+      { timeout: AUTO_CONNECT_TIMEOUT_MS },
+    );
     expect(screen.getByTestId("shouldPromptForConnect")).toHaveTextContent("no");
   });
 
