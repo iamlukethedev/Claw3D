@@ -16,10 +16,12 @@ import {
 } from "lucide-react";
 import {
   type ComponentProps,
+  type Ref,
   memo,
   Suspense,
   useCallback,
   useEffect,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
@@ -80,6 +82,7 @@ import {
 } from "@/features/retro-office/core/constants";
 import {
   ensureOfficeAtm,
+  ensureOfficeBulletinBoard,
   ensureOfficeGymRoom,
   ensureOfficeKanbanBoard,
   ensureOfficePhoneBooth,
@@ -161,6 +164,8 @@ import type { NavGrid } from "@/features/retro-office/core/navigation";
 import type { OfficeLayoutSnapshot } from "@/lib/office/layoutSnapshot";
 import { AgentModel as AgentObjectModel } from "@/features/retro-office/objects/agents";
 import { JukeboxModel as InteractiveJukeboxModel } from "@/features/retro-office/objects/Jukebox";
+import { BulletinBoardModel } from "@/features/retro-office/objects/bulletinBoard";
+import type { BulletinBoardSummary } from "@/features/office/bulletin/bulletinBoard";
 import {
   FurnitureModel as GenericFurnitureModel,
   InstancedFurnitureItems as InstancedFurnitureItemsModel,
@@ -378,6 +383,12 @@ const PALETTE: PaletteEntry[] = [
     label: "Kanban Board",
     icon: "📌",
     defaults: { w: 130, h: 65, facing: 90 },
+  },
+  {
+    type: "bulletin_board",
+    label: "Bulletin Board",
+    icon: "🗒️",
+    defaults: { facing: 0 },
   },
   {
     type: "whiteboard",
@@ -767,6 +778,17 @@ const ReadOnlyFurnitureClone = memo(function ReadOnlyFurnitureClone({
           <KitchenWallCabinetModel
             key={item._uid}
             item={item}
+            editMode={false}
+            onPointerDown={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOver={NOOP_FURNITURE_UID_HANDLER}
+            onPointerOut={NOOP_FURNITURE_HANDLER}
+          />
+        ) : item.type === "bulletin_board" ? (
+          <BulletinBoardModel
+            key={item._uid}
+            item={item}
+            isSelected={false}
+            isHovered={false}
             editMode={false}
             onPointerDown={NOOP_FURNITURE_UID_HANDLER}
             onPointerOver={NOOP_FURNITURE_UID_HANDLER}
@@ -2217,29 +2239,32 @@ const getAgentInitials = (name: string | null | undefined): string => {
     .join("");
 };
 
+// Each ensure* step adds a default fixture only when the layout lacks it.
+const DEFAULT_FIXTURE_STEPS: Array<(items: FurnitureItem[]) => FurnitureItem[]> = [
+  ensureOfficePingPongTable,
+  ensureOfficeAtm,
+  ensureOfficeSmsBooth,
+  ensureOfficePhoneBooth,
+  ensureOfficeServerRoom,
+  ensureOfficeGymRoom,
+  ensureOfficeQaLab,
+  ensureOfficeJukebox,
+  ensureOfficeKanbanBoard,
+  ensureOfficeBulletinBoard,
+];
+
 const buildInitialFurnitureLayout = (
   storageNamespace: string,
   layoutPreset: OfficeLayoutPreset,
 ): FurnitureItem[] =>
-  ensureOfficeKanbanBoard(
-    ensureOfficeJukebox(
-      ensureOfficeQaLab(
-        ensureOfficeGymRoom(
-          ensureOfficeServerRoom(
-            ensureOfficePhoneBooth(
-              ensureOfficeSmsBooth(
-                ensureOfficeAtm(
-                  ensureOfficePingPongTable(
-                    loadFurniture(storageNamespace) ?? materializeDefaults(layoutPreset),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
+  DEFAULT_FIXTURE_STEPS.reduce(
+    (items, ensureFixture) => ensureFixture(items),
+    loadFurniture(storageNamespace) ?? materializeDefaults(layoutPreset),
   );
+
+export type RetroOfficeKanbanControl = {
+  openKanbanBoard: () => void;
+};
 
 export function RetroOffice3D({
   agents,
@@ -2324,6 +2349,9 @@ export function RetroOffice3D({
   onOpenGithubSkillSetup,
   onJukeboxInteract,
   onKanbanInteract,
+  kanbanControlRef,
+  bulletinBoardSummary = null,
+  onBulletinBoardInteract,
   taskBoardAgents = [],
   taskBoardCardsByStatus = {
     todo: [],
@@ -2444,6 +2472,10 @@ export function RetroOffice3D({
   onOpenGithubSkillSetup?: () => void;
   onJukeboxInteract?: () => void;
   onKanbanInteract?: () => void;
+  // Lets the office screen open the Kanban board from outside the scene.
+  kanbanControlRef?: Ref<RetroOfficeKanbanControl | null>;
+  bulletinBoardSummary?: BulletinBoardSummary | null;
+  onBulletinBoardInteract?: () => void;
   taskBoardAgents?: AgentState[];
   taskBoardCardsByStatus?: Record<TaskBoardStatus, TaskBoardCard[]>;
   taskBoardSelectedCard?: TaskBoardCard | null;
@@ -4458,6 +4490,12 @@ export function RetroOffice3D({
     ],
   );
 
+  useImperativeHandle(
+    kanbanControlRef,
+    () => ({ openKanbanBoard: () => openKanbanBoard(kanbanBoardItem) }),
+    [kanbanBoardItem, openKanbanBoard],
+  );
+
   // E3 Idea 2: click a desk to send its assigned agent to walk and sit there.
   const handleDeskClick = useCallback(
     (uid: string) => {
@@ -4646,6 +4684,11 @@ export function RetroOffice3D({
         openKanbanBoard(item);
         return;
       }
+      if (item.type === "bulletin_board") {
+        setFollowAgentId(null);
+        onBulletinBoardInteract?.();
+        return;
+      }
       if (
         item.type === "round_table" &&
         item.x >= 0 &&
@@ -4678,6 +4721,7 @@ export function RetroOffice3D({
       manualPhoneBoothOpen,
       activeKanbanUid,
       openKanbanBoard,
+      onBulletinBoardInteract,
       onMonitorSelect,
       onStandupStartRequested,
       qaTerminal,
@@ -4767,6 +4811,7 @@ export function RetroOffice3D({
       hoveredItem?.type === "test_bench" ||
       hoveredItem?.type === "server_terminal" ||
       hoveredItem?.type === "kanban_board" ||
+      hoveredItem?.type === "bulletin_board" ||
       hoveredMeetingTable
         ? "pointer"
         : "";
@@ -5418,6 +5463,19 @@ export function RetroOffice3D({
                   <InteractiveAtmMachineModel
                     key={item._uid}
                     item={item}
+                    isSelected={item._uid === selectedUid}
+                    isHovered={item._uid === hoverUid}
+                    editMode={editMode}
+                    onPointerDown={handleFurniturePointerDown}
+                    onPointerOver={handleFurniturePointerOver}
+                    onPointerOut={handleFurniturePointerOut}
+                    onClick={handleDeskClick}
+                  />
+                ) : item.type === "bulletin_board" ? (
+                  <BulletinBoardModel
+                    key={item._uid}
+                    item={item}
+                    summary={bulletinBoardSummary}
                     isSelected={item._uid === selectedUid}
                     isHovered={item._uid === hoverUid}
                     editMode={editMode}

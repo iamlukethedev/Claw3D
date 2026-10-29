@@ -69,6 +69,15 @@ const DEFAULT_KANBAN_BOARD: FurnitureSeed = {
   facing: 180,
 };
 
+// Between the meeting area and the first desk row, facing the desks, so the
+// board is visible from the main floor. Clear of other items in both presets.
+const DEFAULT_BULLETIN_BOARD: FurnitureSeed = {
+  type: "bulletin_board",
+  x: 560,
+  y: 200,
+  facing: 0,
+};
+
 const PREVIOUS_SERVER_ROOM_ITEMS_BOTTOM_RIGHT: FurnitureSeed[] = [
   { type: "wall", x: 820, y: 540, w: 280, h: WALL_THICKNESS },
   { type: "wall", x: 820, y: 540, w: WALL_THICKNESS, h: 70 },
@@ -646,6 +655,11 @@ export const ensureOfficeJukebox = (items: FurnitureItem[]): FurnitureItem[] => 
 export const ensureOfficeKanbanBoard = (items: FurnitureItem[]): FurnitureItem[] => {
   if (items.some((item) => item.type === "kanban_board")) return items;
   return [...items, { ...DEFAULT_KANBAN_BOARD, _uid: nextUid() }];
+};
+
+export const ensureOfficeBulletinBoard = (items: FurnitureItem[]): FurnitureItem[] => {
+  if (items.some((item) => item.type === "bulletin_board")) return items;
+  return [...items, { ...DEFAULT_BULLETIN_BOARD, _uid: nextUid() }];
 };
 
 export const ensureOfficePhoneBooth = (

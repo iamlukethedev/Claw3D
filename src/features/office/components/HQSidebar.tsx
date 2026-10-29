@@ -18,6 +18,8 @@ type HQSidebarProps = {
   onOpenMarketplace: () => void;
   onAddAgent?: () => void;
   onOpenCompanyBuilder?: () => void;
+  onOpenBulletinBoard?: () => void;
+  bulletinBlockerCount?: number;
   inboxPanel: ReactNode;
   historyPanel: ReactNode;
   kanbanPanel: ReactNode;
@@ -44,6 +46,8 @@ export function HQSidebar({
   onOpenMarketplace,
   onAddAgent,
   onOpenCompanyBuilder,
+  onOpenBulletinBoard,
+  bulletinBlockerCount = 0,
   inboxPanel,
   historyPanel,
   kanbanPanel,
@@ -91,6 +95,31 @@ export function HQSidebar({
             MARKETPLACE
           </span>
         </button>
+
+        {onOpenBulletinBoard ? (
+          <button
+            type="button"
+            onClick={onOpenBulletinBoard}
+            className="relative rounded-l-md border border-r-0 border-orange-400/30 bg-[#140b05]/90 px-1.5 py-2.5 font-mono text-[10px] font-semibold tracking-[0.2em] text-orange-200/85 shadow-xl backdrop-blur transition-colors hover:border-orange-300/55 hover:text-orange-50"
+            aria-label={
+              bulletinBlockerCount > 0
+                ? `Open bulletin board, ${bulletinBlockerCount} open ${bulletinBlockerCount === 1 ? "blocker" : "blockers"}`
+                : "Open bulletin board"
+            }
+          >
+            {bulletinBlockerCount > 0 ? (
+              <span
+                aria-hidden="true"
+                className="absolute -left-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold tracking-normal text-white shadow"
+              >
+                {bulletinBlockerCount > 9 ? "9+" : bulletinBlockerCount}
+              </span>
+            ) : null}
+            <span className="block leading-none [writing-mode:vertical-rl]">
+              BULLETIN
+            </span>
+          </button>
+        ) : null}
 
         <button
           type="button"

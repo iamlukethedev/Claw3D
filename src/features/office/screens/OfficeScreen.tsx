@@ -10,7 +10,10 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { MessageSquare, ChevronDown, ChevronLeft, ChevronRight, Mic } from "lucide-react";
-import { RetroOffice3D } from "@/features/retro-office/RetroOffice3D";
+import {
+  RetroOffice3D,
+  type RetroOfficeKanbanControl,
+} from "@/features/retro-office/RetroOffice3D";
 import type { OfficeAgent } from "@/features/retro-office/core/types";
 import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
 import { GatewayConnectScreen } from "@/features/agents/components/GatewayConnectScreen";
@@ -176,6 +179,9 @@ import { useOfficeSkillsMarketplace } from "@/features/office/hooks/useOfficeSki
 import { useOfficeStandupController } from "@/features/office/hooks/useOfficeStandupController";
 import { useRunLog } from "@/features/office/hooks/useRunLog";
 import { useTaskBoardController } from "@/features/office/tasks/useTaskBoardController";
+import { BulletinBoardPanel } from "@/features/office/bulletin/components/BulletinBoardPanel";
+import { isStandupMeetingForFleet } from "@/features/office/bulletin/bulletinBoard";
+import { useBulletinBoard } from "@/features/office/bulletin/useBulletinBoard";
 import {
   OnboardingWizard,
   useOnboardingState,
@@ -1130,6 +1136,8 @@ export function OfficeScreen({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
   const [kanbanInstallPromptOpen, setKanbanInstallPromptOpen] = useState(false);
+  const [bulletinBoardOpen, setBulletinBoardOpen] = useState(false);
+  const kanbanControlRef = useRef<RetroOfficeKanbanControl | null>(null);
   const [kanbanInstallProgress, setKanbanInstallProgress] = useState<{
     active: boolean;
     percent: number;
@@ -3146,6 +3154,36 @@ export function OfficeScreen({
     runLog,
     standup: standupController,
   });
+  // The standup store is office-wide; only this fleet's meeting belongs here.
+  const bulletinStandupMeeting = useMemo(() => {
+    const meeting = standupController.meeting;
+    if (!meeting) return null;
+    return isStandupMeetingForFleet(
+      meeting,
+      state.agents.map((agent) => agent.agentId),
+    )
+      ? meeting
+      : null;
+  }, [standupController.meeting, state.agents]);
+  const bulletinBoard = useBulletinBoard({
+    gatewayUrl,
+    settingsCoordinator,
+    tasks: taskBoard.state.cards,
+    tasksReady: !taskBoard.loading,
+    standupMeeting: bulletinStandupMeeting,
+    standupReady: !standupController.loading && agentsLoaded,
+  });
+  const bulletinBoardAgents = useMemo(
+    () => state.agents.map((agent) => ({ agentId: agent.agentId, name: agent.name })),
+    [state.agents],
+  );
+  const bulletinBoardTasksById = useMemo(
+    () =>
+      Object.fromEntries(
+        taskBoard.state.cards.map((card) => [card.id, { title: card.title, status: card.status }]),
+      ),
+    [taskBoard.state.cards],
+  );
   const ingestTaskBoardEvent = taskBoard.ingestGatewayEvent;
   taskBoardEventHandlerRef.current = ingestTaskBoardEvent;
   taskBoardRefreshRef.current = async () => {
@@ -4879,6 +4917,11 @@ export function OfficeScreen({
           onKanbanInteract={() => {
             setKanbanInstallPromptOpen(true);
           }}
+          kanbanControlRef={kanbanControlRef}
+          bulletinBoardSummary={bulletinBoard.summary}
+          onBulletinBoardInteract={() => {
+            setBulletinBoardOpen(true);
+          }}
           taskBoardAgents={state.agents}
           taskBoardCardsByStatus={taskBoard.cardsByStatus}
           taskBoardSelectedCard={taskBoard.selectedCard}
@@ -4920,6 +4963,23 @@ export function OfficeScreen({
               }}
             />
           )
+        ) : null}
+        {bulletinBoardOpen ? (
+          <BulletinBoardPanel
+            board={bulletinBoard}
+            agents={bulletinBoardAgents}
+            tasksById={bulletinBoardTasksById}
+            onClose={() => setBulletinBoardOpen(false)}
+            onOpenAgent={(agentId) => {
+              setBulletinBoardOpen(false);
+              handleOpenAgentChat(agentId);
+            }}
+            onOpenTask={(taskId) => {
+              setBulletinBoardOpen(false);
+              taskBoard.selectCard(taskId);
+              kanbanControlRef.current?.openKanbanBoard();
+            }}
+          />
         ) : null}
         {kanbanInstallPromptOpen ? (
           <KanbanDisabledPanel
@@ -5057,6 +5117,8 @@ export function OfficeScreen({
           onOpenMarketplace={() => setMarketplaceOpen(true)}
           onAddAgent={handleOpenCreateAgentWizard}
           onOpenCompanyBuilder={handleOpenCompanyBuilder}
+          onOpenBulletinBoard={() => setBulletinBoardOpen(true)}
+          bulletinBlockerCount={bulletinBoard.summary.blockers}
           inboxPanel={
             <InboxPanel
               agents={state.agents}
