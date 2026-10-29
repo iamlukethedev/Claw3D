@@ -22,6 +22,12 @@ import {
   type TaskBoardPreference,
   type TaskBoardPreferencePatch,
 } from "@/features/office/tasks/types";
+import {
+  defaultBulletinBoardPreference,
+  normalizeBulletinBoardPreference,
+  type BulletinBoardPreference,
+  type BulletinBoardPreferencePatch,
+} from "@/features/office/bulletin/types";
 
 export type StudioGatewaySettings = {
   url: string;
@@ -218,6 +224,9 @@ export type StudioTaskBoardPreference = TaskBoardPreference;
 export type StudioTaskBoardPreferencePublic = TaskBoardPreference;
 export type StudioTaskBoardPreferencePatch = TaskBoardPreferencePatch;
 
+export type StudioBulletinBoardPreference = BulletinBoardPreference;
+export type StudioBulletinBoardPreferencePatch = BulletinBoardPreferencePatch;
+
 export type FloorRuntimeConnectionStatus =
   | "disconnected"
   | "connecting"
@@ -257,6 +266,7 @@ export type StudioSettings = {
   office: Record<string, StudioOfficePreference>;
   standup?: Record<string, StudioStandupPreference>;
   taskBoard?: Record<string, StudioTaskBoardPreference>;
+  bulletinBoard?: Record<string, StudioBulletinBoardPreference>;
 };
 
 export type StudioSettingsPublic = Omit<StudioSettings, "gateway" | "office" | "standup"> & {
@@ -264,6 +274,7 @@ export type StudioSettingsPublic = Omit<StudioSettings, "gateway" | "office" | "
   office: Record<string, StudioOfficePreferencePublic>;
   standup?: Record<string, StudioStandupPreferencePublic>;
   taskBoard?: Record<string, StudioTaskBoardPreferencePublic>;
+  bulletinBoard?: Record<string, StudioBulletinBoardPreference>;
 };
 
 export type StudioSettingsPatch = {
@@ -278,6 +289,7 @@ export type StudioSettingsPatch = {
   office?: Record<string, StudioOfficePreferencePatch | null>;
   standup?: Record<string, StudioStandupPreferencePatch | null>;
   taskBoard?: Record<string, StudioTaskBoardPreferencePatch | null>;
+  bulletinBoard?: Record<string, StudioBulletinBoardPreferencePatch | null>;
 };
 
 const SETTINGS_VERSION = 1 as const;
@@ -764,6 +776,19 @@ const normalizeTaskBoard = (
     taskBoard[gatewayKey] = normalizeTaskBoardPreference(taskBoardRaw);
   }
   return taskBoard;
+};
+
+const normalizeBulletinBoard = (
+  value: unknown
+): Record<string, StudioBulletinBoardPreference> => {
+  if (!isRecord(value)) return {};
+  const bulletinBoard: Record<string, StudioBulletinBoardPreference> = {};
+  for (const [gatewayKeyRaw, boardRaw] of Object.entries(value)) {
+    const gatewayKey = normalizeGatewayKey(gatewayKeyRaw);
+    if (!gatewayKey) continue;
+    bulletinBoard[gatewayKey] = normalizeBulletinBoardPreference(boardRaw);
+  }
+  return bulletinBoard;
 };
 
 const normalizeFocusedPreference = (
@@ -1277,6 +1302,7 @@ export const defaultStudioSettings = (): StudioSettings => ({
   office: {},
   standup: {},
   taskBoard: {},
+  bulletinBoard: {},
 });
 
 export const sanitizeStudioGatewaySettings = (
@@ -1353,6 +1379,15 @@ export const sanitizeStudioSettings = (
       sanitizeTaskBoardPreference(preference),
     ]),
   ),
+  bulletinBoard: Object.fromEntries(
+    Object.entries(value.bulletinBoard ?? {}).map(([gatewayKey, preference]) => [
+      gatewayKey,
+      {
+        cards: preference.cards.map((card) => ({ ...card, tags: [...card.tags] })),
+        updatedAt: preference.updatedAt,
+      },
+    ]),
+  ),
 });
 
 export const normalizeStudioSettings = (raw: unknown): StudioSettings => {
@@ -1368,6 +1403,7 @@ export const normalizeStudioSettings = (raw: unknown): StudioSettings => {
   const office = normalizeOffice(raw.office);
   const standup = normalizeStandup(raw.standup);
   const taskBoard = normalizeTaskBoard(raw.taskBoard);
+  const bulletinBoard = normalizeBulletinBoard(raw.bulletinBoard);
   return {
     version: SETTINGS_VERSION,
     gateway,
@@ -1381,6 +1417,7 @@ export const normalizeStudioSettings = (raw: unknown): StudioSettings => {
     office,
     standup,
     taskBoard,
+    bulletinBoard,
   };
 };
 
@@ -1403,6 +1440,7 @@ export const mergeStudioSettings = (
   const nextOffice = { ...current.office };
   const nextStandup = { ...(current.standup ?? {}) };
   const nextTaskBoard = { ...(current.taskBoard ?? {}) };
+  const nextBulletinBoard = { ...(current.bulletinBoard ?? {}) };
   if (patch.officeFloors) {
     for (const floor of OFFICE_FLOORS) {
       const floorPatch = patch.officeFloors[floor.id];
@@ -1614,6 +1652,24 @@ export const mergeStudioSettings = (
       );
     }
   }
+  if (patch.bulletinBoard) {
+    for (const [gatewayKeyRaw, boardPatch] of Object.entries(patch.bulletinBoard)) {
+      const gatewayKey = normalizeGatewayKey(gatewayKeyRaw);
+      if (!gatewayKey) continue;
+      if (boardPatch === null) {
+        delete nextBulletinBoard[gatewayKey];
+        continue;
+      }
+      const fallback = nextBulletinBoard[gatewayKey] ?? defaultBulletinBoardPreference();
+      nextBulletinBoard[gatewayKey] = normalizeBulletinBoardPreference(
+        {
+          cards: Array.isArray(boardPatch.cards) ? boardPatch.cards : fallback.cards,
+          updatedAt: boardPatch.updatedAt ?? fallback.updatedAt,
+        },
+        fallback
+      );
+    }
+  }
   return {
     version: SETTINGS_VERSION,
     gateway: nextGateway ?? null,
@@ -1627,6 +1683,7 @@ export const mergeStudioSettings = (
     office: nextOffice,
     standup: nextStandup,
     taskBoard: nextTaskBoard,
+    bulletinBoard: nextBulletinBoard,
   };
 };
 
@@ -1730,4 +1787,13 @@ export const resolveTaskBoardPreference = (
   const gatewayKey = normalizeGatewayKey(gatewayUrl);
   if (!gatewayKey) return defaultStudioTaskBoardPreference();
   return settings.taskBoard?.[gatewayKey] ?? defaultStudioTaskBoardPreference();
+};
+
+export const resolveBulletinBoardPreference = (
+  settings: StudioSettings | StudioSettingsPublic,
+  gatewayUrl: string
+): StudioBulletinBoardPreference => {
+  const gatewayKey = normalizeGatewayKey(gatewayUrl);
+  if (!gatewayKey) return defaultBulletinBoardPreference();
+  return settings.bulletinBoard?.[gatewayKey] ?? defaultBulletinBoardPreference();
 };

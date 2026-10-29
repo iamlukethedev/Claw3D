@@ -11,6 +11,7 @@ import type {
   StudioSettingsPatch,
   StudioStandupPreferencePatch,
   StudioTaskBoardPreferencePatch,
+  StudioBulletinBoardPreferencePatch,
   StudioVoiceRepliesPreferencePatch,
 } from "@/lib/studio/settings";
 
@@ -34,6 +35,7 @@ type VoiceRepliesPatch = Record<string, StudioVoiceRepliesPreferencePatch | null
 type OfficePatch = Record<string, StudioOfficePreferencePatch | null>;
 type StandupPatch = Record<string, StudioStandupPreferencePatch | null>;
 type TaskBoardPatch = Record<string, StudioTaskBoardPreferencePatch | null>;
+type BulletinBoardPatch = Record<string, StudioBulletinBoardPreferencePatch | null>;
 
 export type StudioSettingsCoordinatorTransport = {
   fetchSettings: () => Promise<StudioSettingsResponse>;
@@ -231,6 +233,28 @@ const mergeStandupPatch = (
   return merged;
 };
 
+// Each bulletin board patch carries the full card list, so the latest
+// patch for a gateway replaces any earlier queued one.
+const mergeBulletinBoardPatch = (
+  current: BulletinBoardPatch | undefined,
+  next: BulletinBoardPatch | undefined
+): BulletinBoardPatch | undefined => {
+  if (!current && !next) return undefined;
+  const merged: BulletinBoardPatch = { ...(current ?? {}) };
+  for (const [gatewayKey, value] of Object.entries(next ?? {})) {
+    if (value === null) {
+      merged[gatewayKey] = null;
+      continue;
+    }
+    merged[gatewayKey] = {
+      ...(merged[gatewayKey] ?? {}),
+      ...value,
+      ...(value.cards ? { cards: [...value.cards] } : {}),
+    };
+  }
+  return merged;
+};
+
 const mergeTaskBoardPatch = (
   current: TaskBoardPatch | undefined,
   next: TaskBoardPatch | undefined
@@ -354,6 +378,7 @@ const mergeStudioPatch = (
       ...(next.office ? { office: { ...next.office } } : {}),
       ...(next.standup ? { standup: { ...next.standup } } : {}),
       ...(next.taskBoard ? { taskBoard: { ...next.taskBoard } } : {}),
+      ...(next.bulletinBoard ? { bulletinBoard: { ...next.bulletinBoard } } : {}),
       ...(next.officeFloors ? { officeFloors: { ...next.officeFloors } } : {}),
     };
   }
@@ -368,6 +393,7 @@ const mergeStudioPatch = (
   const office = mergeOfficePatch(current.office, next.office);
   const standup = mergeStandupPatch(current.standup, next.standup);
   const taskBoard = mergeTaskBoardPatch(current.taskBoard, next.taskBoard);
+  const bulletinBoard = mergeBulletinBoardPatch(current.bulletinBoard, next.bulletinBoard);
   const officeFloors = mergeOfficeFloorsPatch(current.officeFloors, next.officeFloors);
   const gateway = mergeGatewayPatch(current.gateway, next.gateway);
   return {
@@ -389,6 +415,7 @@ const mergeStudioPatch = (
     ...(office ? { office } : {}),
     ...(standup ? { standup } : {}),
     ...(taskBoard ? { taskBoard } : {}),
+    ...(bulletinBoard ? { bulletinBoard } : {}),
     ...(officeFloors ? { officeFloors } : {}),
   };
 };
