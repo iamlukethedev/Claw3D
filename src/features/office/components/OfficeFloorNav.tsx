@@ -117,6 +117,8 @@ export function OfficeFloorNav({
     if (typeof window === "undefined") return;
     try {
       const stored = window.localStorage.getItem(DIRECTORY_COLLAPSED_STORAGE_KEY);
+      // Read after mount so SSR and the first client render match (avoids a hydration mismatch).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (stored === "true") setDirectoryCollapsed(true);
     } catch {
       // localStorage may be unavailable (private mode, SSR, etc.); ignore.
