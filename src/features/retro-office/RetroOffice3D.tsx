@@ -59,8 +59,6 @@ import type {
 import { extractSpeechImage } from "@/lib/text/speech-image";
 import { MonitorImmersiveContent as MonitorImmersiveOverlay } from "@/features/retro-office/overlays/MonitorImmersiveContent";
 import {
-  AGENT_RADIUS,
-  BUMP_FREEZE_MS,
   BUMP_RECOVERY_MS,
   CANVAS_H,
   CANVAS_W,
@@ -72,7 +70,6 @@ import {
   PING_PONG_SESSION_MS,
   ROTATION_STEP_DEG,
   SCALE,
-  SEPARATION_STRENGTH,
   SNAP_GRID,
   WALK_SPEED,
   WALL_THICKNESS,
@@ -2530,19 +2527,6 @@ export function RetroOffice3D({
           : defaultRemoteLayoutFurniture,
     [defaultRemoteLayoutFurniture, remoteLayoutSnapshot, remoteOfficeEnabled],
   );
-  useEffect(() => {
-    setFurniture(
-      buildInitialFurnitureLayout(storageNamespace, layoutPreset).filter(
-        (item) => !isRetiredPingPongLamp(item),
-      ),
-    );
-    setSelectedUid(null);
-    setDeskActionUid(null);
-    setDeskAssignPickerOpen(false);
-    setDrag({ kind: "idle" });
-    setGhostPos(null);
-    setWallDrawStart(null);
-  }, [layoutPreset, storageNamespace]);
   const [editMode, setEditMode] = useState(false);
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
   const [hoverUid, setHoverUid] = useState<string | null>(null);
@@ -2574,6 +2558,27 @@ export function RetroOffice3D({
   } | null>(null);
   const [deskActionUid, setDeskActionUid] = useState<string | null>(null);
   const [deskAssignPickerOpen, setDeskAssignPickerOpen] = useState(false);
+  const [furnitureLayoutSource, setFurnitureLayoutSource] = useState({
+    storageNamespace,
+    layoutPreset,
+  });
+  if (
+    furnitureLayoutSource.storageNamespace !== storageNamespace ||
+    furnitureLayoutSource.layoutPreset !== layoutPreset
+  ) {
+    setFurnitureLayoutSource({ storageNamespace, layoutPreset });
+    setFurniture(
+      buildInitialFurnitureLayout(storageNamespace, layoutPreset).filter(
+        (item) => !isRetiredPingPongLamp(item),
+      ),
+    );
+    setSelectedUid(null);
+    setDeskActionUid(null);
+    setDeskAssignPickerOpen(false);
+    setDrag({ kind: "idle" });
+    setGhostPos(null);
+    setWallDrawStart(null);
+  }
   // New Idea 3: speech bubble agent IDs.
   const [speechAgentIds, setSpeechAgentIds] = useState<Set<string>>(new Set());
   const statusFeedEvents = useMemo(

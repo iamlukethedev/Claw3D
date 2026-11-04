@@ -43,6 +43,8 @@ export const useOnboardingState = (): OnboardingStateReturn => {
   const [completed, setCompleted] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // Read after mount so SSR and the first client render match (avoids a hydration mismatch).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCompleted(readCompleted());
   }, []);
 

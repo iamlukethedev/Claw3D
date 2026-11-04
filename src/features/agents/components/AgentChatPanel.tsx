@@ -65,31 +65,6 @@ const EMPTY_CHAT_INTRO_MESSAGES = [
   "What are we working on today?",
   "I'm here and ready. What's the plan?",
 ];
-const TEXT_ATTACHMENT_EXTENSIONS = new Set([
-  "txt",
-  "md",
-  "markdown",
-  "json",
-  "js",
-  "jsx",
-  "ts",
-  "tsx",
-  "py",
-  "rb",
-  "go",
-  "rs",
-  "java",
-  "kt",
-  "sql",
-  "html",
-  "css",
-  "xml",
-  "yaml",
-  "yml",
-  "csv",
-  "log",
-]);
-const MAX_ATTACHMENT_TEXT_CHARS = 12_000;
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 type UploadAttachment = {
@@ -98,42 +73,6 @@ type UploadAttachment = {
   url: string;
   contentType: string;
   extractedText?: string;
-};
-
-const isTextAttachmentFile = (file: File): boolean => {
-  const mime = file.type.trim().toLowerCase();
-  if (mime.startsWith("text/")) return true;
-  if (
-    mime.includes("json") ||
-    mime.includes("javascript") ||
-    mime.includes("typescript") ||
-    mime.includes("xml") ||
-    mime.includes("yaml")
-  ) {
-    return true;
-  }
-  const extension = file.name.split(".").pop()?.trim().toLowerCase() ?? "";
-  return extension.length > 0 && TEXT_ATTACHMENT_EXTENSIONS.has(extension);
-};
-
-const buildAttachmentPromptBlock = (fileName: string, content: string): string =>
-  [
-    `[Attached reference: ${fileName}]`,
-    content,
-    `[End attached reference: ${fileName}]`,
-  ].join("\n");
-
-const buildUploadedAttachmentPromptBlock = (attachment: UploadAttachment): string => {
-  const lines = [
-    `[Attached file: ${attachment.name}]`,
-    `URL: ${attachment.url}`,
-    `Content-Type: ${attachment.contentType}`,
-  ];
-  if (attachment.extractedText) {
-    lines.push("", attachment.extractedText);
-  }
-  lines.push(`[End attached file: ${attachment.name}]`);
-  return lines.join("\n");
 };
 
 const stableStringHash = (value: string): number => {
