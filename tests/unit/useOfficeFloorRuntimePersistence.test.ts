@@ -36,7 +36,7 @@ describe("useOfficeFloorRuntimePersistence", () => {
   it("writes the connecting status to the floor that was active when gatewayUrl was set", async () => {
     const { coordinator, updateSettings } = makeCoordinator();
 
-    const { rerender } = renderHook<void, HookParams>(
+    renderHook<void, HookParams>(
       (props) => useOfficeFloorRuntimePersistence(props),
       {
         initialProps: {

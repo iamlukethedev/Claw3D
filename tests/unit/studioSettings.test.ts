@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { createDefaultAgentAvatarProfile } from "@/lib/avatars/profile";
 
 import {
-  defaultStudioSettings,
   defaultStudioFloorRuntimeState,
   mergeStudioSettings,
   normalizeStudioSettings,

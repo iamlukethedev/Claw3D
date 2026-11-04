@@ -20,7 +20,6 @@ import {
 } from "@/lib/runtime/agentMessaging";
 import type {
   RuntimeCapability,
-  RuntimeEvent,
   RuntimeProvider,
   RuntimeProviderId,
 } from "@/lib/runtime/types";
@@ -327,7 +326,7 @@ export class CustomRuntimeProvider implements RuntimeProvider {
     return this.client.onEvent(handler);
   }
 
-  onRuntimeEvent(_handler: (event: RuntimeEvent) => void): () => void {
+  onRuntimeEvent(): () => void {
     return () => {};
   }
 

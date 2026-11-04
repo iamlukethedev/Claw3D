@@ -59,8 +59,6 @@ import type {
 import { extractSpeechImage } from "@/lib/text/speech-image";
 import { MonitorImmersiveContent as MonitorImmersiveOverlay } from "@/features/retro-office/overlays/MonitorImmersiveContent";
 import {
-  AGENT_RADIUS,
-  BUMP_FREEZE_MS,
   BUMP_RECOVERY_MS,
   CANVAS_H,
   CANVAS_W,
@@ -72,7 +70,6 @@ import {
   PING_PONG_SESSION_MS,
   ROTATION_STEP_DEG,
   SCALE,
-  SEPARATION_STRENGTH,
   SNAP_GRID,
   WALK_SPEED,
   WALL_THICKNESS,

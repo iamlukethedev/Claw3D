@@ -25,8 +25,6 @@ export const ConnectionPanel = ({
   token,
   selectedAdapterType,
   activeAdapterType,
-  localGatewayUrl = null,
-  localGatewayToken = null,
   status,
   error,
   onGatewayUrlChange,
