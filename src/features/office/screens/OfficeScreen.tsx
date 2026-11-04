@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { MessageSquare, ChevronDown, ChevronLeft, ChevronRight, Mic } from "lucide-react";
 import { RetroOffice3D } from "@/features/retro-office/RetroOffice3D";
 import type { OfficeAgent } from "@/features/retro-office/core/types";
+import { resolveOfficeEmbedMode } from "@/features/office/embedMode";
 import { RunningAvatarLoader } from "@/features/agents/components/RunningAvatarLoader";
 import { GatewayConnectScreen } from "@/features/agents/components/GatewayConnectScreen";
 import { useAgentStore, type AgentState } from "@/features/agents/state/store";
@@ -961,6 +962,17 @@ export function OfficeScreen({
   const debugEnabled = useMemo(() => {
     if (typeof window === "undefined") return false;
     return new URLSearchParams(window.location.search).get("officeDebug") === "1";
+  }, []);
+  // Minimal "home" embed (kiosk/tablet ambient view): hide product chrome —
+  // building directory, HQ sidebar, event console, in-scene toolbar — behind one
+  // flag. `?full=1` restores everything. Read via the same SSR-safe window path
+  // as debugEnabled above (no useSearchParams). See embedMode.ts for resolution.
+  const isHomeEmbed = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return (
+      resolveOfficeEmbedMode(new URLSearchParams(window.location.search)) ===
+      "home"
+    );
   }, []);
   const [settingsCoordinator] = useState(() =>
     createStudioSettingsCoordinator(),
@@ -4748,18 +4760,21 @@ export function OfficeScreen({
           </div>
         </div>
       ) : null}
-      <OfficeFloorNav
-        activeFloorId={activeFloor.id}
-        floorRosterCache={floorRosterCache}
-        onSelectFloor={(floorId) => {
-          void handleSelectFloor(floorId);
-        }}
-        activeAdapterType={(selectedAdapterType as FloorProvider) ?? null}
-      />
+      {!isHomeEmbed ? (
+        <OfficeFloorNav
+          activeFloorId={activeFloor.id}
+          floorRosterCache={floorRosterCache}
+          onSelectFloor={(floorId) => {
+            void handleSelectFloor(floorId);
+          }}
+          activeAdapterType={(selectedAdapterType as FloorProvider) ?? null}
+        />
+      ) : null}
       <section className="relative h-full min-h-0 min-w-0 overflow-hidden">
         <RetroOffice3D
           key={activeFloor.id}
           agents={allVisibleAgents}
+          embedHome={isHomeEmbed}
           storageNamespace={activeFloor.id}
           layoutPreset={activeFloor.kind === "lobby" ? "lobby" : "office"}
           officeCenterSignal={officeCameraCenterSignal}
@@ -4992,7 +5007,7 @@ export function OfficeScreen({
         ) : null}
       </section>
 
-      {showEmptyFleetBanner ? (
+      {showEmptyFleetBanner && !isHomeEmbed ? (
         <div className="pointer-events-none fixed left-1/2 top-16 z-40 w-full max-w-xl -translate-x-1/2 px-4">
           <div className="pointer-events-auto rounded-lg border border-amber-400/35 bg-black/80 px-4 py-3 shadow-2xl backdrop-blur">
             <div className="flex items-center justify-between gap-3">
@@ -5047,7 +5062,7 @@ export function OfficeScreen({
         </div>
       ) : null}
 
-      {!debugEnabled ? (
+      {!debugEnabled && !isHomeEmbed ? (
         <HQSidebar
           open={sidebarOpen}
           activeTab={activeSidebarTab}
@@ -5172,7 +5187,7 @@ export function OfficeScreen({
         />
       ) : null}
 
-      {showOpenClawConsole ? (
+      {showOpenClawConsole && !isHomeEmbed ? (
         <section className="pointer-events-auto fixed bottom-3 left-3 z-30 flex w-[520px] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded border border-cyan-500/25 bg-black/78 shadow-2xl backdrop-blur">
           <div className="flex items-center justify-between border-b border-cyan-500/15 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-cyan-200/80">
             <span>Agent Event Console</span>

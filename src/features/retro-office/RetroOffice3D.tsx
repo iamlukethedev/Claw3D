@@ -2246,6 +2246,7 @@ export function RetroOffice3D({
   officeCenterSignal = 0,
   animationState = null,
   readOnly = false,
+  embedHome = false,
   storageNamespace = "default",
   layoutPreset = "office",
   deskAssignmentByDeskUid = EMPTY_STRING_RECORD,
@@ -2360,6 +2361,10 @@ export function RetroOffice3D({
     | "jukeboxHoldByAgentId"
   > | null;
   readOnly?: boolean;
+  /** Minimal "home" embed: hide product chrome (top-right toolbar, in-scene
+   * kanban/standup buttons, bottom-left status bar). Scene, nameplates, title,
+   * roster pill, and camera controls stay. See features/office/embedMode.ts. */
+  embedHome?: boolean;
   storageNamespace?: string;
   layoutPreset?: OfficeLayoutPreset;
   deskAssignmentByDeskUid?: Record<string, string>;
@@ -5866,7 +5871,7 @@ export function RetroOffice3D({
               </button>
             ))}
           </div>
-          {standupMeeting ? (
+          {standupMeeting && !embedHome ? (
             <button
               type="button"
               onClick={() => setStandupBoardOpen(true)}
@@ -5888,7 +5893,7 @@ export function RetroOffice3D({
               </div>
             </button>
           ) : null}
-          {kanbanBoardItem ? (
+          {kanbanBoardItem && !embedHome ? (
             <button
               type="button"
               onClick={() => openKanbanBoard(kanbanBoardItem)}
@@ -6956,7 +6961,7 @@ export function RetroOffice3D({
       )}
 
       {/* Toolbar — top right. */}
-      {!readOnly && !immersiveOverlayActive ? (
+      {!readOnly && !immersiveOverlayActive && !embedHome ? (
         <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
           {remoteOfficeEnabled &&
           (remoteOfficeSourceKind === "presence_endpoint"
@@ -7154,7 +7159,7 @@ export function RetroOffice3D({
         </div>
       ) : null}
 
-      {!immersiveOverlayActive ? (
+      {!immersiveOverlayActive && !embedHome ? (
         <>
           {/* Ideas 3 + 6 + 8: Mini status bar — bottom left. */}
           <div className="absolute bottom-3 left-3 flex flex-col items-start gap-1.5 z-10 pointer-events-none select-none">
