@@ -300,6 +300,8 @@ export class CustomRuntimeProvider implements RuntimeProvider {
         return (await this.callChatAbort(params)) as T;
       case "sessions.reset":
         return (await this.callSessionsReset(params)) as T;
+      case "sessions.patch":
+        return (await this.callSessionsPatch(params)) as T;
       case "agent.wait":
         return (await this.callAgentWait(params)) as T;
       case "exec.approvals.get":
@@ -684,6 +686,27 @@ export class CustomRuntimeProvider implements RuntimeProvider {
       this.activeRunIdBySessionKey.delete(key);
     }
     return { ok: true };
+  }
+
+  private async callSessionsPatch(rawParams: unknown) {
+    const params = isRecord(rawParams) ? rawParams : {};
+    const key = typeof params.key === "string" ? params.key.trim() : "";
+    if (!key) {
+      throw new Error("Custom runtime requires key for sessions.patch.");
+    }
+    // Custom runtimes have no thinking-level or exec settings, so only the model is kept. Studio sends
+    // model keys as "custom/<id>"; the runtime expects the bare id on the next chat completion.
+    const model =
+      typeof params.model === "string" ? params.model.trim().replace(/^custom\//, "") : "";
+    if (model) {
+      this.ensureSession(key, parseAgentIdFromSessionKey(key) ?? "main", model).model = model;
+    }
+    const session = this.sessions.get(key);
+    return {
+      ok: true as const,
+      key,
+      ...(session?.model ? { resolved: { modelProvider: "custom", model: session.model } } : {}),
+    };
   }
 
   private async callAgentWait(rawParams: unknown) {
