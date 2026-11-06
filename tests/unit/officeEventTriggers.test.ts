@@ -9,6 +9,7 @@ import {
   reconcileOfficeAnimationTriggerState,
   reduceOfficeAnimationTriggerEvent,
 } from "@/lib/office/eventTriggers";
+import { buildOfficeStateAnimationMappingResult } from "@/lib/office/stateAnimationMapping";
 import type { EventFrame } from "@/lib/gateway/GatewayClient";
 
 const makeAgent = (
@@ -121,6 +122,84 @@ describe("office event triggers", () => {
     expect(animationState.githubHoldByAgentId.main).toBe(true);
     expect(animationState.qaHoldByAgentId.qa).toBe(true);
     expect(animationState.skillGymHoldByAgentId.skill).toBe(true);
+  });
+
+  it("applies configured state-to-animation mappings to derived agent state", () => {
+    const agents = [
+      makeAgent({
+        agentId: "writer",
+        name: "Writer",
+        sessionKey: "agent:writer:main",
+        status: "running",
+        runId: "run-writer",
+        streamText: "Drafting the client brief.",
+      }),
+      makeAgent({
+        agentId: "blocked",
+        name: "Blocked",
+        sessionKey: "agent:blocked:main",
+        awaitingUserInput: true,
+      }),
+      makeAgent({
+        agentId: "broken",
+        name: "Broken",
+        sessionKey: "agent:broken:main",
+        status: "error",
+      }),
+    ];
+    const state = reconcileOfficeAnimationTriggerState({
+      state: createOfficeAnimationTriggerState(),
+      agents,
+      nowMs: 10_000,
+    });
+    const animationState = buildOfficeAnimationState({
+      state,
+      agents,
+      nowMs: 10_000,
+    });
+
+    const mapped = buildOfficeStateAnimationMappingResult({
+      agents,
+      animationState,
+      nowMs: 10_000,
+      mappings: [
+        {
+          id: "writing-desk",
+          sourceState: "writing",
+          label: "Writing",
+          animationTarget: "desk",
+          effect: "none",
+          soundCueId: null,
+          priority: 90,
+          enabled: true,
+        },
+        {
+          id: "waiting-booth",
+          sourceState: "approval_pending",
+          label: "Approval pending",
+          animationTarget: "phone_booth",
+          effect: "doorbell",
+          soundCueId: "approval",
+          priority: 80,
+          enabled: true,
+        },
+        {
+          id: "error-server-room",
+          sourceState: "error",
+          label: "Error",
+          animationTarget: "server_room",
+          effect: "alarm",
+          soundCueId: "alarm",
+          priority: 100,
+          enabled: true,
+        },
+      ],
+    });
+
+    expect(mapped.deskHoldByAgentId.writer).toBe(true);
+    expect(mapped.phoneBoothHoldByAgentId.blocked).toBe(true);
+    expect(mapped.githubHoldByAgentId.broken).toBe(true);
+    expect(mapped.matchedMappingByAgentId.writer?.id).toBe("writing-desk");
   });
 
   it("reacts to runtime chat commands regardless of channel transport", () => {

@@ -22,6 +22,11 @@ import {
   type TaskBoardPreference,
   type TaskBoardPreferencePatch,
 } from "@/features/office/tasks/types";
+import {
+  normalizeOfficeStateAnimationMappings,
+  type OfficeStateAnimationMapping,
+  type OfficeStateAnimationMappingPatch,
+} from "@/lib/office/stateMappingConfig";
 
 export type StudioGatewaySettings = {
   url: string;
@@ -145,6 +150,7 @@ export type StudioVoiceRepliesPreferencePatch = {
 
 export type StudioOfficePreference = {
   title: string;
+  stateAnimationMappings: OfficeStateAnimationMapping[];
   remoteOfficeEnabled: boolean;
   remoteOfficeSourceKind: "presence_endpoint" | "openclaw_gateway";
   remoteOfficeLabel: string;
@@ -162,6 +168,7 @@ export type StudioOfficePreference = {
 
 export type StudioOfficePreferencePublic = {
   title: string;
+  stateAnimationMappings: OfficeStateAnimationMapping[];
   remoteOfficeEnabled: boolean;
   remoteOfficeSourceKind: "presence_endpoint" | "openclaw_gateway";
   remoteOfficeLabel: string;
@@ -179,6 +186,7 @@ export type StudioOfficePreferencePublic = {
 
 export type StudioOfficePreferencePatch = {
   title?: string | null;
+  stateAnimationMappings?: OfficeStateAnimationMappingPatch[] | null;
   remoteOfficeEnabled?: boolean;
   remoteOfficeSourceKind?: "presence_endpoint" | "openclaw_gateway";
   remoteOfficeLabel?: string | null;
@@ -608,6 +616,7 @@ const normalizeCompanyRoleTitles = (value: unknown, fallback: string[] = []) => 
 
 export const defaultStudioOfficePreference = (): StudioOfficePreference => ({
   title: DEFAULT_OFFICE_TITLE,
+  stateAnimationMappings: [],
   remoteOfficeEnabled: false,
   remoteOfficeSourceKind: DEFAULT_REMOTE_OFFICE_SOURCE_KIND,
   remoteOfficeLabel: DEFAULT_REMOTE_OFFICE_LABEL,
@@ -626,6 +635,7 @@ export const defaultStudioOfficePreference = (): StudioOfficePreference => ({
 export const defaultStudioOfficePreferencePublic =
   (): StudioOfficePreferencePublic => ({
     title: DEFAULT_OFFICE_TITLE,
+    stateAnimationMappings: [],
     remoteOfficeEnabled: false,
     remoteOfficeSourceKind: DEFAULT_REMOTE_OFFICE_SOURCE_KIND,
     remoteOfficeLabel: DEFAULT_REMOTE_OFFICE_LABEL,
@@ -645,6 +655,7 @@ export const sanitizeStudioOfficePreference = (
   value: StudioOfficePreference
 ): StudioOfficePreferencePublic => ({
   title: value.title,
+  stateAnimationMappings: value.stateAnimationMappings,
   remoteOfficeEnabled: value.remoteOfficeEnabled,
   remoteOfficeSourceKind: value.remoteOfficeSourceKind,
   remoteOfficeLabel: value.remoteOfficeLabel,
@@ -1171,6 +1182,10 @@ const normalizeOfficePreference = (
   if (!isRecord(value)) return fallback;
   return {
     title: normalizeOfficeTitle(value.title, fallback.title),
+    stateAnimationMappings: normalizeOfficeStateAnimationMappings(
+      value.stateAnimationMappings,
+      fallback.stateAnimationMappings,
+    ),
     remoteOfficeEnabled:
       typeof value.remoteOfficeEnabled === "boolean"
         ? value.remoteOfficeEnabled
